@@ -6,8 +6,8 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Mon, 29 Feb 2016 23:59:23 +0800</pubDate>
-    <lastBuildDate>Mon, 29 Feb 2016 23:59:23 +0800</lastBuildDate>
+    <pubDate>Tue, 01 Mar 2016 00:20:03 +0800</pubDate>
+    <lastBuildDate>Tue, 01 Mar 2016 00:20:03 +0800</lastBuildDate>
     <generator>Jekyll v3.1.2</generator>
     
       <item>
@@ -77,114 +77,6 @@
         <category>jekyll</category>
         
         <category>update</category>
-        
-      </item>
-    
-      <item>
-        <title>Style Test</title>
-        <description>&lt;p&gt;This is just a style test post, filled with LoremIpsue. Feel free to delete the file.&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;http://lorempixel.com/400/200/&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
-
-&lt;h1 id=&quot;lorem-ipsum-dolor&quot;&gt;Lorem ipsum dolor&lt;/h1&gt;
-
-&lt;p&gt;Sit amet, consectetur adipiscing elit. Phasellus nisi odio, scelerisque vitae volutpat non, facilisis non erat. In gravida placerat pulvinar. Maecenas ac pretium sem. In consectetur nulla leo, ut maximus nisi volutpat eget. Vestibulum vitae malesuada risus, egestas placerat felis. In sed sollicitudin elit. Sed bibendum porttitor dui.&lt;/p&gt;
-
-&lt;h2 id=&quot;condimentum-mauris-accumsan&quot;&gt;Condimentum mauris Accumsan&lt;/h2&gt;
-
-&lt;p&gt;Eu. Suspendisse scelerisque, orci vel elementum accumsan, sem turpis congue justo, et vulputate lacus orci vel felis. Pellentesque at gravida felis, vitae pretium erat. Pellentesque convallis mi vitae lectus semper, quis pellentesque lectus tristique.&lt;/p&gt;
-
-&lt;h2 id=&quot;duis-a-nibh-in&quot;&gt;Duis a nibh in&lt;/h2&gt;
-
-&lt;p&gt;Consectetur ultrices. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.&lt;/p&gt;
-
-&lt;blockquote&gt;
-  &lt;p&gt;Vivamus placerat, tortor et aliquam porttitor, risus mi dapibus neque, vitae vulputate urna.
-– Lorem&lt;/p&gt;
-&lt;/blockquote&gt;
-
-&lt;p&gt;Apurus vel sapien. Fusce at condimentum nibh.&lt;/p&gt;
-
-&lt;h3 id=&quot;donec-ut-urna&quot;&gt;Donec ut urna&lt;/h3&gt;
-
-&lt;p&gt;A dolor rhoncus posuere vel porttitor tortor. Integer ex lacus, sagittis ac tellus et, laoreet condimentum massa.&lt;/p&gt;
-
-&lt;p&gt;&lt;img src=&quot;http://lorempixel.com/400/400/&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
-
-&lt;p&gt;Aliquam tempor pharetra lacus, vel bibendum purus dapibus nec. Integer hendrerit massa ut libero euismod, id gravida neque facilisis.&lt;/p&gt;
-
-&lt;h2 id=&quot;nunc-nec&quot;&gt;Nunc nec&lt;/h2&gt;
-
-&lt;p&gt;Karan justo id turpis auctor pharetra. Fusce pretium ornare facilisis. Aliquam eget scelerisque ex, eu volutpat leo. Proin pharetra est felis, sit amet suscipit orci mattis quis.&lt;/p&gt;
-
-&lt;ol&gt;
-  &lt;li&gt;Etiam bibendum purus tincidunt&lt;/li&gt;
-  &lt;li&gt;As dapibus enim et, porta ligula.&lt;/li&gt;
-  &lt;li&gt;Morbi tempus, mauris sed sodales auctor, nulla erat fringilla purus, vel sodales nulla nunc sit amet purus.&lt;/li&gt;
-  &lt;li&gt;Praesent pellentesque urna et leo eleifend molestie ac ac ex.&lt;/li&gt;
-  &lt;li&gt;Ut eu sagittis metus, et malesuada libero.&lt;/li&gt;
-&lt;/ol&gt;
-
-&lt;p&gt;Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Etiam placerat mauris a libero tempus facilisis. Maecenas ut augue lacinia, ornare mi in, lobortis arcu. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis justo elit, blandit vel tincidunt ac, imperdiet ut neque.&lt;/p&gt;
-
-&lt;h1 id=&quot;class-aptent&quot;&gt;Class aptent&lt;/h1&gt;
-
-&lt;p&gt;taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Aliquam erat volutpat. Sed at semper sem. Morbi in finibus tellus. Pellentesque nec dapibus risus.&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;cp&quot;&gt;#include &amp;lt;iostream&amp;gt;
-&lt;/span&gt; 
-  &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;main&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;std&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;cout&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Hello world!&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;std&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;endl&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
-  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;vitae erat non congue. Proin sagittis vitae justo at cursus. Phasellus egestas bibendum urna vel condimentum.&lt;/p&gt;
-
-&lt;h2 id=&quot;fusce-a-ullamcorper-nisl&quot;&gt;Fusce a ullamcorper nisl&lt;/h2&gt;
-
-&lt;p&gt;Pellentesque vehicula faucibus nibh, &lt;strong&gt;a pharetra odio pretium ac.&lt;/strong&gt; Mauris eget gravida orci, vitae tincidunt urna. Integer pharetra ante in porta maximus. Morbi ac arcu lacinia, posuere mauris vitae, lobortis dui. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vitae metus nibh. Cras quis malesuada nisi. Ut porttitor, ipsum vel suscipit posuere, elit purus egestas velit, ac lobortis urna orci nec mi.&lt;/p&gt;
-
-&lt;h2 id=&quot;maecenas-bibendum-nisi&quot;&gt;Maecenas bibendum nisi&lt;/h2&gt;
-
-&lt;p&gt;Aleo facilisis porttitor ac ac metus. &lt;strong&gt;Vivamus faucibus faucibus bibendum.&lt;/strong&gt; Donec efficitur consectetur erat quis porttitor. Ut id euismod nunc. Sed venenatis eleifend suscipit. Donec magna purus, porta eget enim a, ornare porttitor nibh. Cras nisl nibh, viverra vitae magna quis, hendrerit facilisis sem.&lt;/p&gt;
-
-&lt;table&gt;
-  &lt;thead&gt;
-    &lt;tr&gt;
-      &lt;th style=&quot;text-align: center&quot;&gt;table&lt;/th&gt;
-      &lt;th style=&quot;text-align: center&quot;&gt;test&lt;/th&gt;
-      &lt;th style=&quot;text-align: center&quot;&gt;lorem&lt;/th&gt;
-    &lt;/tr&gt;
-  &lt;/thead&gt;
-  &lt;tbody&gt;
-    &lt;tr&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;Praesent ultrices&lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;convallis lorem&lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;at sollicitudin enim&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;Mauris&lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;tristique cursus&lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;arcu ac&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;facilisis&lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;Proin&lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;vulputate neque lectus&lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/tbody&gt;
-&lt;/table&gt;
-
-&lt;p&gt;maximus malesuada est rutrum ac. Sed blandit semper faucibus. Nam venenatis consectetur malesuada. Nulla lacus purus, ultrices ac eros porttitor, finibus sodales augue. Suspendisse tincidunt, felis in placerat euismod, libero nulla interdum nisl, commodo efficitur felis dui in libero. Integer lobortis sapien sit amet orci tristique auctor a sit amet neque. Nunc tincidunt iaculis purus eget maximus. Fusce risus justo, rutrum at magna sed, rhoncus lacinia lectus. Vivamus lobortis odio ex, ac vehicula nunc facilisis non. Aliquam fermentum diam massa. Sed cursus, nisi varius laoreet aliquet, tortor urna porta turpis, in dictum urna enim vel leo. Etiam at lacus lorem. Vivamus ornare vitae nisl vel malesuada.&lt;/p&gt;
-
-</description>
-        <pubDate>Thu, 01 Jan 1970 08:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/test</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/test</guid>
-        
-        
-        <category>jekyll</category>
         
       </item>
     
