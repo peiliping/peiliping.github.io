@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>PeiLiPing&#39;s Blog</title>
-    <description>One or more sentences introducing this blog.
+    <title>Pei LiPing&#39;s Blog</title>
+    <description>Augur
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Mon, 29 Feb 2016 09:49:35 +0800</pubDate>
-    <lastBuildDate>Mon, 29 Feb 2016 09:49:35 +0800</lastBuildDate>
+    <pubDate>Mon, 29 Feb 2016 23:59:23 +0800</pubDate>
+    <lastBuildDate>Mon, 29 Feb 2016 23:59:23 +0800</lastBuildDate>
     <generator>Jekyll v3.1.2</generator>
     
       <item>
