@@ -1,16 +1,16 @@
 # Site settings
-title: PeiLiPing's Blog
+title: Pei LiPing's Blog
 url: "http://peiliping.github.io"    # the protocol and hostname of your site, eg. `http://laobubu.github.io`
 baseurl: "/blog" # the prefix of your site uri, eg. `/jekyll-theme-EasyBook` or just one slash `/`
 #timezone: Asia/Chongqing
 description: >
-  One or more sentences introducing this blog.
+  Augur
 
 # Your information
 email: peilipingplp@gmail.com
-author: PeiLiPing
+author: Pei LiPing
 avatar: "//www.gravatar.com/avatar/your_email_md5?d=mm&s=135"
-profile: One sentence introducing yourself.
+profile: The Cabin Of Pei LiPing.
 #twitter_username: twitter_username
 #github_username:  github_username
 # Comment Service (Disqus or 多说)
