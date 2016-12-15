@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>日志采集工具Logwatch « Pei LiPing's Blog</title>
+  <meta name="description" content="  2016年11月到12月中旬，开发了Logwatch的第一个版本。">
+
+  <link rel="stylesheet" href="/blog/css/main.css">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2016-12-15-logwatch">
+  <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
+</head>
+
+
+  <body>
+
+    <header class="header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Pei LiPing's Blog</a>
+    <nav class="site-nav">
+      
+        
+      
+        
+        <a class="page-link" href="/blog/about/">About</a>
+        
+      
+        
+        <a class="page-link" href="/blog/category/">Category</a>
+        
+      
+        
+      
+        
+      
+        
+      
+    </nav>
+  </div>
+</header>
+
+    <div class="page-content">
+      <div class="wrapper">
+        <div class="col-main">
+          <div class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">日志采集工具Logwatch</h1>
+    <p class="post-meta">Dec 15, 2016</p>
+  </header>
+
+  <article class="post-content">
+    <ul>
+  <li>
+    <p>2016年11月到12月中旬，开发了<a href="https://github.com/peiliping/logwatch">Logwatch</a>的第一个版本。</p>
+  </li>
+  <li>
+    <p>去年公司生产环境下的应用日志采集，主要用的是Logstash，也就是ELK豪华套餐中的“L”。碰到的主要问题是：Cpu开销高、内存占用高（比如采集NginxAccessLog，NgxQPS 1000+ ，Logstash要消耗2G的内存，Cpu开销也有很大的波动）。</p>
+  </li>
+  <li>
+    <p>市面上与Logstash同类的开源项目有Flume、Heka、Fluentd、Graylog、Logkafka，以及各种Syslog和Collecter。不仅开源世界百花齐放，几乎每家云计算服务提供商还都提供日志采集、传输和搜索服务。</p>
+  </li>
+  <li>
+    <p>简单总结一下这些开源项目或多或少存在的一些问题：</p>
+  </li>
+</ul>
+
+<blockquote>
+  <ol>
+    <li>只支持单行Log，无法对Java应用中的ExceptionLog进行有效的采集和解析</li>
+    <li>解析日志不够灵活</li>
+    <li>性能一般</li>
+    <li>不支持Kafka作为输出</li>
+  </ol>
+</blockquote>
+
+<ul>
+  <li>自己造一个轮子要达到什么目标呢？</li>
+</ul>
+
+<blockquote>
+  <ol>
+    <li>代码要少，简单可控</li>
+    <li>性能要好，不能因为采集日志影响了应用的性能</li>
+    <li>支持新版Kafka(0.10+)</li>
+    <li>支持单双行混合模式的应用日志</li>
+    <li>对简单格式的日志可以不用编写正则表达式，根据类似nginx的logformat配置格式，自动生成解析正则,也就是logwatch里的grok功能</li>
+  </ol>
+</blockquote>
+
+<ul>
+  <li>Lua程序优化的心得</li>
+</ul>
+
+<blockquote>
+  <ol>
+    <li>Lua的协程切换开销非常低，封装调度任务非常合适</li>
+    <li>Lua的正则性能非常好，其非贪婪匹配‘(.-)’，可以应用于非常多的解析场景，简单高效,控制好回溯，尽量明确字符类型</li>
+    <li>table要尽量复用，减少创建table和table.insert的过程中resize的开销</li>
+    <li>不要反复做字符串拼接，必要时用table.concat替代</li>
+    <li>尽量使用ipairs，少使用table.foreach</li>
+    <li>尽量不要相信网上传说的Lua优化写法，Luajit已经优化了绝大多数问题了</li>
+    <li>Luajit有profile功能，可以用于测试代码热点</li>
+    <li>程序运行一次很快，运行几亿次再看看性能如何</li>
+  </ol>
+</blockquote>
+
+  </article>
+  
+  
+
+
+
+
+</div>
+
+        </div>
+        <div class="col-second">
+          <div class="col-box col-box-author">
+  <img class="avatar" src="//www.gravatar.com/avatar/your_email_md5?d=mm&s=135" alt="Pei LiPing">
+  <div class="col-box-title name">Pei LiPing</div>
+  <p>The Cabin Of Pei LiPing.</p>
+  <p class="contact">
+    
+    
+    
+    <a href="mailto:peilipingplp@gmail.com">Email</a>
+    
+  </p>
+</div>
+
+<div class="col-box">
+  <div class="col-box-title">Newest Posts</div>
+  <ul class="post-list">
+    
+      <li><a class="post-link" href="/blog/archivers/2016-12-15-logwatch">日志采集工具Logwatch</a></li>
+    
+  </ul>
+</div>
+
+<div class="col-box post-toc hide">
+  <div class="col-box-title">TOC</div>
+</div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+<div class="wrapper">
+&copy; 2016 Pei LiPing
+</div>
+</footer>
+
+<script src="//upcdn.b0.upaiyun.com/libs/jquery/jquery-1.9.0.min.js"></script>
+<script src="/blog/js/easybook.js"></script>
+
+  </body>
+
+</html>

@@ -7,7 +7,7 @@ public: true
 
    Welcome To My New Blog ! (原博客地址 http://0101.pro) 
 
-   从2016年3月1日开始，重新记录我的生活，Good Luck ! 
+   从2016年12月15日开始，重新记录我的生活，Good Luck ! 
 
 ### 自我介绍 ###
 
