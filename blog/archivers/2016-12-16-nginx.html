@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>nginx配置 « Pei LiPing's Blog</title>
+  <meta name="description" content="今年进行了一次Nginx的大面积升级，把Nginx的安装配置方法记录一下。">
+
+  <link rel="stylesheet" href="/blog/css/main.css">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2016-12-16-nginx">
+  <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
+</head>
+
+
+  <body>
+
+    <header class="header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Pei LiPing's Blog</a>
+    <nav class="site-nav">
+      
+        
+      
+        
+        <a class="page-link" href="/blog/about/">About</a>
+        
+      
+        
+        <a class="page-link" href="/blog/category/">Category</a>
+        
+      
+        
+      
+        
+      
+        
+      
+    </nav>
+  </div>
+</header>
+
+    <div class="page-content">
+      <div class="wrapper">
+        <div class="col-main">
+          <div class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">nginx配置</h1>
+    <p class="post-meta">Dec 16, 2016</p>
+  </header>
+
+  <article class="post-content">
+    <p>今年进行了一次Nginx的大面积升级，把Nginx的安装配置方法记录一下。</p>
+
+<h3 id="section">依赖准备</h3>
+
+<ol>
+  <li>
+    <p>下载一个稳定版本的<a href="https://nginx.org/en/download.html">Nginx源码包</a>。</p>
+  </li>
+  <li>
+    <p>因为Nginx一般都是挡在最前面的系统，所以要做一些基本的保护，防止死机，github上有一些开源项目可以集成到Nginx中去，比如nginx-http-sysguard。</p>
+  </li>
+  <li>
+    <p>NginxPlus版本有自定义心跳检查的功能，但是免费版没有提供。为什么要自定义，而不是用默认的upstream心跳检查呢？如果能自定义的话，可以做更加优雅平滑的发布，还可以做引流压测。</p>
+  </li>
+  <li>
+    <p>Nginx默认的监控比较弱，同样丰富的监控都在NginxPlus里提供，只能自己开发了。配套定制一下Tsar，将监控信息记录在Tsar中。</p>
+  </li>
+  <li>
+    <p>现在绝大多数网站都是https了，所以openssl和证书也要准备好。openssl这两年出了好多头条，慎重选择。</p>
+  </li>
+  <li>
+    <p>Nginx编译时依赖的一些包，比如：pcre、zlib、perl-devel、perl-ExtUtils-Embed等</p>
+  </li>
+  <li>
+    <p>Nginx的服务器一般都有外网IP，所以也需要定制一些防火墙策略。</p>
+  </li>
+  <li>
+    <p>为了提高Nginx的吞吐能力需要修改一些系统参数（/etc/sysctl.conf和/etc/security/limits.conf）</p>
+  </li>
+  <li>
+    <p>Nginx日志默认是没有daily-rolling功能的，需要配和其他软件来实现。之前是用cronlog和fifo文件来实现的，这次统一换成logrotate，logrotate相关资料这里就不介绍了。注意不要使用copy模式，nginx的accesslog很大，copy非常消耗性能。下面给一个配置的例子：</p>
+  </li>
+</ol>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>/log/nginx/*.log {
+    daily
+    rotate 1
+    missingok
+    nocompress
+    notifempty
+    dateext
+    postrotate
+    if [ -f /pid/nginx.pid ]; then
+        kill -USR1 `cat /pid/nginx.pid`
+    fi
+    endscript
+}
+</code></pre>
+</div>
+
+<h3 id="section-1">编译安装</h3>
+
+<p>nginx启动一般需要80端口，如果不想用root来启动的话，就需要特殊处理一下</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>src/nginx/configure --prefix=/local/nginx ....
+make -j ${nc} &amp;&amp; make install
+chown -R nginx:nginx /local/nginx
+chown root:nginx /local/nginx/sbin/nginx
+chmod 6755 /local/nginx/sbin/nginx
+</code></pre>
+</div>
+
+<h3 id="nginx">Nginx配置</h3>
+
+<p>nginx的配置实在是太多了，下面只写一些值得注意的配置项</p>
+
+<ol>
+  <li>
+    <p>worker_processes和worker_cpu_affinity 在新版nginx中都可以设置为auto</p>
+  </li>
+  <li>
+    <p>log_format中$upstream_addr最好用引号或者中括号扩起来，因为他的输出不仅仅是一个IP，可能是多个Ip或者upstream的名字或者是中横线</p>
+  </li>
+  <li>
+    <p>merge_slashes合并url中连续出现的两个/，防止url拼接错误导致无法访问</p>
+  </li>
+  <li>
+    <p>proxy_set_header设置要注意，在http、server、location层都能够进行定义，但是并不是merge覆盖的逻辑，官方文档是这样说的，These directives are inherited from the previous level if and only if there are no proxy_set_header directives defined on the current level。</p>
+  </li>
+  <li>
+    <p>proxy_ignore_client_abort默认为off，千万不要轻易开启。可能会导致nginx活跃链接数持续增长，tcp状态close_wait持续增长，只能重启nginx进程才能回收，网上说的修改linux内核参数也无法回收。大致过程是，客户端发起请求，后端的业务服务器无法及时响应该请求等待超时，如果客户端配置了较短的超时，客户端就会主动关闭此连接，当nginx断开与tomcat的proxy连接时，客户端连接早已不存在了，此连接就会挂在nginx上，无法释放。</p>
+  </li>
+  <li>
+    <p>ssl_ciphers设置不当可能导致某些浏览器无法访问，认为网站是不安全的，在IE和Firefox中尤为明显。ssl相关配置有一些<a href="https://mozilla.github.io/server-side-tls/ssl-config-generator/">自动生成器</a>，github上也有一些自动的shell脚本可以参考。</p>
+  </li>
+  <li>
+    <p>简化proxy_pass对应upstream的配置，可以将upstream的名字设置为host的值(proxy_pass http://$host;)，这样很多server的配置就可以复用了。</p>
+  </li>
+  <li>
+    <p>server同时有80和443可以配置成这样：</p>
+  </li>
+</ol>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>listen 80;
+listen 443 ssl;
+</code></pre>
+</div>
+
+
+  </article>
+  
+  
+
+
+
+
+</div>
+
+        </div>
+        <div class="col-second">
+          <div class="col-box col-box-author">
+  <img class="avatar" src="//www.gravatar.com/avatar/your_email_md5?d=mm&s=135" alt="Pei LiPing">
+  <div class="col-box-title name">Pei LiPing</div>
+  <p>The Cabin Of Pei LiPing.</p>
+  <p class="contact">
+    
+    
+    
+    <a href="mailto:peilipingplp@gmail.com">Email</a>
+    
+  </p>
+</div>
+
+<div class="col-box">
+  <div class="col-box-title">Newest Posts</div>
+  <ul class="post-list">
+    
+      <li><a class="post-link" href="/blog/archivers/2016-12-16-nginx">nginx配置</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2016-12-15-logwatch">日志采集工具Logwatch</a></li>
+    
+  </ul>
+</div>
+
+<div class="col-box post-toc hide">
+  <div class="col-box-title">TOC</div>
+</div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+<div class="wrapper">
+&copy; 2016 Pei LiPing
+</div>
+</footer>
+
+<script src="//upcdn.b0.upaiyun.com/libs/jquery/jquery-1.9.0.min.js"></script>
+<script src="/blog/js/easybook.js"></script>
+
+  </body>
+
+</html>

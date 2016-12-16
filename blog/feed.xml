@@ -6,9 +6,119 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Thu, 15 Dec 2016 23:46:52 +0800</pubDate>
-    <lastBuildDate>Thu, 15 Dec 2016 23:46:52 +0800</lastBuildDate>
+    <pubDate>Fri, 16 Dec 2016 16:58:29 +0800</pubDate>
+    <lastBuildDate>Fri, 16 Dec 2016 16:58:29 +0800</lastBuildDate>
     <generator>Jekyll v3.1.2</generator>
+    
+      <item>
+        <title>nginx配置</title>
+        <description>&lt;p&gt;今年进行了一次Nginx的大面积升级，把Nginx的安装配置方法记录一下。&lt;/p&gt;
+
+&lt;h3 id=&quot;section&quot;&gt;依赖准备&lt;/h3&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;
+    &lt;p&gt;下载一个稳定版本的&lt;a href=&quot;https://nginx.org/en/download.html&quot;&gt;Nginx源码包&lt;/a&gt;。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;因为Nginx一般都是挡在最前面的系统，所以要做一些基本的保护，防止死机，github上有一些开源项目可以集成到Nginx中去，比如nginx-http-sysguard。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;NginxPlus版本有自定义心跳检查的功能，但是免费版没有提供。为什么要自定义，而不是用默认的upstream心跳检查呢？如果能自定义的话，可以做更加优雅平滑的发布，还可以做引流压测。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Nginx默认的监控比较弱，同样丰富的监控都在NginxPlus里提供，只能自己开发了。配套定制一下Tsar，将监控信息记录在Tsar中。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;现在绝大多数网站都是https了，所以openssl和证书也要准备好。openssl这两年出了好多头条，慎重选择。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Nginx编译时依赖的一些包，比如：pcre、zlib、perl-devel、perl-ExtUtils-Embed等&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Nginx的服务器一般都有外网IP，所以也需要定制一些防火墙策略。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;为了提高Nginx的吞吐能力需要修改一些系统参数（/etc/sysctl.conf和/etc/security/limits.conf）&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;Nginx日志默认是没有daily-rolling功能的，需要配和其他软件来实现。之前是用cronlog和fifo文件来实现的，这次统一换成logrotate，logrotate相关资料这里就不介绍了。注意不要使用copy模式，nginx的accesslog很大，copy非常消耗性能。下面给一个配置的例子：&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;/log/nginx/*.log {
+    daily
+    rotate 1
+    missingok
+    nocompress
+    notifempty
+    dateext
+    postrotate
+    if [ -f /pid/nginx.pid ]; then
+        kill -USR1 `cat /pid/nginx.pid`
+    fi
+    endscript
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h3 id=&quot;section-1&quot;&gt;编译安装&lt;/h3&gt;
+
+&lt;p&gt;nginx启动一般需要80端口，如果不想用root来启动的话，就需要特殊处理一下&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;src/nginx/configure --prefix=/local/nginx ....
+make -j ${nc} &amp;amp;&amp;amp; make install
+chown -R nginx:nginx /local/nginx
+chown root:nginx /local/nginx/sbin/nginx
+chmod 6755 /local/nginx/sbin/nginx
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h3 id=&quot;nginx&quot;&gt;Nginx配置&lt;/h3&gt;
+
+&lt;p&gt;nginx的配置实在是太多了，下面只写一些值得注意的配置项&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;
+    &lt;p&gt;worker_processes和worker_cpu_affinity 在新版nginx中都可以设置为auto&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;log_format中$upstream_addr最好用引号或者中括号扩起来，因为他的输出不仅仅是一个IP，可能是多个Ip或者upstream的名字或者是中横线&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;merge_slashes合并url中连续出现的两个/，防止url拼接错误导致无法访问&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;proxy_set_header设置要注意，在http、server、location层都能够进行定义，但是并不是merge覆盖的逻辑，官方文档是这样说的，These directives are inherited from the previous level if and only if there are no proxy_set_header directives defined on the current level。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;proxy_ignore_client_abort默认为off，千万不要轻易开启。可能会导致nginx活跃链接数持续增长，tcp状态close_wait持续增长，只能重启nginx进程才能回收，网上说的修改linux内核参数也无法回收。大致过程是，客户端发起请求，后端的业务服务器无法及时响应该请求等待超时，如果客户端配置了较短的超时，客户端就会主动关闭此连接，当nginx断开与tomcat的proxy连接时，客户端连接早已不存在了，此连接就会挂在nginx上，无法释放。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;ssl_ciphers设置不当可能导致某些浏览器无法访问，认为网站是不安全的，在IE和Firefox中尤为明显。ssl相关配置有一些&lt;a href=&quot;https://mozilla.github.io/server-side-tls/ssl-config-generator/&quot;&gt;自动生成器&lt;/a&gt;，github上也有一些自动的shell脚本可以参考。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;简化proxy_pass对应upstream的配置，可以将upstream的名字设置为host的值(proxy_pass http://$host;)，这样很多server的配置就可以复用了。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;server同时有80和443可以配置成这样：&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;listen 80;
+listen 443 ssl;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+</description>
+        <pubDate>Fri, 16 Dec 2016 14:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2016-12-16-nginx</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2016-12-16-nginx</guid>
+        
+        
+        <category>nginx</category>
+        
+      </item>
     
       <item>
         <title>日志采集工具Logwatch</title>
