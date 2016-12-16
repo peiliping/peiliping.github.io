@@ -6,12 +6,12 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Fri, 16 Dec 2016 16:58:29 +0800</pubDate>
-    <lastBuildDate>Fri, 16 Dec 2016 16:58:29 +0800</lastBuildDate>
+    <pubDate>Fri, 16 Dec 2016 17:04:01 +0800</pubDate>
+    <lastBuildDate>Fri, 16 Dec 2016 17:04:01 +0800</lastBuildDate>
     <generator>Jekyll v3.1.2</generator>
     
       <item>
-        <title>nginx配置</title>
+        <title>Nginx配置</title>
         <description>&lt;p&gt;今年进行了一次Nginx的大面积升级，把Nginx的安装配置方法记录一下。&lt;/p&gt;
 
 &lt;h3 id=&quot;section&quot;&gt;依赖准备&lt;/h3&gt;
@@ -42,7 +42,7 @@
     &lt;p&gt;为了提高Nginx的吞吐能力需要修改一些系统参数（/etc/sysctl.conf和/etc/security/limits.conf）&lt;/p&gt;
   &lt;/li&gt;
   &lt;li&gt;
-    &lt;p&gt;Nginx日志默认是没有daily-rolling功能的，需要配和其他软件来实现。之前是用cronlog和fifo文件来实现的，这次统一换成logrotate，logrotate相关资料这里就不介绍了。注意不要使用copy模式，nginx的accesslog很大，copy非常消耗性能。下面给一个配置的例子：&lt;/p&gt;
+    &lt;p&gt;Nginx日志默认是没有daily-rolling功能的，需要配和其他软件来实现。之前是用cronlog和fifo文件来实现的，这次统一换成logrotate，logrotate相关资料这里就不介绍了。注意不要使用copy模式，Nginx的accesslog很大，copy非常消耗性能。下面给一个配置的例子：&lt;/p&gt;
   &lt;/li&gt;
 &lt;/ol&gt;
 
@@ -64,7 +64,7 @@
 
 &lt;h3 id=&quot;section-1&quot;&gt;编译安装&lt;/h3&gt;
 
-&lt;p&gt;nginx启动一般需要80端口，如果不想用root来启动的话，就需要特殊处理一下&lt;/p&gt;
+&lt;p&gt;Nginx启动一般需要80端口，如果不想用root来启动的话，就需要特殊处理一下&lt;/p&gt;
 
 &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;src/nginx/configure --prefix=/local/nginx ....
 make -j ${nc} &amp;amp;&amp;amp; make install
@@ -76,7 +76,7 @@ chmod 6755 /local/nginx/sbin/nginx
 
 &lt;h3 id=&quot;nginx&quot;&gt;Nginx配置&lt;/h3&gt;
 
-&lt;p&gt;nginx的配置实在是太多了，下面只写一些值得注意的配置项&lt;/p&gt;
+&lt;p&gt;Nginx的配置实在是太多了，下面只写一些值得注意的配置项&lt;/p&gt;
 
 &lt;ol&gt;
   &lt;li&gt;
@@ -92,7 +92,7 @@ chmod 6755 /local/nginx/sbin/nginx
     &lt;p&gt;proxy_set_header设置要注意，在http、server、location层都能够进行定义，但是并不是merge覆盖的逻辑，官方文档是这样说的，These directives are inherited from the previous level if and only if there are no proxy_set_header directives defined on the current level。&lt;/p&gt;
   &lt;/li&gt;
   &lt;li&gt;
-    &lt;p&gt;proxy_ignore_client_abort默认为off，千万不要轻易开启。可能会导致nginx活跃链接数持续增长，tcp状态close_wait持续增长，只能重启nginx进程才能回收，网上说的修改linux内核参数也无法回收。大致过程是，客户端发起请求，后端的业务服务器无法及时响应该请求等待超时，如果客户端配置了较短的超时，客户端就会主动关闭此连接，当nginx断开与tomcat的proxy连接时，客户端连接早已不存在了，此连接就会挂在nginx上，无法释放。&lt;/p&gt;
+    &lt;p&gt;proxy_ignore_client_abort默认为off，千万不要轻易开启。可能会导致Nginx活跃链接数持续增长，tcp状态close_wait持续增长，只能重启Nginx进程才能回收，网上说的修改linux内核参数也无法回收。大致过程是，客户端发起请求，后端的业务服务器无法及时响应该请求等待超时，如果客户端配置了较短的超时，客户端就会主动关闭此连接，当Nginx断开与tomcat的proxy连接时，客户端连接早已不存在了，此连接就会挂在Nginx上，无法释放。&lt;/p&gt;
   &lt;/li&gt;
   &lt;li&gt;
     &lt;p&gt;ssl_ciphers设置不当可能导致某些浏览器无法访问，认为网站是不安全的，在IE和Firefox中尤为明显。ssl相关配置有一些&lt;a href=&quot;https://mozilla.github.io/server-side-tls/ssl-config-generator/&quot;&gt;自动生成器&lt;/a&gt;，github上也有一些自动的shell脚本可以参考。&lt;/p&gt;

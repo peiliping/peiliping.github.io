@@ -6,7 +6,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>nginx配置 « Pei LiPing's Blog</title>
+  <title>Nginx配置 « Pei LiPing's Blog</title>
   <meta name="description" content="今年进行了一次Nginx的大面积升级，把Nginx的安装配置方法记录一下。">
 
   <link rel="stylesheet" href="/blog/css/main.css">
@@ -48,7 +48,7 @@
           <div class="post">
 
   <header class="post-header">
-    <h1 class="post-title">nginx配置</h1>
+    <h1 class="post-title">Nginx配置</h1>
     <p class="post-meta">Dec 16, 2016</p>
   </header>
 
@@ -83,7 +83,7 @@
     <p>为了提高Nginx的吞吐能力需要修改一些系统参数（/etc/sysctl.conf和/etc/security/limits.conf）</p>
   </li>
   <li>
-    <p>Nginx日志默认是没有daily-rolling功能的，需要配和其他软件来实现。之前是用cronlog和fifo文件来实现的，这次统一换成logrotate，logrotate相关资料这里就不介绍了。注意不要使用copy模式，nginx的accesslog很大，copy非常消耗性能。下面给一个配置的例子：</p>
+    <p>Nginx日志默认是没有daily-rolling功能的，需要配和其他软件来实现。之前是用cronlog和fifo文件来实现的，这次统一换成logrotate，logrotate相关资料这里就不介绍了。注意不要使用copy模式，Nginx的accesslog很大，copy非常消耗性能。下面给一个配置的例子：</p>
   </li>
 </ol>
 
@@ -105,7 +105,7 @@
 
 <h3 id="section-1">编译安装</h3>
 
-<p>nginx启动一般需要80端口，如果不想用root来启动的话，就需要特殊处理一下</p>
+<p>Nginx启动一般需要80端口，如果不想用root来启动的话，就需要特殊处理一下</p>
 
 <div class="highlighter-rouge"><pre class="highlight"><code>src/nginx/configure --prefix=/local/nginx ....
 make -j ${nc} &amp;&amp; make install
@@ -117,7 +117,7 @@ chmod 6755 /local/nginx/sbin/nginx
 
 <h3 id="nginx">Nginx配置</h3>
 
-<p>nginx的配置实在是太多了，下面只写一些值得注意的配置项</p>
+<p>Nginx的配置实在是太多了，下面只写一些值得注意的配置项</p>
 
 <ol>
   <li>
@@ -133,7 +133,7 @@ chmod 6755 /local/nginx/sbin/nginx
     <p>proxy_set_header设置要注意，在http、server、location层都能够进行定义，但是并不是merge覆盖的逻辑，官方文档是这样说的，These directives are inherited from the previous level if and only if there are no proxy_set_header directives defined on the current level。</p>
   </li>
   <li>
-    <p>proxy_ignore_client_abort默认为off，千万不要轻易开启。可能会导致nginx活跃链接数持续增长，tcp状态close_wait持续增长，只能重启nginx进程才能回收，网上说的修改linux内核参数也无法回收。大致过程是，客户端发起请求，后端的业务服务器无法及时响应该请求等待超时，如果客户端配置了较短的超时，客户端就会主动关闭此连接，当nginx断开与tomcat的proxy连接时，客户端连接早已不存在了，此连接就会挂在nginx上，无法释放。</p>
+    <p>proxy_ignore_client_abort默认为off，千万不要轻易开启。可能会导致Nginx活跃链接数持续增长，tcp状态close_wait持续增长，只能重启Nginx进程才能回收，网上说的修改linux内核参数也无法回收。大致过程是，客户端发起请求，后端的业务服务器无法及时响应该请求等待超时，如果客户端配置了较短的超时，客户端就会主动关闭此连接，当Nginx断开与tomcat的proxy连接时，客户端连接早已不存在了，此连接就会挂在Nginx上，无法释放。</p>
   </li>
   <li>
     <p>ssl_ciphers设置不当可能导致某些浏览器无法访问，认为网站是不安全的，在IE和Firefox中尤为明显。ssl相关配置有一些<a href="https://mozilla.github.io/server-side-tls/ssl-config-generator/">自动生成器</a>，github上也有一些自动的shell脚本可以参考。</p>
@@ -180,7 +180,7 @@ listen 443 ssl;
   <div class="col-box-title">Newest Posts</div>
   <ul class="post-list">
     
-      <li><a class="post-link" href="/blog/archivers/2016-12-16-nginx">nginx配置</a></li>
+      <li><a class="post-link" href="/blog/archivers/2016-12-16-nginx">Nginx配置</a></li>
     
       <li><a class="post-link" href="/blog/archivers/2016-12-15-logwatch">日志采集工具Logwatch</a></li>
     
