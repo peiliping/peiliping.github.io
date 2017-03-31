@@ -6,8 +6,8 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Fri, 31 Mar 2017 11:07:05 +0800</pubDate>
-    <lastBuildDate>Fri, 31 Mar 2017 11:07:05 +0800</lastBuildDate>
+    <pubDate>Fri, 31 Mar 2017 11:15:12 +0800</pubDate>
+    <lastBuildDate>Fri, 31 Mar 2017 11:15:12 +0800</lastBuildDate>
     <generator>Jekyll v3.1.2</generator>
     
       <item>
@@ -44,6 +44,9 @@
   &lt;/li&gt;
   &lt;li&gt;
     &lt;p&gt;shell下执行jmc，启动图形化客户端，导入jfr文件，就可以看到cpu、gc、线程、io、代码热点等监控信息了&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;如果需要定制化jfr抓取的指标，可以修改setting的xml文件，/…./JDK/jdk1.8.0_51/jre/lib/jfr/&lt;/p&gt;
   &lt;/li&gt;
 &lt;/ol&gt;
 </description>
