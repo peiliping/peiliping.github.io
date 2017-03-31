@@ -6,8 +6,8 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Fri, 31 Mar 2017 11:03:14 +0800</pubDate>
-    <lastBuildDate>Fri, 31 Mar 2017 11:03:14 +0800</lastBuildDate>
+    <pubDate>Fri, 31 Mar 2017 11:07:05 +0800</pubDate>
+    <lastBuildDate>Fri, 31 Mar 2017 11:07:05 +0800</lastBuildDate>
     <generator>Jekyll v3.1.2</generator>
     
       <item>
@@ -28,16 +28,16 @@
 
 &lt;ol&gt;
   &lt;li&gt;
-    &lt;p&gt;jcmd &lt;pid&gt; VM.unlock_commercial_features&lt;/pid&gt;&lt;/p&gt;
+    &lt;p&gt;jcmd pid VM.unlock_commercial_features&lt;/p&gt;
   &lt;/li&gt;
   &lt;li&gt;
-    &lt;p&gt;jcmd &lt;pid&gt; JFR.start duration=60s filename=/home/peiliping/dev/logs/test.jfr settings=[default,profile]&lt;/pid&gt;&lt;/p&gt;
+    &lt;p&gt;jcmd pid JFR.start duration=60s filename=/home/peiliping/dev/logs/test.jfr settings=[default,profile]&lt;/p&gt;
   &lt;/li&gt;
   &lt;li&gt;
-    &lt;p&gt;jcmd &lt;pid&gt; JFR.check 检查当前运行状况&lt;/pid&gt;&lt;/p&gt;
+    &lt;p&gt;jcmd pid JFR.check 检查当前运行状况&lt;/p&gt;
   &lt;/li&gt;
   &lt;li&gt;
-    &lt;p&gt;jcmd &lt;pid&gt; JFR.stop name=&lt;rname&gt; 或者 jcmd 5007 JFR.stop recording=&lt;rid&gt; name和rid的值参见check的结果&lt;/rid&gt;&lt;/rname&gt;&lt;/pid&gt;&lt;/p&gt;
+    &lt;p&gt;jcmd pid JFR.stop name=test.jfr 或者 jcmd pid JFR.stop recording=3 name和recording的值参见check的结果&lt;/p&gt;
   &lt;/li&gt;
   &lt;li&gt;
     &lt;p&gt;将生成的jfr文件传回到自己的电脑中&lt;/p&gt;

@@ -69,16 +69,16 @@
 
 <ol>
   <li>
-    <p>jcmd <pid> VM.unlock_commercial_features</pid></p>
+    <p>jcmd pid VM.unlock_commercial_features</p>
   </li>
   <li>
-    <p>jcmd <pid> JFR.start duration=60s filename=/home/peiliping/dev/logs/test.jfr settings=[default,profile]</pid></p>
+    <p>jcmd pid JFR.start duration=60s filename=/home/peiliping/dev/logs/test.jfr settings=[default,profile]</p>
   </li>
   <li>
-    <p>jcmd <pid> JFR.check 检查当前运行状况</pid></p>
+    <p>jcmd pid JFR.check 检查当前运行状况</p>
   </li>
   <li>
-    <p>jcmd <pid> JFR.stop name=<rname> 或者 jcmd 5007 JFR.stop recording=<rid> name和rid的值参见check的结果</rid></rname></pid></p>
+    <p>jcmd pid JFR.stop name=test.jfr 或者 jcmd pid JFR.stop recording=3 name和recording的值参见check的结果</p>
   </li>
   <li>
     <p>将生成的jfr文件传回到自己的电脑中</p>
