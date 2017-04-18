@@ -6,12 +6,11 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>Page Not Found « Pei LiPing's Blog</title>
-  <meta name="description" content="Augur
-">
+  <title>Meepo « Pei LiPing's Blog</title>
+  <meta name="description" content="Meepo最开始是为了Mysql到Mysql的数据迁移开发的，今年年初对其进行了重构。">
 
   <link rel="stylesheet" href="/blog/css/main.css">
-  <link rel="canonical" href="http://peiliping.github.io/blog/404.html">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2017-04-18-meepo">
   <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
 </head>
 
@@ -49,15 +48,47 @@
           <div class="post">
 
   <header class="post-header">
-    <h1 class="post-title">Page Not Found</h1>
+    <h1 class="post-title">Meepo</h1>
+    <p class="post-meta">Apr 18, 2017</p>
   </header>
 
   <article class="post-content">
-    <p>Seems disappeared :(</p>
+    <p>Meepo最开始是为了Mysql到Mysql的数据迁移开发的，今年年初对其进行了重构。</p>
+
+<p>目前可以基本替代Sqoop完成每天凌晨将Mysql数据拷贝到HDFS上的需求，数据格式为Parquet+Snappy。</p>
+
+<p>并且Meepo还提供了AVSC文件，方便Hive更新表结构（TBLPROPERTIES (‘avro.schema.url’=’hdfs://onlinecluster/xxxxxxxxxx)）。</p>
+
+<p>Meepo的Mysql数据表迁移功能也优化了很多：</p>
+
+<ol>
+  <li>
+    <p>支持基本字段类型的自动匹配转化</p>
+  </li>
+  <li>
+    <p>自动识别表结构和主键</p>
+  </li>
+  <li>
+    <p>支持同时使用N个Plugin</p>
+  </li>
+  <li>
+    <p>提供了ReplacePlugin，用于系统升级中常见的表字段值替换需求（查另外一张表，来决定替换成什么值）</p>
+  </li>
+</ol>
+
+<p>这次重构中，还引入了Disruptor的Ringbuffer，作为数据缓冲区。</p>
+
+<p>Ringbuffer强制了对象复用，大幅度减少了GC的频率，使得Meepo可以用更小的JVM来完成任务，性能也有一定的提升。</p>
+
+<p>在我们的测试中，Meepo的吞吐能力一直在每秒6W行以上，极限可以达到每秒15W。</p>
+
+<p>这次重构后的测试中，也找到了更多应该暴露的Metric指标，方便对Meepo进行调优。</p>
 
   </article>
-
   
+  
+
+
 
 
 </div>
