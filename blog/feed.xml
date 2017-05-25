@@ -6,9 +6,166 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Tue, 18 Apr 2017 09:51:48 +0800</pubDate>
-    <lastBuildDate>Tue, 18 Apr 2017 09:51:48 +0800</lastBuildDate>
+    <pubDate>Thu, 25 May 2017 19:33:38 +0800</pubDate>
+    <lastBuildDate>Thu, 25 May 2017 19:33:38 +0800</lastBuildDate>
     <generator>Jekyll v3.1.2</generator>
+    
+      <item>
+        <title>批量写入Mysql</title>
+        <description>&lt;p&gt;Mysql是最常用的一种关系型数据库，随着各种ORM框架的演进，操作数据库也越来越简单。&lt;/p&gt;
+
+&lt;p&gt;当你碰到一些极端需求时，还是要在JDBC这个层面上来操作数据库。&lt;/p&gt;
+
+&lt;p&gt;今里就介绍一下，在批量写Mysql时碰到的问题。&lt;/p&gt;
+
+&lt;h3 id=&quot;section&quot;&gt;真正的批量写&lt;/h3&gt;
+
+&lt;p&gt;使用JDBC来完成批量Mysql写入的一般方法是:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;this.connection.setAutoCommit(false);
+
+this.preparedStatement = this.connection.prepareStatement(this.sql);
+for (int i = 0; i &amp;lt; this.schema.size(); i++) {
+    this.preparedStatement.setObject(i + 1, data[i], this.schema.get(i));
+}
+this.preparedStatement.addBatch();
+
+...N次
+
+this.preparedStatement.executeBatch();
+this.connection.commit();
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;当你写完这段代码之后，测试性能会发现，并没有什么提升。因为实际上还是一条条发送执行的。&lt;/p&gt;
+
+&lt;p&gt;当你为DatasourceUrl添加了参数rewriteBatchedStatements=true，才会真正生效。&lt;/p&gt;
+
+&lt;p&gt;具体原因可以自行搜索这个参数，网上有很多文章介绍。&lt;/p&gt;
+
+&lt;p&gt;改了参数，性能提升三五倍是很轻松的，具体能提升多少要看实际的情况。&lt;/p&gt;
+
+&lt;h3 id=&quot;section-1&quot;&gt;选择好数据库的伴侣——数据源连接池&lt;/h3&gt;
+
+&lt;p&gt;开源的数据源连接池非常多，c3p0、druid、Proxool、BoneCP、HikariCP等等。&lt;/p&gt;
+
+&lt;p&gt;比较常用的是阿里开源的Druid，性能不是特别突出，但是综合表现不错。&lt;/p&gt;
+
+&lt;p&gt;HikariCP也是性能表现很抢眼的选手。&lt;/p&gt;
+
+&lt;h3 id=&quot;section-2&quot;&gt;缓冲区&lt;/h3&gt;
+
+&lt;p&gt;涉及到批量写入数据库就意味着可能和缓冲区打交道了。&lt;/p&gt;
+
+&lt;p&gt;攒够一个批量（100条），但是也不能无限期的等，需要一个超时时间（15秒）。&lt;/p&gt;
+
+&lt;p&gt;缓冲区可以用框架来实现，比如Disruptor的Ringbuffer无锁队列就可以满足这两个要求。&lt;/p&gt;
+
+&lt;p&gt;Ringbuffer的具体使用方法这里就不介绍了，初次上手会有一些难度。&lt;/p&gt;
+
+&lt;p&gt;Ringbuffer强制了数据对象的复用，来减少JVM GC的次数，对性能的提升非常有帮助。&lt;/p&gt;
+
+&lt;h3 id=&quot;section-3&quot;&gt;线程数和批量大小&lt;/h3&gt;
+
+&lt;p&gt;加大处理数据的线程数也是一个提升处理速度的方法，当然也不能一直加大线程数，&lt;/p&gt;
+
+&lt;p&gt;根据测试批量写的线程数不要超过Mysql的Cpu核数+1。&lt;/p&gt;
+
+&lt;p&gt;批量条数要根据单行数据的大小决定，一般1000条左右。&lt;/p&gt;
+
+&lt;h3 id=&quot;mysql&quot;&gt;Mysql性能优化&lt;/h3&gt;
+
+&lt;p&gt;Mysql的性能优化去参考网上的文章，这里就不详细介绍了。&lt;/p&gt;
+
+&lt;p&gt;大多是关闭一些log，提高一些buffer，改变filesync的方式等。&lt;/p&gt;
+
+&lt;p&gt;表上的索引是很影响写入性能的，尽量保证索引精简。&lt;/p&gt;
+
+&lt;h3 id=&quot;jdbc&quot;&gt;JDBC优化&lt;/h3&gt;
+
+&lt;p&gt;根据前面的优化过后，使用JFR对你的程序做一下热点代码分析，就会发现JDBC的问题了。&lt;/p&gt;
+
+&lt;p&gt;如果你仔细阅读过Java的MysqlConnector的代码就会发现，可以改造的地方还是挺多的。&lt;/p&gt;
+
+&lt;p&gt;下面举几个例子：&lt;/p&gt;
+
+&lt;p&gt;1、批量数据的暂存容器&lt;/p&gt;
+
+&lt;p&gt;你提交到preparestatment中的数据，会暂时存到一个ArrayList中。&lt;/p&gt;
+
+&lt;p&gt;在大批量数据处理时Arraylist就是一个优化点。跟HashMap一样，它也会涉及到resize的过程。&lt;/p&gt;
+
+&lt;p&gt;在你初始化一个preparestatment的时候，根据你的批量大小，对其进行capacity的初始化，会带来不小的性能提升。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;this.batchArgsField = StatementImpl.class.getDeclaredField(&quot;batchedArgs&quot;);
+this.batchArgsField.setAccessible(true);
+...
+this.batchArgsField.set((StatementImpl) ((DruidPooledPreparedStatement) this.preparedStatement).getStatement(), new ArrayList&amp;lt;Object&amp;gt;(stepSize));
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;2、日期格式化&lt;/p&gt;
+
+&lt;p&gt;一般数据库表都会有一些日期类型的字段，比如创建时间、更新时间等。&lt;/p&gt;
+
+&lt;p&gt;Java中的日期类型处理性能一直都不是很高，比如SimpleDateFormat就是一个关键点。&lt;/p&gt;
+
+&lt;p&gt;代码详见com.mysql.jdbc.PreparedStatement.class.getDeclaredField(“tsdf”)，这里就不细说了。&lt;/p&gt;
+
+&lt;p&gt;如果你的表字段日期类型比较多，可以考虑替换掉SimpleDateFormat的实现。&lt;/p&gt;
+
+&lt;p&gt;比如用Calender的接口，通过字符串拼接的方式完成日期数据的格式化。性能也是会有一定的提升的。&lt;/p&gt;
+
+&lt;p&gt;3、失败重试&lt;/p&gt;
+
+&lt;p&gt;一个完善的数据处理流程，必然要考虑很多异常场景。比如网络闪断，数据库重启等等。&lt;/p&gt;
+
+&lt;p&gt;如果在请求失败后重试呢？一般性的做法就是记录下批量写入的每一个参数，重新写入再执行一边。&lt;/p&gt;
+
+&lt;p&gt;前面基于ringbuffer做了数据对象的复用，目的是减少gc，这里为了失败重试，再次引入重复对象是很难接受的。&lt;/p&gt;
+
+&lt;p&gt;而且statement.setObject过程就是一个java对象序列化成byte的过程，重复执行也很浪费。&lt;/p&gt;
+
+&lt;p&gt;最简单的办法就是利用前面初始化好的batchArgs，实际上他里面就记录了你写入的每一行数据。&lt;/p&gt;
+
+&lt;p&gt;只要把它拷贝出来，写入新的preparestatement中，就可以再次执行了。&lt;/p&gt;
+
+&lt;p&gt;注意executeBatch()一定不能丢掉&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;List&amp;lt;Object&amp;gt; batchParams = ((JDBC4PreparedStatement) ((DruidPooledPreparedStatement) this.preparedStatement).getStatement()).getBatchedArgs();
+Connection tc = this.dataSource.getConnection();
+tc.setAutoCommit(false);
+PreparedStatement tp = tc.prepareStatement(this.sql);
+StatementImpl target = (StatementImpl) ((DruidPooledPreparedStatement) tp).getStatement();
+List&amp;lt;Object&amp;gt; newParams = new ArrayList&amp;lt;&amp;gt;(batchParams);
+this.batchArgsField.set(target, newParams);
+tp.executeBatch();
+tc.commit();
+tp.close();
+tc.close();
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;经过这些优化，我的程序（8G的JVM）可以每秒向Mysql写入十几万行数据（无索引的情况）。&lt;/p&gt;
+
+</description>
+        <pubDate>Thu, 25 May 2017 16:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2017-05-25-batch2mysql</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2017-05-25-batch2mysql</guid>
+        
+        
+        <category>java</category>
+        
+        <category>mysql</category>
+        
+        <category>batch</category>
+        
+        <category>ringbuffer</category>
+        
+        <category>jdbc</category>
+        
+      </item>
     
       <item>
         <title>Meepo</title>
