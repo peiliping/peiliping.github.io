@@ -6,8 +6,8 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Fri, 26 May 2017 13:17:22 +0800</pubDate>
-    <lastBuildDate>Fri, 26 May 2017 13:17:22 +0800</lastBuildDate>
+    <pubDate>Fri, 26 May 2017 13:24:48 +0800</pubDate>
+    <lastBuildDate>Fri, 26 May 2017 13:24:48 +0800</lastBuildDate>
     <generator>Jekyll v3.1.2</generator>
     
       <item>
@@ -229,7 +229,7 @@ autoReconnectForPools=true
 &lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 
-&lt;p&gt;经过这些优化，Meepo可以每秒可以从Mysql中读取十几万的数据，并写入到一个无索引的新表中。&lt;/p&gt;
+&lt;p&gt;经过这些优化，Meepo可以每秒从Mysql中读取十几万的数据，并写入到一个无索引的新表中。&lt;/p&gt;
 
 &lt;p&gt;8G的JVM，YGC每8-10秒发生一次，Mysql的Cpu会被压满。&lt;/p&gt;
 </description>

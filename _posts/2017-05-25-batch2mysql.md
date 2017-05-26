@@ -223,6 +223,6 @@ autoReconnect=true
 autoReconnectForPools=true
 ```
 
-经过这些优化，Meepo可以每秒可以从Mysql中读取十几万的数据，并写入到一个无索引的新表中。
+经过这些优化，Meepo可以每秒从Mysql中读取十几万的数据，并写入到一个无索引的新表中。
 
 8G的JVM，YGC每8-10秒发生一次，Mysql的Cpu会被压满。
