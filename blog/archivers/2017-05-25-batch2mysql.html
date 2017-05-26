@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <title>批量写入Mysql « Pei LiPing's Blog</title>
-  <meta name="description" content="Mysql是最常用的一种关系型数据库，随着各种ORM框架的演进，操作数据库也越来越简单。">
+  <meta name="description" content="Mysql是最常用的一种关系型数据库，随着各种ORM框架的演进，操作数据库也变得越来越简单。">
 
   <link rel="stylesheet" href="/blog/css/main.css">
   <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2017-05-25-batch2mysql">
@@ -53,11 +53,13 @@
   </header>
 
   <article class="post-content">
-    <p>Mysql是最常用的一种关系型数据库，随着各种ORM框架的演进，操作数据库也越来越简单。</p>
+    <p>Mysql是最常用的一种关系型数据库，随着各种ORM框架的演进，操作数据库也变得越来越简单。</p>
 
-<p>当你碰到一些极端需求时，还是要在JDBC这个层面上来操作数据库。</p>
+<p>但是，当你碰到一些极端需求时，还是要回到JDBC这个层面上来操作。</p>
 
-<p>今里就介绍一下，在批量写Mysql时碰到的问题。</p>
+<p>上篇博客介绍了Meepo这个数据迁移工具，其中就涉及到大量的Mysql写入操作。</p>
+
+<p>下面介绍一下，我在批量写Mysql时碰到的一些问题。</p>
 
 <h3 id="section">真正的批量写</h3>
 
@@ -78,65 +80,75 @@ this.connection.commit();
 </code></pre>
 </div>
 
-<p>当你写完这段代码之后，测试性能会发现，并没有什么提升。因为实际上还是一条条发送执行的。</p>
+<p>当你写完这段代码，测试性能就会发现，与单条Insert相比，并没有什么提升。</p>
 
-<p>当你为DatasourceUrl添加了参数rewriteBatchedStatements=true，才会真正生效。</p>
+<p>因为，JDBC实际上仍是以行为单位，发送和执行写入操作的，Batch是假的。</p>
 
-<p>具体原因可以自行搜索这个参数，网上有很多文章介绍。</p>
+<p>当你为Datasource的Url添加了参数rewriteBatchedStatements=true，才会真正批量执行。</p>
 
-<p>改了参数，性能提升三五倍是很轻松的，具体能提升多少要看实际的情况。</p>
+<p>具体原因可以自行搜索这个参数，网上有很多文章介绍，性能可以提升三五倍。</p>
 
 <h3 id="section-1">选择好数据库的伴侣——数据源连接池</h3>
 
-<p>开源的数据源连接池非常多，c3p0、druid、Proxool、BoneCP、HikariCP等等。</p>
+<p>开源的数据源连接池非常多，比如C3P0、Druid、Proxool、BoneCP、HikariCP…</p>
 
-<p>比较常用的是阿里开源的Druid，性能不是特别突出，但是综合表现不错。</p>
+<p>比较常用的是阿里开源的Druid，综合表现不错。HikariCP也是不错的选择。</p>
 
-<p>HikariCP也是性能表现很抢眼的选手。</p>
+<p>HikariCP和Druid的作者在Github上有一段关于性能测试的争论也可以看看。</p>
 
 <h3 id="section-2">缓冲区</h3>
 
-<p>涉及到批量写入数据库就意味着可能和缓冲区打交道了。</p>
+<p>涉及到批量操作，就意味着要和缓冲区打交道了，你可能会想到数组、队列、栈等等。</p>
 
-<p>攒够一个批量（100条），但是也不能无限期的等，需要一个超时时间（15秒）。</p>
+<p>一般来说批量写入的缓冲区有这么几个要求：</p>
 
-<p>缓冲区可以用框架来实现，比如Disruptor的Ringbuffer无锁队列就可以满足这两个要求。</p>
+<p>1、容量空间可控，比如1024条，写满的时候可以阻塞住。</p>
 
-<p>Ringbuffer的具体使用方法这里就不介绍了，初次上手会有一些难度。</p>
+<p>2、有超时机制，不要无限期等待。</p>
 
-<p>Ringbuffer强制了数据对象的复用，来减少JVM GC的次数，对性能的提升非常有帮助。</p>
+<p>3、性能好，最好是无锁的。</p>
+
+<p>Disruptor的Ringbuffer可以满足上面的这些需求，只是初次上手会有一些难度。</p>
+
+<p>Ringbuffer强制了数据对象的复用，可以减少JVM GC的次数，对性能的提升非常有帮助。</p>
+
+<p>Ringbuffer的具体使用方法这里就不介绍了，网上有很多文章和例子。</p>
 
 <h3 id="section-3">线程数和批量大小</h3>
 
-<p>加大处理数据的线程数也是一个提升处理速度的方法，当然也不能一直加大线程数，</p>
+<p>适当的加大并行度和批量大小，是可以提高消费速度的。</p>
 
 <p>根据测试批量写的线程数不要超过Mysql的Cpu核数+1。</p>
 
-<p>批量条数要根据单行数据的大小决定，一般1000条左右。</p>
+<p>批量的条数由单行数据大小决定，一般1000条左右。</p>
 
 <h3 id="mysql">Mysql性能优化</h3>
 
-<p>Mysql的性能优化去参考网上的文章，这里就不详细介绍了。</p>
+<p>Mysql性能优化，参考网上的文章，这里就不详细介绍了。</p>
 
 <p>大多是关闭一些log，提高一些buffer，改变filesync的方式等。</p>
 
-<p>表上的索引是很影响写入性能的，尽量保证索引精简。</p>
+<p>我们是使用阿里云的RDS进行的测试，几乎不用什么调整，性能就很不错了。</p>
+
+<p>需要注意表上的索引个数，索引是很影响写入性能的，尽量保证索引精简。</p>
 
 <h3 id="jdbc">JDBC优化</h3>
 
-<p>根据前面的优化过后，使用JFR对你的程序做一下热点代码分析，就会发现JDBC的问题了。</p>
+<p>经过前面的优化后，再使用JFR对你的程序做一下热点代码的分析，就会发现集中在JDBC的代码上了。</p>
 
-<p>如果你仔细阅读过Java的MysqlConnector的代码就会发现，可以改造的地方还是挺多的。</p>
+<p>仔细阅读MysqlConnector的代码就会发现，可以改造的地方还是挺多的。</p>
 
 <p>下面举几个例子：</p>
 
 <p>1、批量数据的暂存容器</p>
 
-<p>你提交到preparestatment中的数据，会暂时存到一个ArrayList中。</p>
+<p>提交到Preparestatment中的数据，会暂时存到一个ArrayList中。</p>
 
-<p>在大批量数据处理时Arraylist就是一个优化点。跟HashMap一样，它也会涉及到resize的过程。</p>
+<p>ArrayList跟HashMap一样，随着数据被多次add，就会触发resize和array copy。</p>
 
-<p>在你初始化一个preparestatment的时候，根据你的批量大小，对其进行capacity的初始化，会带来不小的性能提升。</p>
+<p>通过Arrays类的copyOf方法对原数组进行拷贝，长度为原数组的1.5倍+1。</p>
+
+<p>在你初始化一个Preparestatment的时候，根据你的批量大小，对其进行capacity的初始化，会带来不小的性能提升。</p>
 
 <div class="highlighter-rouge"><pre class="highlight"><code>this.batchArgsField = StatementImpl.class.getDeclaredField("batchedArgs");
 this.batchArgsField.setAccessible(true);
@@ -150,29 +162,72 @@ this.batchArgsField.set((StatementImpl) ((DruidPooledPreparedStatement) this.pre
 
 <p>一般数据库表都会有一些日期类型的字段，比如创建时间、更新时间等。</p>
 
-<p>Java中的日期类型处理性能一直都不是很高，比如SimpleDateFormat就是一个关键点。</p>
+<p>Java中的日期类型格式化处理性能一般，比如SimpleDateFormat就是一个关键点。</p>
 
-<p>代码详见com.mysql.jdbc.PreparedStatement.class.getDeclaredField(“tsdf”)，这里就不细说了。</p>
+<p>代码com.mysql.jdbc.PreparedStatement中的tsdf，就是用来格式化日期类型的。</p>
 
-<p>如果你的表字段日期类型比较多，可以考虑替换掉SimpleDateFormat的实现。</p>
+<p>假如你的表中日期类型字段比较多，可以考虑替换掉SimpleDateFormat的实现。</p>
 
-<p>比如用Calender的接口，通过字符串拼接的方式完成日期数据的格式化。性能也是会有一定的提升的。</p>
+<p>Mysql中的日期类型格式是比较固定的，并不需要SimpleDateFormat那么复杂的实现，</p>
 
-<p>3、失败重试</p>
+<p>可以使用Calender的接口，通过字符串拼接的方式完成日期数据的格式化。</p>
 
-<p>一个完善的数据处理流程，必然要考虑很多异常场景。比如网络闪断，数据库重启等等。</p>
+<p>性能也是会有一定的提升。</p>
 
-<p>如果在请求失败后重试呢？一般性的做法就是记录下批量写入的每一个参数，重新写入再执行一边。</p>
+<div class="highlighter-rouge"><pre class="highlight"><code>public class DateFormatter extends SimpleDateFormat {
 
-<p>前面基于ringbuffer做了数据对象的复用，目的是减少gc，这里为了失败重试，再次引入重复对象是很难接受的。</p>
+    public DateFormatter(String pattern) {
+        super("", Locale.US);
+    }
 
-<p>而且statement.setObject过程就是一个java对象序列化成byte的过程，重复执行也很浪费。</p>
+    @Override public StringBuffer format(Date date, StringBuffer toAppendTo, FieldPosition pos) {
+        super.calendar.setTime(date);
+        toAppendTo.append("'");
+        toAppendTo.append(super.calendar.get(1));
+        toAppendTo.append("-");
+        if (super.calendar.get(2) &lt; 9) {
+            toAppendTo.append(0);
+        }
+        toAppendTo.append(super.calendar.get(2) + 1);
+        toAppendTo.append("-");
+        if (super.calendar.get(5) &lt; 10) {
+            toAppendTo.append(0);
+        }
+        toAppendTo.append(super.calendar.get(5));
+        toAppendTo.append(" ");
+        if (super.calendar.get(11) &lt; 10) {
+            toAppendTo.append(0);
+        }
+        toAppendTo.append(super.calendar.get(11));
+        toAppendTo.append(":");
+        if (super.calendar.get(12) &lt; 10) {
+            toAppendTo.append(0);
+        }
+        toAppendTo.append(super.calendar.get(12));
+        toAppendTo.append(":");
+        if (super.calendar.get(13) &lt; 10) {
+            toAppendTo.append(0);
+        }
+        toAppendTo.append(super.calendar.get(13));
+        return toAppendTo;
+    }
+}
+</code></pre>
+</div>
 
-<p>最简单的办法就是利用前面初始化好的batchArgs，实际上他里面就记录了你写入的每一行数据。</p>
+<p>3、异常处理</p>
 
-<p>只要把它拷贝出来，写入新的preparestatement中，就可以再次执行了。</p>
+<p>一个完善的数据处理流程，必然要考虑异常情况，比如网络闪断，数据库重启等等。</p>
 
-<p>注意executeBatch()一定不能丢掉</p>
+<p>如何在请求失败后重试呢？一般的做法就是记录下批量写入的每一个数据，异常时重新写入一遍。</p>
+
+<p>前面基于Ringbuffer做了数据对象的复用，为了处理异常再次引入重复对象是很难接受的。</p>
+
+<p>最简单的办法就是利用前面初始化好的batchArgs，实际上它里面就记录了你写入的每一行数据。</p>
+
+<p>当出现异常时，只要把它拷贝出来，写入新的Preparestatement中，就可以再次执行了。</p>
+
+<p>注意executeBatch一定不能丢掉。</p>
 
 <div class="highlighter-rouge"><pre class="highlight"><code>List&lt;Object&gt; batchParams = ((JDBC4PreparedStatement) ((DruidPooledPreparedStatement) this.preparedStatement).getStatement()).getBatchedArgs();
 Connection tc = this.dataSource.getConnection();
@@ -188,8 +243,36 @@ tc.close();
 </code></pre>
 </div>
 
-<p>经过这些优化，我的程序（8G的JVM）可以每秒向Mysql写入十几万行数据（无索引的情况）。</p>
+<h3 id="sql">SQL语法</h3>
 
+<p>批量写入的SQL语法也不止一种，比较常见的有：</p>
+
+<p>1、INSERT INTO xxxx (…) VALUES (…)</p>
+
+<p>2、INSERT IGNORE INTO xxxx (…) VALUES (…)</p>
+
+<p>3、REPLACE INTO xxxx (…) VALUES (…)</p>
+
+<p>当主键冲突的时候如何处理，可以根据情况选择合适的SQL模式。</p>
+
+<h3 id="section-4">参数</h3>
+
+<p>最后附上我所使用的URL参数</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>rewriteBatchedStatements=true
+useUnicode=true
+characterEncoding=UTF-8
+useSSL=false
+verifyServerCertificate=false
+failOverReadOnly=false
+autoReconnect=true
+autoReconnectForPools=true
+</code></pre>
+</div>
+
+<p>经过这些优化，Meepo可以每秒可以从Mysql中读取十几万的数据，并写入到一个无索引的新表中。</p>
+
+<p>8G的JVM，YGC每8-10秒发生一次，Mysql的Cpu会被压满。</p>
 
   </article>
   
