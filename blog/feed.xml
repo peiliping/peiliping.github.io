@@ -6,9 +6,89 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Fri, 02 Jun 2017 09:16:10 +0800</pubDate>
-    <lastBuildDate>Fri, 02 Jun 2017 09:16:10 +0800</lastBuildDate>
+    <pubDate>Mon, 05 Jun 2017 19:23:30 +0800</pubDate>
+    <lastBuildDate>Mon, 05 Jun 2017 19:23:30 +0800</lastBuildDate>
     <generator>Jekyll v3.1.2</generator>
+    
+      <item>
+        <title>Vertica优化之Encode</title>
+        <description>&lt;p&gt;Vertica是一个成熟的商用列式数据库，也提供免费版本（限制数据规模小于1T，集群规模小于3台）。&lt;/p&gt;
+
+&lt;p&gt;2015年尝试使用Vertica来存储时序类型的数据，主要应用在内部的JVM监控数据上。&lt;/p&gt;
+
+&lt;p&gt;每天增量在8千万行，保留最近2个月左右的数据，按时间对数据进行分区，保留总量在50亿行左右。&lt;/p&gt;
+
+&lt;p&gt;查询的SQL以sum avg count where group by order by这些关键词为主，简单的数值统计需求。&lt;/p&gt;
+
+&lt;h3 id=&quot;section&quot;&gt;时序数据的表有哪些字段&lt;/h3&gt;
+
+&lt;p&gt;谈到时序数据就会想到监控，常见的开源项目有OpenTSDB、Graphite、Druid、Influxdb等等。&lt;/p&gt;
+
+&lt;p&gt;年初Facebook开源的Beringer也掀起了一波浪潮，在规律的数据场景下，如何压缩存储数据呢？&lt;/p&gt;
+
+&lt;p&gt;时序数据表中一般会有如下集中类型的列：&lt;/p&gt;
+
+&lt;p&gt;1、时间戳，可能有不同精度的时间戳（ms、s、min、hour、day等）&lt;/p&gt;
+
+&lt;p&gt;2、metricid、typeid，用来定义数据的类别&lt;/p&gt;
+
+&lt;p&gt;3、dimensionid，数字化的维度信息，比如国家地区编码、性别、年龄、操作系统等等&lt;/p&gt;
+
+&lt;p&gt;4、tag，跟维度类似，但是由于不方便定义成id，就以原始的字符串存下来了&lt;/p&gt;
+
+&lt;p&gt;5、value，数值型用来存储最主要的信息&lt;/p&gt;
+
+&lt;h3 id=&quot;verticaencode&quot;&gt;如何选择Vertica的Encode&lt;/h3&gt;
+
+&lt;p&gt;1、经过测试时间戳类型的字段用COMMONDELTA_COMP存储空间占用最小，比BLOCK_DICT好很多。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;This compression scheme builds a dictionary of all deltas in the block and 
+then stores indexes into the delta dictionary using entropy coding.
+This scheme is ideal for sorted FLOAT and INTEGER-based
+(DATE/TIME/TIMESTAMP/INTERVAL) data columns with predictable sequences and
+only occasional sequence breaks, such as timestamps recorded at periodic 
+intervals or primary keys. For example, the following sequence compresses 
+well: 300, 600, 900,1200, 1500, 600, 1200, 1800, 2400. The following sequence 
+does not compress well: 1,3, 6, 10, 15, 21, 28, 36, 45, 55.
+If delta distribution is excellent, columns can be stored in less than one bit 
+per row. However, this scheme is very CPU intensive. If you use this scheme on 
+data with arbitrary deltas, it can cause significant data expansion.
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;2、MetricId和DimId之类的，一般来说value的变化比较少，比较适合BLOCK_DICT。&lt;/p&gt;
+
+&lt;p&gt;3、tag类型字段选择了RLE（Run Length Encoding），效果还可以。&lt;/p&gt;
+
+&lt;p&gt;4、Value的选择是最难的，前面提到的字段一般都是经过排序的，规律性很强。&lt;/p&gt;
+
+&lt;p&gt;value的变化范围比较大，还有可能是小数，又没经过排序。经过一系列测试在性能和存储空间&lt;/p&gt;
+
+&lt;p&gt;开销上权衡，最理想的encode方案是GCDDELTA&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;For INTEGER and DATE/TIME/TIMESTAMP/INTERVAL columns, and NUMERIC
+columns with 18 or fewer digits, data is recorded as the difference from the 
+smallest value in the data block divided by the greatest common divisor (GCD) of 
+all entries in the block. This encoding has no effect on other data types.
+ENCODING GCDDELTA is best used for many-valued, unsorted, integer columns or
+integer-based columns, when the values are a multiple of a common factor. For
+example, timestamps are stored internally in microseconds, so data that is only 
+precise to the millisecond are all multiples of 1000. The CPU requirements for 
+decoding GCDDELTA encoding are minimal, and the data never expands, but GCDDELTA 
+may take more encoding time than DELTAVAL.
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+</description>
+        <pubDate>Mon, 05 Jun 2017 16:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2017-06-05-verticaencoding</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2017-06-05-verticaencoding</guid>
+        
+        
+        <category>vertica</category>
+        
+        <category>encode</category>
+        
+      </item>
     
       <item>
         <title>批量写入Mysql</title>

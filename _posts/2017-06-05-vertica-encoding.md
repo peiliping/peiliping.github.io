@@ -1,0 +1,74 @@
+---
+layout: post
+title:  "Vertica优化之Encode"
+date:   "2017-06-05 16:00:00"
+categories: "vertica encode"
+permalink: /archivers/2017-06-05-verticaencoding
+---
+
+Vertica是一个成熟的商用列式数据库，也提供免费版本（限制数据规模小于1T，集群规模小于3台）。
+
+2015年尝试使用Vertica来存储时序类型的数据，主要应用在内部的JVM监控数据上。
+
+每天增量在8千万行，保留最近2个月左右的数据，按时间对数据进行分区，保留总量在50亿行左右。
+
+查询的SQL以sum avg count where group by order by这些关键词为主，简单的数值统计需求。
+
+### 时序数据的表有哪些字段
+
+谈到时序数据就会想到监控，常见的开源项目有OpenTSDB、Graphite、Druid、Influxdb等等。
+
+年初Facebook开源的Beringer也掀起了一波浪潮，在规律的数据场景下，如何压缩存储数据呢？
+
+时序数据表中一般会有如下集中类型的列：
+
+1、时间戳，可能有不同精度的时间戳（ms、s、min、hour、day等）
+
+2、metricid、typeid，用来定义数据的类别
+
+3、dimensionid，数字化的维度信息，比如国家地区编码、性别、年龄、操作系统等等
+
+4、tag，跟维度类似，但是由于不方便定义成id，就以原始的字符串存下来了
+
+5、value，数值型用来存储最主要的信息
+
+### 如何选择Vertica的Encode
+
+1、经过测试时间戳类型的字段用COMMONDELTA_COMP存储空间占用最小，比BLOCK_DICT好很多。
+
+```
+This compression scheme builds a dictionary of all deltas in the block and 
+then stores indexes into the delta dictionary using entropy coding.
+This scheme is ideal for sorted FLOAT and INTEGER-based
+(DATE/TIME/TIMESTAMP/INTERVAL) data columns with predictable sequences and
+only occasional sequence breaks, such as timestamps recorded at periodic 
+intervals or primary keys. For example, the following sequence compresses 
+well: 300, 600, 900,1200, 1500, 600, 1200, 1800, 2400. The following sequence 
+does not compress well: 1,3, 6, 10, 15, 21, 28, 36, 45, 55.
+If delta distribution is excellent, columns can be stored in less than one bit 
+per row. However, this scheme is very CPU intensive. If you use this scheme on 
+data with arbitrary deltas, it can cause significant data expansion.
+```
+
+2、MetricId和DimId之类的，一般来说value的变化比较少，比较适合BLOCK_DICT。
+
+3、tag类型字段选择了RLE（Run Length Encoding），效果还可以。
+
+4、Value的选择是最难的，前面提到的字段一般都是经过排序的，规律性很强。
+
+value的变化范围比较大，还有可能是小数，又没经过排序。经过一系列测试在性能和存储空间
+
+开销上权衡，最理想的encode方案是GCDDELTA
+
+```
+For INTEGER and DATE/TIME/TIMESTAMP/INTERVAL columns, and NUMERIC
+columns with 18 or fewer digits, data is recorded as the difference from the 
+smallest value in the data block divided by the greatest common divisor (GCD) of 
+all entries in the block. This encoding has no effect on other data types.
+ENCODING GCDDELTA is best used for many-valued, unsorted, integer columns or
+integer-based columns, when the values are a multiple of a common factor. For
+example, timestamps are stored internally in microseconds, so data that is only 
+precise to the millisecond are all multiples of 1000. The CPU requirements for 
+decoding GCDDELTA encoding are minimal, and the data never expands, but GCDDELTA 
+may take more encoding time than DELTAVAL.
+```
