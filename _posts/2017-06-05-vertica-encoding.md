@@ -20,7 +20,7 @@ Vertica是一个成熟的商用列式数据库，也提供免费版本（限制�
 
 年初Facebook开源的Beringer也掀起了一波浪潮，在规律的数据场景下，如何压缩存储数据呢？
 
-时序数据表中一般会有如下集中类型的列：
+时序数据表中一般会有如下几种类型的列：
 
 1、时间戳，可能有不同精度的时间戳（ms、s、min、hour、day等）
 
@@ -71,4 +71,73 @@ example, timestamps are stored internally in microseconds, so data that is only
 precise to the millisecond are all multiples of 1000. The CPU requirements for 
 decoding GCDDELTA encoding are minimal, and the data never expands, but GCDDELTA 
 may take more encoding time than DELTAVAL.
+```
+
+### 建表SQL
+```
+CREATE PROJECTION public.jvm_metrics_tmp
+(
+ parent_id ENCODING BLOCK_DICT,
+ metric_id ENCODING BLOCK_DICT,
+ dim1 ENCODING BLOCK_DICT,
+ dim2 ENCODING BLOCK_DICT,
+ dim3 ENCODING BLOCK_DICT,
+ dim4 ENCODING BLOCK_DICT,
+ mtc1 ENCODING GCDDELTA,
+ mtc2 ENCODING GCDDELTA,
+ mtc3 ENCODING GCDDELTA,
+ mtc4 ENCODING GCDDELTA,
+ mtc5 ENCODING GCDDELTA,
+ mtc6 ENCODING GCDDELTA,
+ mtc7 ENCODING GCDDELTA,
+ mtc8 ENCODING GCDDELTA,
+ tag1 ENCODING RLE,
+ tag2 ENCODING RLE,
+ tag3 ENCODING RLE,
+ tag4 ENCODING RLE,
+ timestamps ENCODING COMMONDELTA_COMP,
+ timestamps_1d ENCODING COMMONDELTA_COMP,
+ timestamps_1h ENCODING COMMONDELTA_COMP,
+ timestamps_10m ENCODING COMMONDELTA_COMP,
+ timestamps_1m ENCODING COMMONDELTA_COMP,
+ partition ENCODING COMMONDELTA_COMP
+)
+AS
+ SELECT jvm_metrics.parent_id,
+        jvm_metrics.metric_id,
+        jvm_metrics.dim1,
+        jvm_metrics.dim2,
+        jvm_metrics.dim3,
+        jvm_metrics.dim4,
+        jvm_metrics.mtc1,
+        jvm_metrics.mtc2,
+        jvm_metrics.mtc3,
+        jvm_metrics.mtc4,
+        jvm_metrics.mtc5,
+        jvm_metrics.mtc6,
+        jvm_metrics.mtc7,
+        jvm_metrics.mtc8,
+        jvm_metrics.tag1,
+        jvm_metrics.tag2,
+        jvm_metrics.tag3,
+        jvm_metrics.tag4,
+        jvm_metrics.timestamps,
+        jvm_metrics.timestamps_1d,
+        jvm_metrics.timestamps_1h,
+        jvm_metrics.timestamps_10m,
+        jvm_metrics.timestamps_1m,
+        jvm_metrics.partition
+ FROM public.jvm_metrics
+ ORDER BY jvm_metrics.dim1,
+          jvm_metrics.parent_id,
+          jvm_metrics.metric_id,
+          jvm_metrics.dim2,
+          jvm_metrics.dim3,
+          jvm_metrics.dim4,
+          jvm_metrics.tag1,
+          jvm_metrics.tag2,
+          jvm_metrics.tag3,
+          jvm_metrics.tag4,
+          jvm_metrics.timestamps
+UNSEGMENTED ALL NODES;
 ```
