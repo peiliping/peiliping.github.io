@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Pei LiPing&#39;s Blog</title>
+    <title>Pei LiPing's Blog</title>
     <description>Augur
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Mon, 05 Jun 2017 19:28:30 +0800</pubDate>
-    <lastBuildDate>Mon, 05 Jun 2017 19:28:30 +0800</lastBuildDate>
-    <generator>Jekyll v3.1.2</generator>
+    <pubDate>Sat, 10 Jun 2017 11:47:09 +0800</pubDate>
+    <lastBuildDate>Sat, 10 Jun 2017 11:47:09 +0800</lastBuildDate>
+    <generator>Jekyll v3.4.3</generator>
     
       <item>
         <title>Vertica优化之Encode</title>
@@ -290,7 +290,7 @@ this.batchArgsField.set((StatementImpl) ((DruidPooledPreparedStatement) this.pre
 
     @Override public StringBuffer format(Date date, StringBuffer toAppendTo, FieldPosition pos) {
         super.calendar.setTime(date);
-        toAppendTo.append(&quot;&#39;&quot;);
+        toAppendTo.append(&quot;'&quot;);
         toAppendTo.append(super.calendar.get(1));
         toAppendTo.append(&quot;-&quot;);
         if (super.calendar.get(2) &amp;lt; 9) {
