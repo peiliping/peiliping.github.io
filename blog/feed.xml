@@ -6,8 +6,8 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Thu, 15 Jun 2017 15:05:30 +0800</pubDate>
-    <lastBuildDate>Thu, 15 Jun 2017 15:05:30 +0800</lastBuildDate>
+    <pubDate>Thu, 15 Jun 2017 15:07:30 +0800</pubDate>
+    <lastBuildDate>Thu, 15 Jun 2017 15:07:30 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
     
       <item>
@@ -76,11 +76,12 @@
 
 &lt;h3 id=&quot;section-3&quot;&gt;继续深入&lt;/h3&gt;
 
-&lt;p&gt;将简化的表达式进行一下整理替换，得到下面的：
-&lt;code class=&quot;highlighter-rouge&quot;&gt;
-&quot;([^&quot;]*)&quot; ([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*) &quot;([^:]*)://([^&quot;]*)&quot; ([^ ]*) ([^ ]*) &quot;([^&quot;]*)&quot; &quot;(.*)&quot;
-&lt;/code&gt;
-这里就看到比较重的分隔符含义了，一般来说我们的日志都有分隔符在的。&lt;/p&gt;
+&lt;p&gt;将简化的表达式进行一下整理替换，得到下面的：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&quot;([^&quot;]*)&quot; ([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*) &quot;([^:]*)://([^&quot;]*)&quot; ([^ ]*) ([^ ]*) &quot;([^&quot;]*)&quot; &quot;(.*)&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;这里就看到比较重的分隔符含义了，一般来说我们的日志都有分隔符在的。&lt;/p&gt;
 
 &lt;p&gt;但列与列之间的分隔符并不一定一致，比如NginxLog，不知道为什么Nginx要把Log默认写成那个样子。&lt;/p&gt;
 
