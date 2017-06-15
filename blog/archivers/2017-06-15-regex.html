@@ -6,7 +6,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>说说日志解析中的正则表达式 « Pei LiPing's Blog</title>
+  <title>谈谈日志解析中的正则表达式 « Pei LiPing's Blog</title>
   <meta name="description" content="正则表达式算是编程的基础知识，日常功能开发中也经常会用到。">
 
   <link rel="stylesheet" href="/blog/css/main.css">
@@ -50,7 +50,7 @@
           <div class="post">
 
   <header class="post-header">
-    <h1 class="post-title">说说日志解析中的正则表达式</h1>
+    <h1 class="post-title">谈谈日志解析中的正则表达式</h1>
     <p class="post-meta">Jun 15, 2017</p>
   </header>
 
@@ -87,7 +87,7 @@
 
 <p><a href="http://blog.csdn.net/yangzhongxuan/article/details/6968556">引擎</a>、<a href="http://blog.csdn.net/lxcnn/article/details/4756030">贪婪与非贪婪</a></p>
 
-<p>###　繁琐啰嗦的表达式</p>
+<h3 id="section-2">繁琐啰嗦的表达式</h3>
 
 <p>为了解析一行NginxLog，你可能会把正则写成这样:</p>
 
@@ -101,7 +101,7 @@
 
 <p>主要是因为大量的贪婪回溯，导致性能下降。注意：最后一个分组字段使用(.*)是非常合理的。</p>
 
-<h3 id="section-2">简化一下</h3>
+<h3 id="section-3">简化一下</h3>
 
 <p>用(.*)来简化性能不好，那有没有性能好，又简单的表达式呢？可以试试非贪婪模式。</p>
 
@@ -117,7 +117,7 @@
 
 <p>这个表达式的性能比第一个啰嗦的表达式性能略差，差距很小，基本是可以接受的。</p>
 
-<h3 id="section-3">继续深入</h3>
+<h3 id="section-4">继续深入</h3>
 
 <p>将简化的表达式进行一下整理替换，得到下面的：</p>
 
@@ -132,7 +132,7 @@
 
 <p>性能上比非贪婪的要好，和第一个表达式的性能是一样的。</p>
 
-<h3 id="section-4">自动化</h3>
+<h3 id="section-5">自动化</h3>
 
 <p>上面两个正则表达式看起来规律性都非常强，也就是说有极大的可能可以自动生成这个表达式。</p>
 
@@ -169,7 +169,7 @@
   <div class="col-box-title">Newest Posts</div>
   <ul class="post-list">
     
-      <li><a class="post-link" href="/blog/archivers/2017-06-15-regex">说说日志解析中的正则表达式</a></li>
+      <li><a class="post-link" href="/blog/archivers/2017-06-15-regex">谈谈日志解析中的正则表达式</a></li>
     
       <li><a class="post-link" href="/blog/archivers/2017-06-05-verticaencoding">Vertica优化之Encode</a></li>
     
