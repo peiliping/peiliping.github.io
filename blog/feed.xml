@@ -6,9 +6,105 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Sat, 10 Jun 2017 13:29:13 +0800</pubDate>
-    <lastBuildDate>Sat, 10 Jun 2017 13:29:13 +0800</lastBuildDate>
+    <pubDate>Thu, 15 Jun 2017 15:05:30 +0800</pubDate>
+    <lastBuildDate>Thu, 15 Jun 2017 15:05:30 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>说说日志解析中的正则表达式</title>
+        <description>&lt;p&gt;正则表达式算是编程的基础知识，日常功能开发中也经常会用到。&lt;/p&gt;
+
+&lt;p&gt;以Java为例，简单的一个String.format就会用到Pattern.match。&lt;/p&gt;
+
+&lt;p&gt;Nginx的location配置，sed、grep等常用的linux命令也会用到正则。&lt;/p&gt;
+
+&lt;p&gt;还有很多类似正则表达式的应用，比如Spring的PathURI解析。&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;日志解析中的正则表达式&lt;/h2&gt;
+
+&lt;p&gt;日志解析领域，是重度依赖Regex的。一提到正则就会有人说性能问题，耗Cpu。&lt;/p&gt;
+
+&lt;p&gt;的确，由于正则的书写方式不合理，导致的性能问题非常之多，甚至还有死循环的bug。&lt;/p&gt;
+
+&lt;p&gt;能写正则和写好正则之间需要大量的实践积累，也需要了解非常多的背景知识。&lt;/p&gt;
+
+&lt;p&gt;去年做过一个日志采集工具，其中就用到了正则来解析NginxLog，性能调的还可以。&lt;/p&gt;
+
+&lt;h3 id=&quot;section-1&quot;&gt;正则表达式的几个基础概念&lt;/h3&gt;
+
+&lt;p&gt;1、DFA和NFA引擎、回溯&lt;/p&gt;
+
+&lt;p&gt;2、贪婪和非贪婪&lt;/p&gt;
+
+&lt;p&gt;3、固化分组&lt;/p&gt;
+
+&lt;p&gt;4、量词匹配、优先匹配&lt;/p&gt;
+
+&lt;p&gt;具体概念就不展开讲了，自行查阅，提供２个blog可以看看。&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&quot;http://blog.csdn.net/yangzhongxuan/article/details/6968556&quot;&gt;引擎&lt;/a&gt;、&lt;a href=&quot;http://blog.csdn.net/lxcnn/article/details/4756030&quot;&gt;贪婪与非贪婪&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;###　繁琐啰嗦的表达式&lt;/p&gt;
+
+&lt;p&gt;为了解析一行NginxLog，你可能会把正则写成这样:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&quot;([%d]+/[%a]+/[%d]+:[%d]+:[%d]+:[%d]+ %+0800)&quot; ([%d|%.]+) (.-) ([%d|%.]+) ([%a|%-]+) ([%d]+) &quot;([http|https]+)://([^&quot;]*)&quot; ([%d]+) ([%d]+) &quot;([^&quot;]*)&quot; &quot;(.*)&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;精确的提供了每个字段的类型、长度等等，这样的表达式性能很好，但是看起来非常的啰嗦。&lt;/p&gt;
+
+&lt;p&gt;有人为了省事，会大量用(.&lt;em&gt;)来替代表达式中的明确的类型和长度信息，简单测试一下就会发现(.&lt;/em&gt;)的性能惨不忍睹。&lt;/p&gt;
+
+&lt;p&gt;主要是因为大量的贪婪回溯，导致性能下降。注意：最后一个分组字段使用(.*)是非常合理的。&lt;/p&gt;
+
+&lt;h3 id=&quot;section-2&quot;&gt;简化一下&lt;/h3&gt;
+
+&lt;p&gt;用(.*)来简化性能不好，那有没有性能好，又简单的表达式呢？可以试试非贪婪模式。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&quot;(.-)&quot; (.-) (.-) (.-) (.-) (.-) &quot;(.-)://(.-)&quot; (.-) (.-) &quot;(.-)&quot; &quot;(.*)&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;这个看起来是不是非常清晰，一个坑一个字段，最后一个分组仍然使用贪婪模式。&lt;/p&gt;
+
+&lt;p&gt;看到这里是不是觉得以后正则表达式有可能自动生成了，不需要烧脑完成。&lt;/p&gt;
+
+&lt;p&gt;这个正则的语法是以Lua为例的，其他语言也有类似的，只是符号不一样而已。Java是(.*?)&lt;/p&gt;
+
+&lt;p&gt;这个表达式的性能比第一个啰嗦的表达式性能略差，差距很小，基本是可以接受的。&lt;/p&gt;
+
+&lt;h3 id=&quot;section-3&quot;&gt;继续深入&lt;/h3&gt;
+
+&lt;p&gt;将简化的表达式进行一下整理替换，得到下面的：
+&lt;code class=&quot;highlighter-rouge&quot;&gt;
+&quot;([^&quot;]*)&quot; ([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*) &quot;([^:]*)://([^&quot;]*)&quot; ([^ ]*) ([^ ]*) &quot;([^&quot;]*)&quot; &quot;(.*)&quot;
+&lt;/code&gt;
+这里就看到比较重的分隔符含义了，一般来说我们的日志都有分隔符在的。&lt;/p&gt;
+
+&lt;p&gt;但列与列之间的分隔符并不一定一致，比如NginxLog，不知道为什么Nginx要把Log默认写成那个样子。&lt;/p&gt;
+
+&lt;p&gt;实际应用中，这种风格写法的Regex非常的实用。看过一些国内日志业务的解析功能也大概是这个思路吧。&lt;/p&gt;
+
+&lt;p&gt;性能上比非贪婪的要好，和第一个表达式的性能是一样的。&lt;/p&gt;
+
+&lt;h3 id=&quot;section-4&quot;&gt;自动化&lt;/h3&gt;
+
+&lt;p&gt;上面两个正则表达式看起来规律性都非常强，也就是说有极大的可能可以自动生成这个表达式。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&quot;$time_local&quot; $remote_addr $upstream_addr $request_time $request_method $status &quot;$scheme://$host$request_uri&quot; $request_length $body_bytes_sent &quot;$http_referer&quot; &quot;$http_user_agent&quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;这个是Nginx的logformat配置，日志解析的正则表达式自动生成就很简单了。&lt;/p&gt;
+</description>
+        <pubDate>Thu, 15 Jun 2017 13:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2017-06-15-regex</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2017-06-15-regex</guid>
+        
+        
+        <category>regex</category>
+        
+      </item>
     
       <item>
         <title>Vertica优化之Encode</title>

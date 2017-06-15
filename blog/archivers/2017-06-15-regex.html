@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>说说日志解析中的正则表达式 « Pei LiPing's Blog</title>
+  <meta name="description" content="正则表达式算是编程的基础知识，日常功能开发中也经常会用到。">
+
+  <link rel="stylesheet" href="/blog/css/main.css">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2017-06-15-regex">
+  <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
+</head>
+
+
+  <body>
+
+    <header class="header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Pei LiPing's Blog</a>
+    <nav class="site-nav">
+      
+        
+      
+        
+        <a class="page-link" href="/blog/about/">About</a>
+        
+      
+        
+        <a class="page-link" href="/blog/category/">Category</a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </nav>
+  </div>
+</header>
+
+    <div class="page-content">
+      <div class="wrapper">
+        <div class="col-main">
+          <div class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">说说日志解析中的正则表达式</h1>
+    <p class="post-meta">Jun 15, 2017</p>
+  </header>
+
+  <article class="post-content">
+    <p>正则表达式算是编程的基础知识，日常功能开发中也经常会用到。</p>
+
+<p>以Java为例，简单的一个String.format就会用到Pattern.match。</p>
+
+<p>Nginx的location配置，sed、grep等常用的linux命令也会用到正则。</p>
+
+<p>还有很多类似正则表达式的应用，比如Spring的PathURI解析。</p>
+
+<h2 id="section">日志解析中的正则表达式</h2>
+
+<p>日志解析领域，是重度依赖Regex的。一提到正则就会有人说性能问题，耗Cpu。</p>
+
+<p>的确，由于正则的书写方式不合理，导致的性能问题非常之多，甚至还有死循环的bug。</p>
+
+<p>能写正则和写好正则之间需要大量的实践积累，也需要了解非常多的背景知识。</p>
+
+<p>去年做过一个日志采集工具，其中就用到了正则来解析NginxLog，性能调的还可以。</p>
+
+<h3 id="section-1">正则表达式的几个基础概念</h3>
+
+<p>1、DFA和NFA引擎、回溯</p>
+
+<p>2、贪婪和非贪婪</p>
+
+<p>3、固化分组</p>
+
+<p>4、量词匹配、优先匹配</p>
+
+<p>具体概念就不展开讲了，自行查阅，提供２个blog可以看看。</p>
+
+<p><a href="http://blog.csdn.net/yangzhongxuan/article/details/6968556">引擎</a>、<a href="http://blog.csdn.net/lxcnn/article/details/4756030">贪婪与非贪婪</a></p>
+
+<p>###　繁琐啰嗦的表达式</p>
+
+<p>为了解析一行NginxLog，你可能会把正则写成这样:</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>"([%d]+/[%a]+/[%d]+:[%d]+:[%d]+:[%d]+ %+0800)" ([%d|%.]+) (.-) ([%d|%.]+) ([%a|%-]+) ([%d]+) "([http|https]+)://([^"]*)" ([%d]+) ([%d]+) "([^"]*)" "(.*)"
+</code></pre>
+</div>
+
+<p>精确的提供了每个字段的类型、长度等等，这样的表达式性能很好，但是看起来非常的啰嗦。</p>
+
+<p>有人为了省事，会大量用(.<em>)来替代表达式中的明确的类型和长度信息，简单测试一下就会发现(.</em>)的性能惨不忍睹。</p>
+
+<p>主要是因为大量的贪婪回溯，导致性能下降。注意：最后一个分组字段使用(.*)是非常合理的。</p>
+
+<h3 id="section-2">简化一下</h3>
+
+<p>用(.*)来简化性能不好，那有没有性能好，又简单的表达式呢？可以试试非贪婪模式。</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>"(.-)" (.-) (.-) (.-) (.-) (.-) "(.-)://(.-)" (.-) (.-) "(.-)" "(.*)"
+</code></pre>
+</div>
+
+<p>这个看起来是不是非常清晰，一个坑一个字段，最后一个分组仍然使用贪婪模式。</p>
+
+<p>看到这里是不是觉得以后正则表达式有可能自动生成了，不需要烧脑完成。</p>
+
+<p>这个正则的语法是以Lua为例的，其他语言也有类似的，只是符号不一样而已。Java是(.*?)</p>
+
+<p>这个表达式的性能比第一个啰嗦的表达式性能略差，差距很小，基本是可以接受的。</p>
+
+<h3 id="section-3">继续深入</h3>
+
+<p>将简化的表达式进行一下整理替换，得到下面的：
+<code class="highlighter-rouge">
+"([^"]*)" ([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*) ([^ ]*) "([^:]*)://([^"]*)" ([^ ]*) ([^ ]*) "([^"]*)" "(.*)"
+</code>
+这里就看到比较重的分隔符含义了，一般来说我们的日志都有分隔符在的。</p>
+
+<p>但列与列之间的分隔符并不一定一致，比如NginxLog，不知道为什么Nginx要把Log默认写成那个样子。</p>
+
+<p>实际应用中，这种风格写法的Regex非常的实用。看过一些国内日志业务的解析功能也大概是这个思路吧。</p>
+
+<p>性能上比非贪婪的要好，和第一个表达式的性能是一样的。</p>
+
+<h3 id="section-4">自动化</h3>
+
+<p>上面两个正则表达式看起来规律性都非常强，也就是说有极大的可能可以自动生成这个表达式。</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>"$time_local" $remote_addr $upstream_addr $request_time $request_method $status "$scheme://$host$request_uri" $request_length $body_bytes_sent "$http_referer" "$http_user_agent"
+</code></pre>
+</div>
+<p>这个是Nginx的logformat配置，日志解析的正则表达式自动生成就很简单了。</p>
+
+  </article>
+  
+  
+
+
+
+
+</div>
+
+        </div>
+        <div class="col-second">
+          <div class="col-box col-box-author">
+  <img class="avatar" src="//www.gravatar.com/avatar/your_email_md5?d=mm&s=135" alt="Pei LiPing">
+  <div class="col-box-title name">Pei LiPing</div>
+  <p>The Cabin Of Pei LiPing.</p>
+  <p class="contact">
+    
+    
+    
+    <a href="mailto:peilipingplp@gmail.com">Email</a>
+    
+  </p>
+</div>
+
+<div class="col-box">
+  <div class="col-box-title">Newest Posts</div>
+  <ul class="post-list">
+    
+      <li><a class="post-link" href="/blog/archivers/2017-06-15-regex">说说日志解析中的正则表达式</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2017-06-05-verticaencoding">Vertica优化之Encode</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2017-05-25-batch2mysql">批量写入Mysql</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2017-04-18-meepo">Meepo</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2017-03-31-jfr">Java Flight Recorder</a></li>
+    
+  </ul>
+</div>
+
+<div class="col-box post-toc hide">
+  <div class="col-box-title">TOC</div>
+</div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+<div class="wrapper">
+&copy; 2016 Pei LiPing
+</div>
+</footer>
+
+<script src="//upcdn.b0.upaiyun.com/libs/jquery/jquery-1.9.0.min.js"></script>
+<script src="/blog/js/easybook.js"></script>
+
+  </body>
+
+</html>
