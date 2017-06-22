@@ -6,8 +6,8 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Thu, 22 Jun 2017 16:25:16 +0800</pubDate>
-    <lastBuildDate>Thu, 22 Jun 2017 16:25:16 +0800</lastBuildDate>
+    <pubDate>Thu, 22 Jun 2017 16:39:07 +0800</pubDate>
+    <lastBuildDate>Thu, 22 Jun 2017 16:39:07 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
     
       <item>
@@ -655,64 +655,94 @@ MonitoredVm vm = this.monitoredHost.getMonitoredVm(new VmIdentifier(&quot;//&quo
 
 &lt;p&gt;具体指标的含义今后会更新，这里只列一下大致的分类。&lt;/p&gt;
 
-&lt;p&gt;1、TLAB：
- 1.1、sun.gc.tlab.alloc
- 1.2、sun.gc.tlab.allocThreads
- 1.3、sun.gc.tlab.fills
- 1.4、sun.gc.tlab.gcWaste&lt;/p&gt;
+&lt;p&gt;1、TLAB：&lt;/p&gt;
 
-&lt;p&gt;2、Threshold：
- 2.1、sun.gc.policy.tenuringThreshold
- 2.2、sun.gc.policy.maxTenuringThreshold
- 2.3、sun.gc.policy.incrementTenuringThresholdForGcCost
- 2.4、sun.gc.policy.decrementTenuringThresholdForGcCost
- 2.5、sun.gc.policy.decrementTenuringThresholdForSurvivorLimit&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;1.1、sun.gc.tlab.alloc&lt;/li&gt;
+  &lt;li&gt;1.2、sun.gc.tlab.allocThreads&lt;/li&gt;
+  &lt;li&gt;1.3、sun.gc.tlab.fills&lt;/li&gt;
+  &lt;li&gt;1.4、sun.gc.tlab.gcWaste&lt;/li&gt;
+&lt;/ul&gt;
 
-&lt;p&gt;3、Thread：
- 3.1、java.threads.live
- 3.2、java.threads.started&lt;/p&gt;
+&lt;p&gt;2、Threshold：&lt;/p&gt;
 
-&lt;p&gt;4、Safepoint：
- 4.1、sun.rt.safepoints
- 4.2、sun.rt.safepointTime
- 4.3、sun.rt.safepointSyncTime&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;2.1、sun.gc.policy.tenuringThreshold&lt;/li&gt;
+  &lt;li&gt;2.2、sun.gc.policy.maxTenuringThreshold&lt;/li&gt;
+  &lt;li&gt;2.3、sun.gc.policy.incrementTenuringThresholdForGcCost&lt;/li&gt;
+  &lt;li&gt;2.4、sun.gc.policy.decrementTenuringThresholdForGcCost&lt;/li&gt;
+  &lt;li&gt;2.5、sun.gc.policy.decrementTenuringThresholdForSurvivorLimit&lt;/li&gt;
+&lt;/ul&gt;
 
-&lt;p&gt;5、Memory：
- 5.1、sun.gc.generation.0.space.X.used
- 5.2、sun.gc.generation.0.space.X.capacity&lt;/p&gt;
+&lt;p&gt;3、Thread：&lt;/p&gt;
 
-&lt;p&gt;6、Lock：
- 6.1、sun.rt._sync_ContendedLockAttempts
- 6.2、sun.rt._sync_Parks
- 6.3、sun.rt._sync_Notifications
- 6.4、sun.rt._sync_FutileWakeups
- 6.5、sun.rt._sync_Inflations
- 6.6、sun.rt._sync_Deflations&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;3.1、java.threads.live&lt;/li&gt;
+  &lt;li&gt;3.2、java.threads.started&lt;/li&gt;
+&lt;/ul&gt;
 
-&lt;p&gt;7、GC：
- 7.1、sun.gc.collector.X.invocations
- 7.2、sun.gc.collector.X.time
- 7.3、sun.gc.policy.avgMinorPauseTime(avgMajorPauseTime)
- 7.4、sun.gc.policy.avgPromotedAvg
- 7.5、sun.gc.policy.avgSurvivedAvg
- 7.6、sun.gc.policy.gcTimeLimitExceeded
- 7.7、sun.gc.policy.survivorOverflowed&lt;/p&gt;
+&lt;p&gt;4、Safepoint：&lt;/p&gt;
 
-&lt;p&gt;8、Compile：
- 8.1、java.ci.totalTime
- 8.2、sun.ci.totalCompiles
- 8.3、sun.ci.osrTime
- 8.4、sun.ci.osrCompiles
- 8.5、sun.ci.totalBailouts
- 8.6、sun.ci.totalInvalidates&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;4.1、sun.rt.safepoints&lt;/li&gt;
+  &lt;li&gt;4.2、sun.rt.safepointTime&lt;/li&gt;
+  &lt;li&gt;4.3、sun.rt.safepointSyncTime&lt;/li&gt;
+&lt;/ul&gt;
 
-&lt;p&gt;9、Class：
- 9.1、sun.cls.time
- 9.2、java.cls.loadedClasses
- 9.3、java.cls.unloadedClasses&lt;/p&gt;
+&lt;p&gt;5、Memory：&lt;/p&gt;
 
-&lt;p&gt;10、AgeTable：
- 10.1、sun.gc.generation.0.agetable.bytes.XX&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;5.1、sun.gc.generation.0.space.X.used&lt;/li&gt;
+  &lt;li&gt;5.2、sun.gc.generation.0.space.X.capacity&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;6、Lock：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;6.1、sun.rt._sync_ContendedLockAttempts&lt;/li&gt;
+  &lt;li&gt;6.2、sun.rt._sync_Parks&lt;/li&gt;
+  &lt;li&gt;6.3、sun.rt._sync_Notifications&lt;/li&gt;
+  &lt;li&gt;6.4、sun.rt._sync_FutileWakeups&lt;/li&gt;
+  &lt;li&gt;6.5、sun.rt._sync_Inflations&lt;/li&gt;
+  &lt;li&gt;6.6、sun.rt._sync_Deflations&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;7、GC：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;7.1、sun.gc.collector.X.invocations&lt;/li&gt;
+  &lt;li&gt;7.2、sun.gc.collector.X.time&lt;/li&gt;
+  &lt;li&gt;7.3、sun.gc.policy.avgMinorPauseTime(avgMajorPauseTime)&lt;/li&gt;
+  &lt;li&gt;7.4、sun.gc.policy.avgPromotedAvg&lt;/li&gt;
+  &lt;li&gt;7.5、sun.gc.policy.avgSurvivedAvg&lt;/li&gt;
+  &lt;li&gt;7.6、sun.gc.policy.gcTimeLimitExceeded&lt;/li&gt;
+  &lt;li&gt;7.7、sun.gc.policy.survivorOverflowed&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;8、Compile：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;8.1、java.ci.totalTime&lt;/li&gt;
+  &lt;li&gt;8.2、sun.ci.totalCompiles&lt;/li&gt;
+  &lt;li&gt;8.3、sun.ci.osrTime&lt;/li&gt;
+  &lt;li&gt;8.4、sun.ci.osrCompiles&lt;/li&gt;
+  &lt;li&gt;8.5、sun.ci.totalBailouts&lt;/li&gt;
+  &lt;li&gt;8.6、sun.ci.totalInvalidates&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;9、Class：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;9.1、sun.cls.time&lt;/li&gt;
+  &lt;li&gt;9.2、java.cls.loadedClasses&lt;/li&gt;
+  &lt;li&gt;9.3、java.cls.unloadedClasses&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;10、AgeTable：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;10.1、sun.gc.generation.0.agetable.bytes.XX&lt;/li&gt;
+&lt;/ul&gt;
 
 &lt;p&gt;选取的这些指标主要是为了监控性能和性能调优。&lt;/p&gt;
 
