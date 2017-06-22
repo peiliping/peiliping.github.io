@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Jvm的PerfData « Pei LiPing's Blog</title>
+  <meta name="description" content="Java系统的监控经常是通过JMX的，最近几年也比较流行使用Dropwizard和SpringMetrics的集成。">
+
+  <link rel="stylesheet" href="/blog/css/main.css">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2017-02-25-perfdata">
+  <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
+</head>
+
+
+  <body>
+
+    <header class="header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Pei LiPing's Blog</a>
+    <nav class="site-nav">
+      
+        
+      
+        
+        <a class="page-link" href="/blog/about/">About</a>
+        
+      
+        
+        <a class="page-link" href="/blog/category/">Category</a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </nav>
+  </div>
+</header>
+
+    <div class="page-content">
+      <div class="wrapper">
+        <div class="col-main">
+          <div class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">Jvm的PerfData</h1>
+    <p class="post-meta">Feb 25, 2017</p>
+  </header>
+
+  <article class="post-content">
+    <p>Java系统的监控经常是通过JMX的，最近几年也比较流行使用Dropwizard和SpringMetrics的集成。</p>
+
+<p>Jvm自身有一个叫PerfData的指标集，是使用mmap来存储的，jstat就是基于它的。</p>
+
+<p>我们平时在生产环境中使用jstat来观察JVM的GC情况(时间、次数、分代大小)，</p>
+
+<p>但是PerfData还有很多其他指标，而且非常有用。</p>
+
+<p>下面就来介绍一下PerfData。</p>
+
+<h3 id="section">基本概念</h3>
+
+<p>Perfdata里大概有200-300个指标，有数值类型的，也有字符串的（比如gc cause）。</p>
+
+<p>你可以使用MonitoredVm.findByPattern(““)来获取全部指标的列表，也可以用名字获取单个指标。</p>
+
+<p>JVM运行时，不断在内存中更新指标值，通过mmap映射到/tmp/hsperfdata_user/pid的文件中。</p>
+
+<p>这个文件的大小是32K，mmap文件默认是30s才刷新同步，perfdata的文件延迟是特殊控制的。</p>
+
+<p>如果你使用过mmap就会知道有个force接口，可以强制同步更新，perfdata的更新频率在100ms以内。</p>
+
+<p>提一个题外话，jvm启动后会生成一个/tmp/.javapidxxxxx的文件，这个文件是一个socket，</p>
+
+<p>常用的jstack、jmap、jcmd都是通过他来和jvm通讯的，不要和perfdata的文件弄混淆了。</p>
+
+<h3 id="section-1">获取指标的方法</h3>
+
+<p>因为有一个独立的mmap文件存在，所以想要获取指标并不需要和jvm进行通讯，</p>
+
+<p>只要你的程序有权限读取这个文件即可，当然读取这个文件最好使用java提供的类库，方便一些。</p>
+
+<p>如果你想自己解析，可以参考这个类的实现，sun.jvmstat.perfdata.monitor.v2_0.PerfDataBuffer。</p>
+
+<p>特别注意一下其中的ByteOrder，字节存储机制主要有两种：Big-endian和Little-endian。</p>
+
+<p>相关细节就不展开讲了，自行查阅资料吧。</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>Arguments JPS_ARGUMENTS = new Arguments(new String[] {"-l"});
+MonitoredHost monitoredHost = MonitoredHost.getMonitoredHost(JPS_ARGUMENTS.hostId());
+MonitoredVm vm = this.monitoredHost.getMonitoredVm(new VmIdentifier("//" + pid + "?mode=r"), 1000);
+</code></pre>
+</div>
+
+<p>这段代码你可以在jstat的源码中找到，根据需要自行修改。</p>
+
+<h3 id="section-2">指标</h3>
+
+<p>这几百个指标我们也并非都关心，有很多指标的含义都搞不清楚，需要读读JVM的源码才能知道。</p>
+
+<p>今年年初我们在开发基于Perfdata的JVM性能指标监控时，进行了一些整理工作，主要采集了三五十个指标。</p>
+
+<p>具体指标的含义今后会更新，这里只列一下大致的分类。</p>
+
+<p>1、TLAB：
+ 1.1、sun.gc.tlab.alloc
+ 1.2、sun.gc.tlab.allocThreads
+ 1.3、sun.gc.tlab.fills
+ 1.4、sun.gc.tlab.gcWaste</p>
+
+<p>2、Threshold：
+ 2.1、sun.gc.policy.tenuringThreshold
+ 2.2、sun.gc.policy.maxTenuringThreshold
+ 2.3、sun.gc.policy.incrementTenuringThresholdForGcCost
+ 2.4、sun.gc.policy.decrementTenuringThresholdForGcCost
+ 2.5、sun.gc.policy.decrementTenuringThresholdForSurvivorLimit</p>
+
+<p>3、Thread：
+ 3.1、java.threads.live
+ 3.2、java.threads.started</p>
+
+<p>4、Safepoint：
+ 4.1、sun.rt.safepoints
+ 4.2、sun.rt.safepointTime
+ 4.3、sun.rt.safepointSyncTime</p>
+
+<p>5、Memory：
+ 5.1、sun.gc.generation.0.space.X.used
+ 5.2、sun.gc.generation.0.space.X.capacity</p>
+
+<p>6、Lock：
+ 6.1、sun.rt._sync_ContendedLockAttempts
+ 6.2、sun.rt._sync_Parks
+ 6.3、sun.rt._sync_Notifications
+ 6.4、sun.rt._sync_FutileWakeups
+ 6.5、sun.rt._sync_Inflations
+ 6.6、sun.rt._sync_Deflations</p>
+
+<p>7、GC：
+ 7.1、sun.gc.collector.X.invocations
+ 7.2、sun.gc.collector.X.time
+ 7.3、sun.gc.policy.avgMinorPauseTime(avgMajorPauseTime)
+ 7.4、sun.gc.policy.avgPromotedAvg
+ 7.5、sun.gc.policy.avgSurvivedAvg
+ 7.6、sun.gc.policy.gcTimeLimitExceeded
+ 7.7、sun.gc.policy.survivorOverflowed</p>
+
+<p>8、Compile：
+ 8.1、java.ci.totalTime
+ 8.2、sun.ci.totalCompiles
+ 8.3、sun.ci.osrTime
+ 8.4、sun.ci.osrCompiles
+ 8.5、sun.ci.totalBailouts
+ 8.6、sun.ci.totalInvalidates</p>
+
+<p>9、Class：
+ 9.1、sun.cls.time
+ 9.2、java.cls.loadedClasses
+ 9.3、java.cls.unloadedClasses</p>
+
+<p>10、AgeTable：
+ 10.1、sun.gc.generation.0.agetable.bytes.XX</p>
+
+<p>选取的这些指标主要是为了监控性能和性能调优。</p>
+
+<p>除了指标类型的监控，也可以尝试使用一下jitwatch和jfr，都会有一些意想不到的收获。</p>
+
+<h3 id="flags">Flags</h3>
+
+<p>Jvm在启动时，可以配置很多参数，这个参数也是有API可以获取的。</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>VirtualMachine vm = VirtualMachine.attach(pid);
+HotSpotVirtualMachine hvm = (HotSpotVirtualMachine) vm;
+InputStream in = hvm.executeJCmd("VM.flags -all");
+</code></pre>
+</div>
+<p>这个代码你可以从Jcmd的源码中找到，网上能搜到VM.flags，很少有人提到-all这个参数。</p>
+
+<p>看看你的Jvm到底都有哪些flag，你又知道多少flag的含义呢。</p>
+
+  </article>
+  
+  
+
+
+
+
+</div>
+
+        </div>
+        <div class="col-second">
+          <div class="col-box col-box-author">
+  <img class="avatar" src="//www.gravatar.com/avatar/your_email_md5?d=mm&s=135" alt="Pei LiPing">
+  <div class="col-box-title name">Pei LiPing</div>
+  <p>The Cabin Of Pei LiPing.</p>
+  <p class="contact">
+    
+    
+    
+    <a href="mailto:peilipingplp@gmail.com">Email</a>
+    
+  </p>
+</div>
+
+<div class="col-box">
+  <div class="col-box-title">Newest Posts</div>
+  <ul class="post-list">
+    
+      <li><a class="post-link" href="/blog/archivers/2017-06-15-regex">谈谈日志解析中的正则表达式</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2017-06-05-verticaencoding">Vertica优化之Encode</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2017-05-25-batch2mysql">批量写入Mysql</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2017-04-18-meepo">Meepo</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2017-03-31-jfr">Java Flight Recorder</a></li>
+    
+  </ul>
+</div>
+
+<div class="col-box post-toc hide">
+  <div class="col-box-title">TOC</div>
+</div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+<div class="wrapper">
+&copy; 2016 Pei LiPing
+</div>
+</footer>
+
+<script src="//upcdn.b0.upaiyun.com/libs/jquery/jquery-1.9.0.min.js"></script>
+<script src="/blog/js/easybook.js"></script>
+
+  </body>
+
+</html>

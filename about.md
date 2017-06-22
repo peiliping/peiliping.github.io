@@ -47,7 +47,7 @@ public: true
 
 > 数据迁移工具[【Meepo】](https://github.com/peiliping/meepo)，写了两篇Blog来介绍，[【简介】](http://peiliping.github.io/blog/archivers/2017-04-18-meepo)和[【性能优化】](http://peiliping.github.io/blog/archivers/2017-05-25-batch2mysql)
 
-> 高性能日志采集工具[【Logwatch】](https://github.com/peiliping/logwatch)
+> 高性能日志采集工具[【Logwatch】](https://github.com/peiliping/logwatch) [【正则在日志解析中的使用】](http://peiliping.github.io/blog/archivers/2017-06-15-regex)
 
 > 基于Flume二次开发，实现Kafka->HDFS, Kafka->Kafka的数据流转功能，优化了Flume的性能，适配运维系统做了一些动态配置管理的功能。
 

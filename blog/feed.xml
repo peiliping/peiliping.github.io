@@ -6,8 +6,8 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Thu, 22 Jun 2017 14:39:20 +0800</pubDate>
-    <lastBuildDate>Thu, 22 Jun 2017 14:39:20 +0800</lastBuildDate>
+    <pubDate>Thu, 22 Jun 2017 16:23:49 +0800</pubDate>
+    <lastBuildDate>Thu, 22 Jun 2017 16:23:49 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
     
       <item>
@@ -596,6 +596,147 @@ autoReconnectForPools=true
         
         
         <category>java</category>
+        
+      </item>
+    
+      <item>
+        <title>Jvm的PerfData</title>
+        <description>&lt;p&gt;Java系统的监控经常是通过JMX的，最近几年也比较流行使用Dropwizard和SpringMetrics的集成。&lt;/p&gt;
+
+&lt;p&gt;Jvm自身有一个叫PerfData的指标集，是使用mmap来存储的，jstat就是基于它的。&lt;/p&gt;
+
+&lt;p&gt;我们平时在生产环境中使用jstat来观察JVM的GC情况(时间、次数、分代大小)，&lt;/p&gt;
+
+&lt;p&gt;但是PerfData还有很多其他指标，而且非常有用。&lt;/p&gt;
+
+&lt;p&gt;下面就来介绍一下PerfData。&lt;/p&gt;
+
+&lt;h3 id=&quot;section&quot;&gt;基本概念&lt;/h3&gt;
+
+&lt;p&gt;Perfdata里大概有200-300个指标，有数值类型的，也有字符串的（比如gc cause）。&lt;/p&gt;
+
+&lt;p&gt;你可以使用MonitoredVm.findByPattern(““)来获取全部指标的列表，也可以用名字获取单个指标。&lt;/p&gt;
+
+&lt;p&gt;JVM运行时，不断在内存中更新指标值，通过mmap映射到/tmp/hsperfdata_user/pid的文件中。&lt;/p&gt;
+
+&lt;p&gt;这个文件的大小是32K，mmap文件默认是30s才刷新同步，perfdata的文件延迟是特殊控制的。&lt;/p&gt;
+
+&lt;p&gt;如果你使用过mmap就会知道有个force接口，可以强制同步更新，perfdata的更新频率在100ms以内。&lt;/p&gt;
+
+&lt;p&gt;提一个题外话，jvm启动后会生成一个/tmp/.javapidxxxxx的文件，这个文件是一个socket，&lt;/p&gt;
+
+&lt;p&gt;常用的jstack、jmap、jcmd都是通过他来和jvm通讯的，不要和perfdata的文件弄混淆了。&lt;/p&gt;
+
+&lt;h3 id=&quot;section-1&quot;&gt;获取指标的方法&lt;/h3&gt;
+
+&lt;p&gt;因为有一个独立的mmap文件存在，所以想要获取指标并不需要和jvm进行通讯，&lt;/p&gt;
+
+&lt;p&gt;只要你的程序有权限读取这个文件即可，当然读取这个文件最好使用java提供的类库，方便一些。&lt;/p&gt;
+
+&lt;p&gt;如果你想自己解析，可以参考这个类的实现，sun.jvmstat.perfdata.monitor.v2_0.PerfDataBuffer。&lt;/p&gt;
+
+&lt;p&gt;特别注意一下其中的ByteOrder，字节存储机制主要有两种：Big-endian和Little-endian。&lt;/p&gt;
+
+&lt;p&gt;相关细节就不展开讲了，自行查阅资料吧。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Arguments JPS_ARGUMENTS = new Arguments(new String[] {&quot;-l&quot;});
+MonitoredHost monitoredHost = MonitoredHost.getMonitoredHost(JPS_ARGUMENTS.hostId());
+MonitoredVm vm = this.monitoredHost.getMonitoredVm(new VmIdentifier(&quot;//&quot; + pid + &quot;?mode=r&quot;), 1000);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;这段代码你可以在jstat的源码中找到，根据需要自行修改。&lt;/p&gt;
+
+&lt;h3 id=&quot;section-2&quot;&gt;指标&lt;/h3&gt;
+
+&lt;p&gt;这几百个指标我们也并非都关心，有很多指标的含义都搞不清楚，需要读读JVM的源码才能知道。&lt;/p&gt;
+
+&lt;p&gt;今年年初我们在开发基于Perfdata的JVM性能指标监控时，进行了一些整理工作，主要采集了三五十个指标。&lt;/p&gt;
+
+&lt;p&gt;具体指标的含义今后会更新，这里只列一下大致的分类。&lt;/p&gt;
+
+&lt;p&gt;1、TLAB：
+ 1.1、sun.gc.tlab.alloc
+ 1.2、sun.gc.tlab.allocThreads
+ 1.3、sun.gc.tlab.fills
+ 1.4、sun.gc.tlab.gcWaste&lt;/p&gt;
+
+&lt;p&gt;2、Threshold：
+ 2.1、sun.gc.policy.tenuringThreshold
+ 2.2、sun.gc.policy.maxTenuringThreshold
+ 2.3、sun.gc.policy.incrementTenuringThresholdForGcCost
+ 2.4、sun.gc.policy.decrementTenuringThresholdForGcCost
+ 2.5、sun.gc.policy.decrementTenuringThresholdForSurvivorLimit&lt;/p&gt;
+
+&lt;p&gt;3、Thread：
+ 3.1、java.threads.live
+ 3.2、java.threads.started&lt;/p&gt;
+
+&lt;p&gt;4、Safepoint：
+ 4.1、sun.rt.safepoints
+ 4.2、sun.rt.safepointTime
+ 4.3、sun.rt.safepointSyncTime&lt;/p&gt;
+
+&lt;p&gt;5、Memory：
+ 5.1、sun.gc.generation.0.space.X.used
+ 5.2、sun.gc.generation.0.space.X.capacity&lt;/p&gt;
+
+&lt;p&gt;6、Lock：
+ 6.1、sun.rt._sync_ContendedLockAttempts
+ 6.2、sun.rt._sync_Parks
+ 6.3、sun.rt._sync_Notifications
+ 6.4、sun.rt._sync_FutileWakeups
+ 6.5、sun.rt._sync_Inflations
+ 6.6、sun.rt._sync_Deflations&lt;/p&gt;
+
+&lt;p&gt;7、GC：
+ 7.1、sun.gc.collector.X.invocations
+ 7.2、sun.gc.collector.X.time
+ 7.3、sun.gc.policy.avgMinorPauseTime(avgMajorPauseTime)
+ 7.4、sun.gc.policy.avgPromotedAvg
+ 7.5、sun.gc.policy.avgSurvivedAvg
+ 7.6、sun.gc.policy.gcTimeLimitExceeded
+ 7.7、sun.gc.policy.survivorOverflowed&lt;/p&gt;
+
+&lt;p&gt;8、Compile：
+ 8.1、java.ci.totalTime
+ 8.2、sun.ci.totalCompiles
+ 8.3、sun.ci.osrTime
+ 8.4、sun.ci.osrCompiles
+ 8.5、sun.ci.totalBailouts
+ 8.6、sun.ci.totalInvalidates&lt;/p&gt;
+
+&lt;p&gt;9、Class：
+ 9.1、sun.cls.time
+ 9.2、java.cls.loadedClasses
+ 9.3、java.cls.unloadedClasses&lt;/p&gt;
+
+&lt;p&gt;10、AgeTable：
+ 10.1、sun.gc.generation.0.agetable.bytes.XX&lt;/p&gt;
+
+&lt;p&gt;选取的这些指标主要是为了监控性能和性能调优。&lt;/p&gt;
+
+&lt;p&gt;除了指标类型的监控，也可以尝试使用一下jitwatch和jfr，都会有一些意想不到的收获。&lt;/p&gt;
+
+&lt;h3 id=&quot;flags&quot;&gt;Flags&lt;/h3&gt;
+
+&lt;p&gt;Jvm在启动时，可以配置很多参数，这个参数也是有API可以获取的。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;VirtualMachine vm = VirtualMachine.attach(pid);
+HotSpotVirtualMachine hvm = (HotSpotVirtualMachine) vm;
+InputStream in = hvm.executeJCmd(&quot;VM.flags -all&quot;);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;这个代码你可以从Jcmd的源码中找到，网上能搜到VM.flags，很少有人提到-all这个参数。&lt;/p&gt;
+
+&lt;p&gt;看看你的Jvm到底都有哪些flag，你又知道多少flag的含义呢。&lt;/p&gt;
+</description>
+        <pubDate>Sat, 25 Feb 2017 14:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2017-02-25-perfdata</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2017-02-25-perfdata</guid>
+        
+        
+        <category>nginx</category>
         
       </item>
     
