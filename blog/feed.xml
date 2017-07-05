@@ -6,8 +6,8 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Wed, 05 Jul 2017 15:53:34 +0800</pubDate>
-    <lastBuildDate>Wed, 05 Jul 2017 15:53:34 +0800</lastBuildDate>
+    <pubDate>Wed, 05 Jul 2017 16:01:58 +0800</pubDate>
+    <lastBuildDate>Wed, 05 Jul 2017 16:01:58 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
     
       <item>
@@ -58,7 +58,7 @@
 
 &lt;p&gt;最后在sink端做简单的字符串拼接，性能至少可以提升两三倍。&lt;/p&gt;
 
-&lt;p&gt;注意：日期格式的渲染也要考虑，如果每天都将timestamp格式化成YMD也是非常耗时的，&lt;/p&gt;
+&lt;p&gt;注意：日期格式的渲染也要考虑，如果每条数据都将timestamp格式化成YMD也是非常耗时的，&lt;/p&gt;
 
 &lt;p&gt;可以适当引入cache来解决这个问题，比如将timestamp整除60000，缓存一分钟的格式化结果。&lt;/p&gt;
 
