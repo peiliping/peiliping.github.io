@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Flume优化 « Pei LiPing's Blog</title>
+  <meta name="description" content="Flume是Apache大数据套件中比较亲民的，安装、配置简单，功能丰富，而且极易定制化。">
+
+  <link rel="stylesheet" href="/blog/css/main.css">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2017-07-05-flume">
+  <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
+</head>
+
+
+  <body>
+
+    <header class="header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Pei LiPing's Blog</a>
+    <nav class="site-nav">
+      
+        
+      
+        
+        <a class="page-link" href="/blog/about/">About</a>
+        
+      
+        
+        <a class="page-link" href="/blog/category/">Category</a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </nav>
+  </div>
+</header>
+
+    <div class="page-content">
+      <div class="wrapper">
+        <div class="col-main">
+          <div class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">Flume优化</h1>
+    <p class="post-meta">Jul 5, 2017</p>
+  </header>
+
+  <article class="post-content">
+    <p>Flume是Apache大数据套件中比较亲民的，安装、配置简单，功能丰富，而且极易定制化。</p>
+
+<p>Flume的整体设计也是非常值得学习的。之前美团在官方技术blog中，着重讲述了其在Flume</p>
+
+<p>上的定制化开发和性能优化，也让Flume普及率大大提高了。</p>
+
+<p>一般使用Flume主要是作为agent抓取日志或者从Kafka读取消息写入HDFS、Hbase等，</p>
+
+<p>而作为消息通道的功能，这几年渐渐被性能卓越的Kafka所取代。</p>
+
+<p>而在日志抓取领域，Flume的功能性和性能一直都不是最佳选择。</p>
+
+<p>下面介绍一下我在Flume定制开发和性能优化中的一些实践。</p>
+
+<h2 id="kafkasourcesink">KafkaSourceSink</h2>
+
+<p>在我的应用场景中，Flume主要是从Kafka拉取数据写入到HDFS上，还有就是从Kafka到Kafka。</p>
+
+<p>Kafka这几年的发展很快，从比较流行的0.8.2.2到现在的0.10.X版本，API的兼容不是很好。</p>
+
+<p>Flume的官方版本支持的是0.9.X，需要定制一下Kafka的版本支持。把KafkaSource和Sink</p>
+
+<p>中,跟KafkaAPI打交道的方法都封装在抽象类中，提供多种版本的实现，这样就具备了不同Kafka</p>
+
+<p>版本之间的消息迁移，主要用途就是在业务升级Kafka版本时，作为辅助的数据迁移工具，</p>
+
+<p>业务方可以分别升级Producer端和Consumer端，减少升级的难度，控制升级的风险。</p>
+
+<h2 id="section">优化性能</h2>
+
+<p>整体来说Flume的性能并不高，很多组件为了实现通用性，都放弃了性能。</p>
+
+<p>通过JFR的火焰图，我们找到了一些可以优化的点，下面列举一些。</p>
+
+<h3 id="hdfseventsink">HDFSEventSink</h3>
+
+<p>HDFSEventSink最大的问题是HDFSPath路径的渲染，将EventHeader里的Tag写入Path路径中，</p>
+
+<p>还有一些预设的变量，比如年月日时分秒。这种渲染逻辑是每条数据都要执行的，所以开销非常大。</p>
+
+<p>解决办法：</p>
+
+<p>尽量少的使用变量，可以在Source端将路径的相关信息都拼凑好，写成一两个tag，</p>
+
+<p>最后在sink端做简单的字符串拼接，性能至少可以提升两三倍。</p>
+
+<p>注意：日期格式的渲染也要考虑，如果每天都将timestamp格式化成YMD也是非常耗时的，</p>
+
+<p>可以适当引入cache来解决这个问题，比如将timestamp整除60000，缓存一分钟的格式化结果。</p>
+
+<p>网上见到很多人的flume例子中，都是写TextFile到HDFS的，我是选择写的SequenceFile，</p>
+
+<p>并且加了Snappy的压缩。SequenceFile比TextFile的好处就不讲了，网上有很多介绍。</p>
+
+<p>另外sequenceFile也有一点点可以改的地方，将HDFSWritableSerializer的KeyClass修改掉，</p>
+
+<p>Flume源码里是LongWritable，可以改成NullWritable。修改过的SequenceFile并不影响使用，</p>
+
+<p>HDFS的文件大小会有百分之X的下降，相应的网络传输也会有一些收益。</p>
+
+<h3 id="eventsimpleevent">Event、SimpleEvent</h3>
+
+<p>在Flume体系中，Event是数据的载体，一共有两部分组成，一个Header，一个Body。</p>
+
+<p>Header是一个HashMap，这里的HashMap是可以优化的，参见我上一篇文章吧。</p>
+
+<p>这里有一个陷阱需要注意，SimpleEvent的实现中，Header是每次创建时就new了一个HashMap。</p>
+
+<p>按照Flume源码中Kafkasource的逻辑EventBuilder.withBody(eventBody, headers)，</p>
+
+<p>你在外面构建的headers(map),会在event初始化时复制一遍，这里可以优化一下。</p>
+
+<h3 id="channelprocessor">ChannelProcessor</h3>
+
+<p>ChannelProcessor的实现比较丰富，但不一定你都需要用到，这里首先可以做了一下裁剪。</p>
+
+<p>在我的Flume中不会用到optional和InterceptorChain，所以先将相关逻辑删掉了。</p>
+
+<p>processEventBatch方法的参数events，在下面的实现逻辑中被复制到了reqChannelQueue里，</p>
+
+<p>在我的Source中，一个batch操作的数据都是指向同一个channel的，所以这个复制也没有意义。</p>
+
+<p>只需要判断第一个元素的header，选择req的Channel，直接执行Put即可。</p>
+
+<p>如果一个batch的数据可能是流向不同channel的，那么尽量在source端拆分好。</p>
+
+<p>source端承载数据的list是可以反复重用的，而且capacity也可以预设大小，避免resize。</p>
+
+<h3 id="section-1">最后</h3>
+
+<p>写好的代码如果你是以plugin的形式来开发flume的话，那上面的部分代码是没法生效的。</p>
+
+<p>比如ChannelProcessor，有一个简单的办法，在不用修改Flume源码的情况下，就可以生效。</p>
+
+<p>找到Flume/bin目录下的flume-ng启动脚本，在这里修改一下java -cp 后面的参数顺序，</p>
+
+<p>保证你的plugin目录，在flume/lib目录之前，就可以优先加载所覆写的类了。</p>
+
+  </article>
+  
+  
+
+
+
+
+</div>
+
+        </div>
+        <div class="col-second">
+          <div class="col-box col-box-author">
+  <img class="avatar" src="//www.gravatar.com/avatar/your_email_md5?d=mm&s=135" alt="Pei LiPing">
+  <div class="col-box-title name">Pei LiPing</div>
+  <p>The Cabin Of Pei LiPing.</p>
+  <p class="contact">
+    
+    
+    
+    <a href="mailto:peilipingplp@gmail.com">Email</a>
+    
+  </p>
+</div>
+
+<div class="col-box">
+  <div class="col-box-title">Newest Posts</div>
+  <ul class="post-list">
+    
+      <li><a class="post-link" href="/blog/archivers/2017-07-05-flume">Flume优化</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2017-07-02-map">关于Map的优化</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2017-06-15-regex">谈谈日志解析中的正则表达式</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2017-06-05-verticaencoding">Vertica优化之Encode</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2017-05-25-batch2mysql">批量写入Mysql</a></li>
+    
+  </ul>
+</div>
+
+<div class="col-box post-toc hide">
+  <div class="col-box-title">TOC</div>
+</div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+<div class="wrapper">
+&copy; 2016 Pei LiPing
+</div>
+</footer>
+
+<script src="//upcdn.b0.upaiyun.com/libs/jquery/jquery-1.9.0.min.js"></script>
+<script src="/blog/js/easybook.js"></script>
+
+  </body>
+
+</html>
