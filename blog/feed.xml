@@ -6,9 +6,93 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Sun, 16 Jul 2017 16:36:47 +0800</pubDate>
-    <lastBuildDate>Sun, 16 Jul 2017 16:36:47 +0800</lastBuildDate>
+    <pubDate>Wed, 02 Aug 2017 19:53:55 +0800</pubDate>
+    <lastBuildDate>Wed, 02 Aug 2017 19:53:55 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>支持long型的bitmap</title>
+        <description>&lt;p&gt;日常工作中我们使用到bitmap的场景并不是很多，前几年在面试中倒是经常会被问到，&lt;/p&gt;
+
+&lt;p&gt;比如，一亿用户id的去重、排序、布隆过滤器等等，分析型数据库中bitmap也是利器。&lt;/p&gt;
+
+&lt;p&gt;Java中常用的bitmap实现有BitSet，还有开源的、功能强大的Roaringbitmap。&lt;/p&gt;
+
+&lt;p&gt;近年比较火的OLAP领域，大量的采用Roaringbitmap作为bitmap的基础实现库。&lt;/p&gt;
+
+&lt;p&gt;在读写速度还有内存控制上Roaringbitmap都非常优秀，但是有一个比较大的限制，&lt;/p&gt;
+
+&lt;p&gt;就是只支持int类型的数据写入，而实际工作中，我们想要存入Bitmap的是long型。&lt;/p&gt;
+
+&lt;p&gt;如果你去搜索bitmap三方库的issue就会发现，有此类需求的人非常多。&lt;/p&gt;
+
+&lt;p&gt;众多开源项目在使用Roaringbitmap的时候，也碰到了这问题，有的是扩展实现了对&lt;/p&gt;
+
+&lt;p&gt;long型的支持，有的是做了预处理，将数据控制在int类型范围内。&lt;/p&gt;
+
+&lt;p&gt;之前在meepo项目中引入bitmap，为了解决在两张表中，查找差异的主键ID，&lt;/p&gt;
+
+&lt;p&gt;一般来说一个表的主键ID都是自增的long型(bigint)，所以要扩展long型的支持。&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;思考&lt;/h2&gt;
+
+&lt;p&gt;刚才提到bitmap经常被用来存储ID，那么在业务中ID为什么经常被定义为long型呢？&lt;/p&gt;
+
+&lt;p&gt;我们平时使用的大多数表数据量可能只有几百或者几千，这些数据也很少更新和增加。&lt;/p&gt;
+
+&lt;p&gt;这种数据可以称为常量数据，比如定义浏览器、操作系统、运营商等等，这种场景完全&lt;/p&gt;
+
+&lt;p&gt;可以使用int、甚至更短的整数形式，有利于减低索引的开销，还有运行时的内存占用。&lt;/p&gt;
+
+&lt;p&gt;还有一种ID是流水号，比如订单ID、用户ID、商品ID等等。考虑业务未来的增长，&lt;/p&gt;
+
+&lt;p&gt;有必要把他们定义为long型。当然实际上，绝大多数公司都会在流水号上做一些手脚，&lt;/p&gt;
+
+&lt;p&gt;比如在订单流水号的末尾添加用户ID的后四位，用来作为分库分表的依据。&lt;/p&gt;
+
+&lt;p&gt;为了防止ID被穷举，设置适当的跳跃和偏移也是必要的。总之，ID涉及到拼接，&lt;/p&gt;
+
+&lt;p&gt;就极有可能超过int类型的范围了。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-1&quot;&gt;如何实现&lt;/h2&gt;
+
+&lt;p&gt;如果你真有海量数据需要需要填充到bitmap中，你需要考虑一下内存是不是够用了，&lt;/p&gt;
+
+&lt;p&gt;就算支持到long型，内存不够也处理不了。既然一个bitmap可以支持int，那么&lt;/p&gt;
+
+&lt;p&gt;我们使用多个bitmap，依次表达 N × int。这样可以使用现有的Roaringbitmap，&lt;/p&gt;
+
+&lt;p&gt;作为基础实现。这里有实现代码：&lt;a href=&quot;https://github.com/peiliping/meepo/tree/master/src/main/java/meepo/util/hp&quot;&gt;【BitMap】&lt;/a&gt;。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-2&quot;&gt;细节&lt;/h2&gt;
+
+&lt;p&gt;在处理N × int的时候，很多人会使用整除和取模的方式，当然这样可以实现功能，&lt;/p&gt;
+
+&lt;p&gt;但是运行效率一般，参考Ringbuffer在处理Sequence时的技巧，实现如下：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;long seq = data &amp;gt;&amp;gt; 31;
+int val = (int) (data &amp;amp; Integer.MAX_VALUE);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;测试下来，整体运行效率可以提高一倍。&lt;/p&gt;
+
+&lt;p&gt;因为这些Roaringbitmap是有序的，使用Treemap当然是最理想的。&lt;/p&gt;
+
+&lt;p&gt;但是在搜索性能上，Treemap不及Hashmap，所以只在局部使用。&lt;/p&gt;
+
+&lt;p&gt;Roaringbitmap的接口非常多，这里只实现了一部分，后面根据需要再补充。&lt;/p&gt;
+</description>
+        <pubDate>Tue, 01 Aug 2017 09:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2017-08-01-64bitmap</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2017-08-01-64bitmap</guid>
+        
+        
+        <category>java</category>
+        
+        <category>bitmap</category>
+        
+      </item>
     
       <item>
         <title>Flume优化</title>
@@ -1070,76 +1154,6 @@ listen 443 ssl;
         
         
         <category>nginx</category>
-        
-      </item>
-    
-      <item>
-        <title>日志采集工具Logwatch</title>
-        <description>&lt;ul&gt;
-  &lt;li&gt;
-    &lt;p&gt;2016年11月到12月中旬，开发了&lt;a href=&quot;https://github.com/peiliping/logwatch&quot;&gt;Logwatch&lt;/a&gt;的第一个版本。&lt;/p&gt;
-  &lt;/li&gt;
-  &lt;li&gt;
-    &lt;p&gt;去年公司生产环境下的应用日志采集，主要用的是Logstash，也就是ELK豪华套餐中的“L”。碰到的主要问题是：Cpu开销高、内存占用高（比如采集NginxAccessLog，NgxQPS 1000+ ，Logstash要消耗2G的内存，Cpu开销也有很大的波动）。&lt;/p&gt;
-  &lt;/li&gt;
-  &lt;li&gt;
-    &lt;p&gt;市面上与Logstash同类的开源项目有Flume、Heka、Fluentd、Graylog、Logkafka，以及各种Syslog和Collecter。不仅开源世界百花齐放，几乎每家云计算服务提供商还都提供日志采集、传输和搜索服务。&lt;/p&gt;
-  &lt;/li&gt;
-  &lt;li&gt;
-    &lt;p&gt;简单总结一下这些开源项目或多或少存在的一些问题：&lt;/p&gt;
-  &lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;blockquote&gt;
-  &lt;ol&gt;
-    &lt;li&gt;只支持单行Log，无法对Java应用中的ExceptionLog进行有效的采集和解析&lt;/li&gt;
-    &lt;li&gt;解析日志不够灵活&lt;/li&gt;
-    &lt;li&gt;性能一般&lt;/li&gt;
-    &lt;li&gt;不支持Kafka作为输出&lt;/li&gt;
-  &lt;/ol&gt;
-&lt;/blockquote&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;自己造一个轮子要达到什么目标呢？&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;blockquote&gt;
-  &lt;ol&gt;
-    &lt;li&gt;代码要少，简单可控&lt;/li&gt;
-    &lt;li&gt;性能要好，不能因为采集日志影响了应用的性能&lt;/li&gt;
-    &lt;li&gt;支持新版Kafka(0.10+)&lt;/li&gt;
-    &lt;li&gt;支持单双行混合模式的应用日志&lt;/li&gt;
-    &lt;li&gt;对简单格式的日志可以不用编写正则表达式，根据类似nginx的logformat配置格式，自动生成解析正则,也就是logwatch里的grok功能&lt;/li&gt;
-  &lt;/ol&gt;
-&lt;/blockquote&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;Lua程序优化的心得&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;blockquote&gt;
-  &lt;ol&gt;
-    &lt;li&gt;Lua的协程切换开销非常低，封装调度任务非常合适&lt;/li&gt;
-    &lt;li&gt;Lua的正则性能非常好，其非贪婪匹配‘(.-)’，可以应用于非常多的解析场景，简单高效,控制好回溯，尽量明确字符类型&lt;/li&gt;
-    &lt;li&gt;table要尽量复用，减少创建table和table.insert的过程中resize的开销&lt;/li&gt;
-    &lt;li&gt;不要反复做字符串拼接，必要时用table.concat替代&lt;/li&gt;
-    &lt;li&gt;尽量使用ipairs，少使用table.foreach&lt;/li&gt;
-    &lt;li&gt;尽量不要相信网上传说的Lua优化写法，Luajit已经优化了绝大多数问题了&lt;/li&gt;
-    &lt;li&gt;Luajit有profile功能，可以用于测试代码热点&lt;/li&gt;
-    &lt;li&gt;程序运行一次很快，运行几亿次再看看性能如何&lt;/li&gt;
-  &lt;/ol&gt;
-&lt;/blockquote&gt;
-</description>
-        <pubDate>Thu, 15 Dec 2016 20:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2016-12-15-logwatch</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2016-12-15-logwatch</guid>
-        
-        
-        <category>lua</category>
-        
-        <category>log</category>
-        
-        <category>kafka</category>
         
       </item>
     

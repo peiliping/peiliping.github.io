@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>支持long型的bitmap « Pei LiPing's Blog</title>
+  <meta name="description" content="日常工作中我们使用到bitmap的场景并不是很多，前几年在面试中倒是经常会被问到，">
+
+  <link rel="stylesheet" href="/blog/css/main.css">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2017-08-01-64bitmap">
+  <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
+</head>
+
+
+  <body>
+
+    <header class="header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Pei LiPing's Blog</a>
+    <nav class="site-nav">
+      
+        
+      
+        
+        <a class="page-link" href="/blog/about/">About</a>
+        
+      
+        
+        <a class="page-link" href="/blog/category/">Category</a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </nav>
+  </div>
+</header>
+
+    <div class="page-content">
+      <div class="wrapper">
+        <div class="col-main">
+          <div class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">支持long型的bitmap</h1>
+    <p class="post-meta">Aug 1, 2017</p>
+  </header>
+
+  <article class="post-content">
+    <p>日常工作中我们使用到bitmap的场景并不是很多，前几年在面试中倒是经常会被问到，</p>
+
+<p>比如，一亿用户id的去重、排序、布隆过滤器等等，分析型数据库中bitmap也是利器。</p>
+
+<p>Java中常用的bitmap实现有BitSet，还有开源的、功能强大的Roaringbitmap。</p>
+
+<p>近年比较火的OLAP领域，大量的采用Roaringbitmap作为bitmap的基础实现库。</p>
+
+<p>在读写速度还有内存控制上Roaringbitmap都非常优秀，但是有一个比较大的限制，</p>
+
+<p>就是只支持int类型的数据写入，而实际工作中，我们想要存入Bitmap的是long型。</p>
+
+<p>如果你去搜索bitmap三方库的issue就会发现，有此类需求的人非常多。</p>
+
+<p>众多开源项目在使用Roaringbitmap的时候，也碰到了这问题，有的是扩展实现了对</p>
+
+<p>long型的支持，有的是做了预处理，将数据控制在int类型范围内。</p>
+
+<p>之前在meepo项目中引入bitmap，为了解决在两张表中，查找差异的主键ID，</p>
+
+<p>一般来说一个表的主键ID都是自增的long型(bigint)，所以要扩展long型的支持。</p>
+
+<h2 id="section">思考</h2>
+
+<p>刚才提到bitmap经常被用来存储ID，那么在业务中ID为什么经常被定义为long型呢？</p>
+
+<p>我们平时使用的大多数表数据量可能只有几百或者几千，这些数据也很少更新和增加。</p>
+
+<p>这种数据可以称为常量数据，比如定义浏览器、操作系统、运营商等等，这种场景完全</p>
+
+<p>可以使用int、甚至更短的整数形式，有利于减低索引的开销，还有运行时的内存占用。</p>
+
+<p>还有一种ID是流水号，比如订单ID、用户ID、商品ID等等。考虑业务未来的增长，</p>
+
+<p>有必要把他们定义为long型。当然实际上，绝大多数公司都会在流水号上做一些手脚，</p>
+
+<p>比如在订单流水号的末尾添加用户ID的后四位，用来作为分库分表的依据。</p>
+
+<p>为了防止ID被穷举，设置适当的跳跃和偏移也是必要的。总之，ID涉及到拼接，</p>
+
+<p>就极有可能超过int类型的范围了。</p>
+
+<h2 id="section-1">如何实现</h2>
+
+<p>如果你真有海量数据需要需要填充到bitmap中，你需要考虑一下内存是不是够用了，</p>
+
+<p>就算支持到long型，内存不够也处理不了。既然一个bitmap可以支持int，那么</p>
+
+<p>我们使用多个bitmap，依次表达 N × int。这样可以使用现有的Roaringbitmap，</p>
+
+<p>作为基础实现。这里有实现代码：<a href="https://github.com/peiliping/meepo/tree/master/src/main/java/meepo/util/hp">【BitMap】</a>。</p>
+
+<h2 id="section-2">细节</h2>
+
+<p>在处理N × int的时候，很多人会使用整除和取模的方式，当然这样可以实现功能，</p>
+
+<p>但是运行效率一般，参考Ringbuffer在处理Sequence时的技巧，实现如下：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>long seq = data &gt;&gt; 31;
+int val = (int) (data &amp; Integer.MAX_VALUE);
+</code></pre>
+</div>
+
+<p>测试下来，整体运行效率可以提高一倍。</p>
+
+<p>因为这些Roaringbitmap是有序的，使用Treemap当然是最理想的。</p>
+
+<p>但是在搜索性能上，Treemap不及Hashmap，所以只在局部使用。</p>
+
+<p>Roaringbitmap的接口非常多，这里只实现了一部分，后面根据需要再补充。</p>
+
+  </article>
+  
+  
+
+
+
+
+</div>
+
+        </div>
+        <div class="col-second">
+          <div class="col-box col-box-author">
+  <img class="avatar" src="//www.gravatar.com/avatar/your_email_md5?d=mm&s=135" alt="Pei LiPing">
+  <div class="col-box-title name">Pei LiPing</div>
+  <p>The Cabin Of Pei LiPing.</p>
+  <p class="contact">
+    
+    
+    
+    <a href="mailto:peilipingplp@gmail.com">Email</a>
+    
+  </p>
+</div>
+
+<div class="col-box">
+  <div class="col-box-title">Newest Posts</div>
+  <ul class="post-list">
+    
+      <li><a class="post-link" href="/blog/archivers/2017-08-01-64bitmap">支持long型的bitmap</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2017-07-05-flume">Flume优化</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2017-07-02-map">关于Map的优化</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2017-06-15-regex">谈谈日志解析中的正则表达式</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2017-06-05-verticaencoding">Vertica优化之Encode</a></li>
+    
+  </ul>
+</div>
+
+<div class="col-box post-toc hide">
+  <div class="col-box-title">TOC</div>
+</div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+<div class="wrapper">
+&copy; 2016 Pei LiPing
+</div>
+</footer>
+
+<script src="//upcdn.b0.upaiyun.com/libs/jquery/jquery-1.9.0.min.js"></script>
+<script src="/blog/js/easybook.js"></script>
+
+  </body>
+
+</html>
