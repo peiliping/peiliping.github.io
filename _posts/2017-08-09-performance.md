@@ -3,7 +3,7 @@ layout: post
 title:  "关于性能优化"
 date:   "2017-08-09 09:00:00"
 categories: "性能 优化 logwatch"
-permalink: /archivers/2017-08-10-performance
+permalink: /archivers/2017-08-09-performance
 ---
 
 最近两周一直在对去年开发的logwatch进行重构和升级，修复一些小bug、
