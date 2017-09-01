@@ -6,9 +6,66 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Mon, 14 Aug 2017 20:07:06 +0800</pubDate>
-    <lastBuildDate>Mon, 14 Aug 2017 20:07:06 +0800</lastBuildDate>
+    <pubDate>Fri, 01 Sep 2017 09:08:51 +0800</pubDate>
+    <lastBuildDate>Fri, 01 Sep 2017 09:08:51 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>Lpeg与模式匹配</title>
+        <description>&lt;p&gt;去年年底，开发第一版logwatch的时候，就有关注到Lpeg这个项目。&lt;/p&gt;
+
+&lt;p&gt;调研期间看了mozilla的heka项目，在解析日志时引入了lua的sandbox，&lt;/p&gt;
+
+&lt;p&gt;其定义的解析函数主要依赖Lpeg来实现，（LPEG可以称为PEG的Lua实现）。&lt;/p&gt;
+
+&lt;p&gt;PEG相关知识自行google–&amp;gt;解析表达文法。&lt;/p&gt;
+
+&lt;h2 id=&quot;lpeg&quot;&gt;日志领域的Lpeg&lt;/h2&gt;
+
+&lt;p&gt;为什么mozilla的heka要引入lua和lpeg呢？&lt;/p&gt;
+
+&lt;p&gt;heka是基于go开发的高性能日志处理工具，lua也是以性能著称的，&lt;/p&gt;
+
+&lt;p&gt;而且增加或者修改lua文件并不需要重新编译，非常理想的插件模式。&lt;/p&gt;
+
+&lt;p&gt;对于一般的日志文件解析来说正则就足够强大了，但这个世界并不完美，&lt;/p&gt;
+
+&lt;p&gt;总有一些特殊情况，导致了复杂度。假如日志文件里存在一种以上的格式，&lt;/p&gt;
+
+&lt;p&gt;如何高效的进行解析？如何解析抽取UserAgent这样的字段？&lt;/p&gt;
+
+&lt;p&gt;模式匹配是一个很不错的选择，lua领域的lpeg就可以完成这个工作。&lt;/p&gt;
+
+&lt;p&gt;几年前我在看一个解析UserAgent的java库，大概实现思路是要跑N条正则，&lt;/p&gt;
+
+&lt;p&gt;看看哪个可以完成解析，这样的效率显然是很低。&lt;/p&gt;
+
+&lt;h2 id=&quot;lpeg-1&quot;&gt;初识Lpeg&lt;/h2&gt;
+
+&lt;p&gt;Lpeg的入门还是有一些难度的，语法比较怪异，相关的例子也不是很多。&lt;/p&gt;
+
+&lt;p&gt;我在git上建了一个项目，记录了我练习的一些例子，从最简单的计算器、&lt;/p&gt;
+
+&lt;p&gt;到一个日期格式自动识别转化的工具、再到一个简易的模板(支持变量替&lt;/p&gt;
+
+&lt;p&gt;换和for循环语句)。&lt;a href=&quot;https://github.com/peiliping/lpeg-test/tree/master/basic&quot;&gt;【lpeg-test】&lt;/a&gt;。&lt;/p&gt;
+
+&lt;p&gt;如果你想用lpeg来自制一门脚本语言parser的话，还是要借助一些高级库，&lt;/p&gt;
+
+&lt;p&gt;比如&lt;a href=&quot;https://github.com/sqmedeiros/lpeglabel&quot;&gt;【label】&lt;/a&gt;、&lt;a href=&quot;https://github.com/andremm/lua-parser&quot;&gt;【parser】&lt;/a&gt;、&lt;a href=&quot;https://github.com/luapower/lexer&quot;&gt;【lexer】&lt;/a&gt;&lt;/p&gt;
+</description>
+        <pubDate>Fri, 01 Sep 2017 09:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2017-09-01-lpeg</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2017-09-01-lpeg</guid>
+        
+        
+        <category>lpeg</category>
+        
+        <category>lua</category>
+        
+        <category>模式匹配</category>
+        
+      </item>
     
       <item>
         <title>关于性能优化</title>
@@ -987,179 +1044,6 @@ autoReconnectForPools=true
         
         
         <category>java</category>
-        
-      </item>
-    
-      <item>
-        <title>Jvm的PerfData</title>
-        <description>&lt;p&gt;Java系统的监控经常是通过JMX的，最近几年也比较流行使用Dropwizard和SpringMetrics的集成。&lt;/p&gt;
-
-&lt;p&gt;Jvm自身有一个叫PerfData的指标集，是使用mmap来存储的，jstat就是基于它的。&lt;/p&gt;
-
-&lt;p&gt;我们平时在生产环境中使用jstat来观察JVM的GC情况(时间、次数、分代大小)，&lt;/p&gt;
-
-&lt;p&gt;但是PerfData还有很多其他指标，而且非常有用。&lt;/p&gt;
-
-&lt;p&gt;下面就来介绍一下PerfData。&lt;/p&gt;
-
-&lt;h3 id=&quot;section&quot;&gt;基本概念&lt;/h3&gt;
-
-&lt;p&gt;Perfdata里大概有200-300个指标，有数值类型的，也有字符串的（比如gc cause）。&lt;/p&gt;
-
-&lt;p&gt;你可以使用MonitoredVm.findByPattern(““)来获取全部指标的列表，也可以用名字获取单个指标。&lt;/p&gt;
-
-&lt;p&gt;JVM运行时，不断在内存中更新指标值，通过mmap映射到/tmp/hsperfdata_user/pid的文件中。&lt;/p&gt;
-
-&lt;p&gt;这个文件的大小是32K，mmap文件默认是30s才刷新同步，perfdata的文件延迟是特殊控制的。&lt;/p&gt;
-
-&lt;p&gt;如果你使用过mmap就会知道有个force接口，可以强制同步更新，perfdata的更新频率在100ms以内。&lt;/p&gt;
-
-&lt;p&gt;提一个题外话，jvm启动后会生成一个/tmp/.javapidxxxxx的文件，这个文件是一个socket，&lt;/p&gt;
-
-&lt;p&gt;常用的jstack、jmap、jcmd都是通过他来和jvm通讯的，不要和perfdata的文件弄混淆了。&lt;/p&gt;
-
-&lt;h3 id=&quot;section-1&quot;&gt;获取指标的方法&lt;/h3&gt;
-
-&lt;p&gt;因为有一个独立的mmap文件存在，所以想要获取指标并不需要和jvm进行通讯，&lt;/p&gt;
-
-&lt;p&gt;只要你的程序有权限读取这个文件即可，当然读取这个文件最好使用java提供的类库，方便一些。&lt;/p&gt;
-
-&lt;p&gt;如果你想自己解析，可以参考这个类的实现，sun.jvmstat.perfdata.monitor.v2_0.PerfDataBuffer。&lt;/p&gt;
-
-&lt;p&gt;特别注意一下其中的ByteOrder，字节存储机制主要有两种：Big-endian和Little-endian。&lt;/p&gt;
-
-&lt;p&gt;相关细节就不展开讲了，自行查阅资料吧。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Arguments JPS_ARGUMENTS = new Arguments(new String[] {&quot;-l&quot;});
-MonitoredHost monitoredHost = MonitoredHost.getMonitoredHost(JPS_ARGUMENTS.hostId());
-MonitoredVm vm = this.monitoredHost.getMonitoredVm(new VmIdentifier(&quot;//&quot; + pid + &quot;?mode=r&quot;), 1000);
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;这段代码你可以在jstat的源码中找到，根据需要自行修改。&lt;/p&gt;
-
-&lt;h3 id=&quot;section-2&quot;&gt;指标&lt;/h3&gt;
-
-&lt;p&gt;这几百个指标我们也并非都关心，有很多指标的含义都搞不清楚，需要读读JVM的源码才能知道。&lt;/p&gt;
-
-&lt;p&gt;今年年初我们在开发基于Perfdata的JVM性能指标监控时，进行了一些整理工作，主要采集了三五十个指标。&lt;/p&gt;
-
-&lt;p&gt;具体指标的含义今后会更新，这里只列一下大致的分类。&lt;/p&gt;
-
-&lt;p&gt;1、TLAB：&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;1.1、sun.gc.tlab.alloc&lt;/li&gt;
-  &lt;li&gt;1.2、sun.gc.tlab.allocThreads&lt;/li&gt;
-  &lt;li&gt;1.3、sun.gc.tlab.fills&lt;/li&gt;
-  &lt;li&gt;1.4、sun.gc.tlab.gcWaste&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;2、Threshold：&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;2.1、sun.gc.policy.tenuringThreshold&lt;/li&gt;
-  &lt;li&gt;2.2、sun.gc.policy.maxTenuringThreshold&lt;/li&gt;
-  &lt;li&gt;2.3、sun.gc.policy.incrementTenuringThresholdForGcCost&lt;/li&gt;
-  &lt;li&gt;2.4、sun.gc.policy.decrementTenuringThresholdForGcCost&lt;/li&gt;
-  &lt;li&gt;2.5、sun.gc.policy.decrementTenuringThresholdForSurvivorLimit&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;3、Thread：&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;3.1、java.threads.live&lt;/li&gt;
-  &lt;li&gt;3.2、java.threads.started&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;4、Safepoint：&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;4.1、sun.rt.safepoints&lt;/li&gt;
-  &lt;li&gt;4.2、sun.rt.safepointTime&lt;/li&gt;
-  &lt;li&gt;4.3、sun.rt.safepointSyncTime&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;5、Memory：&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;5.1、sun.gc.generation.0.space.X.used&lt;/li&gt;
-  &lt;li&gt;5.2、sun.gc.generation.0.space.X.capacity&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;6、Lock：&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;6.1、sun.rt._sync_ContendedLockAttempts&lt;/li&gt;
-  &lt;li&gt;6.2、sun.rt._sync_Parks&lt;/li&gt;
-  &lt;li&gt;6.3、sun.rt._sync_Notifications&lt;/li&gt;
-  &lt;li&gt;6.4、sun.rt._sync_FutileWakeups&lt;/li&gt;
-  &lt;li&gt;6.5、sun.rt._sync_Inflations&lt;/li&gt;
-  &lt;li&gt;6.6、sun.rt._sync_Deflations&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;7、GC：&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;7.1、sun.gc.collector.X.invocations&lt;/li&gt;
-  &lt;li&gt;7.2、sun.gc.collector.X.time&lt;/li&gt;
-  &lt;li&gt;7.3、sun.gc.policy.avgMinorPauseTime(avgMajorPauseTime)&lt;/li&gt;
-  &lt;li&gt;7.4、sun.gc.policy.avgPromotedAvg&lt;/li&gt;
-  &lt;li&gt;7.5、sun.gc.policy.avgSurvivedAvg&lt;/li&gt;
-  &lt;li&gt;7.6、sun.gc.policy.gcTimeLimitExceeded&lt;/li&gt;
-  &lt;li&gt;7.7、sun.gc.policy.survivorOverflowed&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;8、Compile：&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;8.1、java.ci.totalTime&lt;/li&gt;
-  &lt;li&gt;8.2、sun.ci.totalCompiles&lt;/li&gt;
-  &lt;li&gt;8.3、sun.ci.osrTime&lt;/li&gt;
-  &lt;li&gt;8.4、sun.ci.osrCompiles&lt;/li&gt;
-  &lt;li&gt;8.5、sun.ci.totalBailouts&lt;/li&gt;
-  &lt;li&gt;8.6、sun.ci.totalInvalidates&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;9、Class：&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;9.1、sun.cls.time&lt;/li&gt;
-  &lt;li&gt;9.2、java.cls.loadedClasses&lt;/li&gt;
-  &lt;li&gt;9.3、java.cls.unloadedClasses&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;10、AgeTable：&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;10.1、sun.gc.generation.0.agetable.bytes.XX&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;选取的这些指标主要是为了监控性能和性能调优。&lt;/p&gt;
-
-&lt;p&gt;除了指标类型的监控，也可以尝试使用一下jitwatch和jfr，都会有一些意想不到的收获。&lt;/p&gt;
-
-&lt;h3 id=&quot;flags&quot;&gt;Flags&lt;/h3&gt;
-
-&lt;p&gt;Jvm在启动时，可以配置很多参数，这个参数也是有API可以获取的。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;VirtualMachine vm = VirtualMachine.attach(pid);
-HotSpotVirtualMachine hvm = (HotSpotVirtualMachine) vm;
-InputStream in = hvm.executeJCmd(&quot;VM.flags -all&quot;);
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-&lt;p&gt;这个代码你可以从Jcmd的源码中找到，网上能搜到VM.flags，很少有人提到-all这个参数。&lt;/p&gt;
-
-&lt;p&gt;看看你的Jvm到底都有哪些flag，你又知道多少flag的含义呢。&lt;/p&gt;
-</description>
-        <pubDate>Sat, 25 Feb 2017 14:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2017-02-25-perfdata</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2017-02-25-perfdata</guid>
-        
-        
-        <category>java</category>
-        
-        <category>jvm</category>
         
       </item>
     
