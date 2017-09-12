@@ -6,9 +6,252 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Fri, 01 Sep 2017 09:08:51 +0800</pubDate>
-    <lastBuildDate>Fri, 01 Sep 2017 09:08:51 +0800</lastBuildDate>
+    <pubDate>Tue, 12 Sep 2017 20:53:25 +0800</pubDate>
+    <lastBuildDate>Tue, 12 Sep 2017 20:53:25 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>Redis中的Bitmap数据结构</title>
+        <description>&lt;p&gt;Redis最早被大家熟知，是因为其高效的读写速率和丰富的数据结构。&lt;/p&gt;
+
+&lt;p&gt;近两年在实时计算方面的应用也非常多，尤其是与bit有关的操作。&lt;/p&gt;
+
+&lt;h2 id=&quot;redisbit&quot;&gt;Redis中常见的Bit操作&lt;/h2&gt;
+
+&lt;p&gt;1、SetBit
+2、GetBit
+3、BitOp
+4、BitPos
+5、BitField&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;计算日活跃用户&lt;/h2&gt;
+
+&lt;p&gt;计算日活是一个非常古老的话题，也是面试题目中很常见的一个问题。&lt;/p&gt;
+
+&lt;p&gt;其变种问题有：有限内存的数据排序，在线用户统计等等。&lt;/p&gt;
+
+&lt;p&gt;在网上有很多文章介绍如何利用Redis做高效的日活统计，请自行阅读。&lt;/p&gt;
+
+&lt;p&gt;使用bitmap来作为数据的存储好处就是高效、节省内存。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-1&quot;&gt;维度分析的需求&lt;/h2&gt;
+
+&lt;p&gt;单一的日活跃统计已经不能满足需求了，在实际工作中，运营人员希望能够实现&lt;/p&gt;
+
+&lt;p&gt;一些更为复杂的统计分析，比如漏斗模型、多维度组合分析等等。有很多公司&lt;/p&gt;
+
+&lt;p&gt;已经积累了大量的用户特征数据，开始完善用户画像，通过用户的特征来优化&lt;/p&gt;
+
+&lt;p&gt;业务，提高商业价值。简单概括，我们需要一个列式的存储，方便增加新列，&lt;/p&gt;
+
+&lt;p&gt;需要类似bitmap的索引能够高效完成多个维度的快速筛选。&lt;/p&gt;
+
+&lt;p&gt;近几年以BitMap索引著称的Druid，是一个非常好的选择，在维度统计方面&lt;/p&gt;
+
+&lt;p&gt;性能优异，缺点就是架构比较复杂，维护成本比较高。另外还有ES、Kylin等。&lt;/p&gt;
+
+&lt;p&gt;也有人用Hyperloglog之类的数据结构做日活统计，但不能解决多维度的问题。&lt;/p&gt;
+
+&lt;h2 id=&quot;redis--lua&quot;&gt;Redis + Lua&lt;/h2&gt;
+
+&lt;p&gt;Redis提供了Bit，但不足以完成多维分析的操作，于是引入LuaScript。&lt;/p&gt;
+
+&lt;p&gt;使用过Redis的人都知道通过批量提交可以提升效率，如果我们的需求是先Get&lt;/p&gt;
+
+&lt;p&gt;在Put，那么这个原子性就很难保证。LuaScript可以把这种业务逻辑封装好，&lt;/p&gt;
+
+&lt;p&gt;在Redis服务器上执行，因为Redis本身的单线程特性，不用再处理并发问题了。&lt;/p&gt;
+
+&lt;p&gt;如果我们的计算逻辑包含迭代，那么让Lua在Redis内部完成效率会更高。&lt;/p&gt;
+
+&lt;h2 id=&quot;bitmmap&quot;&gt;如何构建BitmMap索引&lt;/h2&gt;
+
+&lt;p&gt;每个维度的每一个值都要单独构建一个BitMap，所以需要维护一个Value的列表。&lt;/p&gt;
+
+&lt;p&gt;之前在看Kylin的时候，有用一个TrieTree的结构维护Value字典信息。&lt;/p&gt;
+
+&lt;p&gt;Sybase之前有一个专利叫BitWise，结合TrieTree，可以方便实现Between逻辑。&lt;/p&gt;
+
+&lt;p&gt;维度值的膨胀是一个需要高度关注的问题，如果控制不好会吃掉非常多的存储空间。&lt;/p&gt;
+
+&lt;p&gt;假如我们有一亿个用户ID，Bitmap就非常大，因为数据不连续，非常浪费内存。&lt;/p&gt;
+
+&lt;p&gt;所以我们要对数据做一下分块的操作，比如每16384个连续用户ID为一个Block。&lt;/p&gt;
+
+&lt;p&gt;Block的大小会影响存储的开销，如果分的太小，会导致查询性能下降。&lt;/p&gt;
+
+&lt;p&gt;因为数据分了Block，所以还需要维护一个Block的列表。这个地方和之前在&lt;/p&gt;
+
+&lt;p&gt;扩展Roaringbitmap的时候是一样，通过位移运算来计算offset。&lt;/p&gt;
+
+&lt;p&gt;如果没有什么附加信息的话，我们仍然可以用Bitmap来维护这个列表。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-2&quot;&gt;如何查询&lt;/h2&gt;
+
+&lt;p&gt;BitMap的操作类型就是逻辑运算(与、或、非)，那么根据选取的维度列序号和&lt;/p&gt;
+
+&lt;p&gt;维度值找到Bitmap，再对BitMap进行逻辑运算，结果保存在一个临时的Key中，&lt;/p&gt;
+
+&lt;p&gt;最后对其求bitcount，释放内存。&lt;/p&gt;
+
+&lt;p&gt;遍历Block列表的时候，我用到了BitPos，这个操作的参数非常麻烦，&lt;/p&gt;
+
+&lt;p&gt;参数是byte级别的，返回值是bit，需要自己加逻辑去控制一下。&lt;/p&gt;
+
+&lt;h2 id=&quot;demo-code&quot;&gt;demo code&lt;/h2&gt;
+
+&lt;p&gt;在Redis里执行的脚本，负责写入数据和查询数据&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;local resty_redis = require &quot;resty.redis&quot;
+local redis       = resty_redis:new()
+redis:set_timeout(1000)
+local ok , err    = redis:connect(&quot;127.0.0.1&quot;, 6379)
+
+if err then
+  ngx.say(err)
+  return
+end
+
+local scripts = ngx.shared.scripts
+
+local shaw = redis:script(&quot;LOAD&quot; , 
+[[
+  local tableName , dateTime , uidNumber = KEYS[1] , KEYS[2] , tonumber(KEYS[3])
+  
+  local blockSeq , lineSeq 
+  if uidNumber &amp;gt;= 2147483648 then
+  	blockSeq = math.modf(uidNumber / 16384)  
+  	lineSeq  = uidNumber % 16384
+  else
+  	blockSeq , lineSeq = bit.rshift(uidNumber , 14) , bit.band(uidNumber , 16383)
+  end
+  
+  local keyT4N = {&quot;T-&quot; , tableName , &quot;-&quot; , dateTime , &quot;-Nest&quot;}
+  local keyT4V = {&quot;T-&quot; , tableName , &quot;-&quot; , dateTime , &quot;-&quot; , 6 , &quot;-&quot; , &quot;VS&quot;}
+  local keyT4M = {&quot;T-&quot; , tableName , &quot;-&quot; , dateTime , &quot;-&quot; , 6 , &quot;-&quot; , 8 , &quot;-BMP-&quot; , blockSeq}
+
+  for index , val in ipairs(ARGV) do
+    keyT4V[6] , keyT4M[6] = index , index
+    local key4V = table.concat(keyT4V)
+    local m = redis.call(&quot;SISMEMBER&quot; , key4V , val)
+    if m == 1 then
+      keyT4M[8] = val
+      local key4M = table.concat(keyT4M)
+      redis.call(&quot;setbit&quot; , key4M , lineSeq , 1)  
+    else
+      local totalNum = redis.call(&quot;SCARD&quot; , key4V)
+      
+      if totalNum &amp;gt;= 1024 then
+        val = &quot;IGNORE&quot;
+      end
+      if totalNum &amp;lt;= 1024 then 
+        redis.call(&quot;SADD&quot; , key4V , val)
+      end
+      
+      if totalNum == 0 then
+        redis.call(&quot;expire&quot; , key4V , 86400 * 7)    
+      end
+
+      keyT4M[8] = val
+      local key4M = table.concat(keyT4M)
+      redis.call(&quot;setbit&quot; , key4M , lineSeq , 1)
+      redis.call(&quot;expire&quot; , key4M , 86400 * 7)
+    end
+  end
+  local key4N = table.concat(keyT4N)
+  redis.call(&quot;setbit&quot; , key4N , blockSeq , 1)
+  return true
+]]
+)
+
+scripts:set(&quot;WriteScript&quot;, shaw)
+ngx.say(&quot;WriteScript : &quot; .. shaw)
+
+local shar = redis:script(&quot;LOAD&quot; , 
+[[
+  local result = 0
+  local tableName , dateTime = KEYS[1] , KEYS[2]
+  
+  local keyT4N = {&quot;T-&quot; , tableName , &quot;-&quot; , dateTime , &quot;-Nest&quot;}
+  local key4N = table.concat(keyT4N)
+
+  local subKeys , subKeysT = {} , {}
+  for index = 1 , #ARGV , 2 do
+    table.insert(subKeysT , {&quot;T-&quot; , tableName , &quot;-&quot; , dateTime , &quot;-&quot; , ARGV[index] , &quot;-&quot; , ARGV[index+1] , &quot;-BMP-&quot; , 10})
+  end
+
+  local bytepos = 0
+  local pos = redis.call(&quot;bitpos&quot; , key4N , 1 , bytepos)
+  while (pos &amp;gt;= 0)
+  do
+    for g = pos , pos + 7 - bit.band(pos , 7) do
+      local fill = redis.call(&quot;getbit&quot; , key4N , g)
+      if fill == 1 then
+        for index , val in ipairs(subKeysT) do
+          val[10] = g
+          subKeys[index] = table.concat(val)
+        end
+        redis.call(&quot;bitop&quot; , &quot;AND&quot; , &quot;_TMP_&quot; , unpack(subKeys))
+        local uv = redis.call(&quot;bitcount&quot; , &quot;_TMP_&quot;)
+        result = result + uv
+      end
+    end
+
+    bytepos = bit.rshift(pos , 3) + 1 
+    pos = redis.call(&quot;bitpos&quot; , key4N , 1 , bytepos)
+  end
+  redis.call(&quot;del&quot; , &quot;_TMP_&quot;)
+  return result
+]]
+)
+
+scripts:set(&quot;ReadScript&quot;, shar)
+ngx.say(&quot;ReadScript : &quot; .. shar)
+
+redis:close()
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;Openresty+lua包装的查询接口&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;local ngx_re      = require &quot;ngx.re&quot;
+local resty_redis = require &quot;resty.redis&quot;
+local redis       = resty_redis:new()
+redis:set_timeout(1000)
+local ok , err    = redis:connect(&quot;127.0.0.1&quot;, 6379)
+
+if err then
+  ngx.say(err)
+  return
+end
+
+local scripts = ngx.shared.scripts
+
+local tableName = ngx.var.arg_table
+local dateTime  = ngx.var.arg_datetime
+
+local dimsStr   = ngx.var.arg_dims
+local dims      = ngx_re.split(dimsStr , &quot;,&quot;)
+
+local r = redis:evalsha(scripts:get(&quot;ReadScript&quot;) , 2 , tableName , dateTime , unpack(dims))
+ngx.say(r)
+redis:close()
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+</description>
+        <pubDate>Fri, 01 Sep 2017 09:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2017-09-12-redis-bit</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2017-09-12-redis-bit</guid>
+        
+        
+        <category>redis</category>
+        
+        <category>lua</category>
+        
+        <category>bitmap</category>
+        
+      </item>
     
       <item>
         <title>Lpeg与模式匹配</title>
@@ -995,55 +1238,6 @@ autoReconnectForPools=true
         <category>avsc</category>
         
         <category>ringbuffer</category>
-        
-      </item>
-    
-      <item>
-        <title>Java Flight Recorder</title>
-        <description>&lt;p&gt;Profiling是最常见的，用来定位代码性能问题的方法。&lt;/p&gt;
-
-&lt;p&gt;在开发环境中，我们用Visualvm、JProfiler、Yourkit等。这些工具功能强大，支持图形化界面操作，可以让我们很快定位代码问题。&lt;/p&gt;
-
-&lt;p&gt;但是他们对应用性能的影响也非常大，所以不适合在生产环境下使用。还有这些软件要attach到jvm进程上，生产环境一般网络隔离，很难做到。&lt;/p&gt;
-
-&lt;p&gt;在生产环境我们最常用的profiling工具就是java/bin下的jstack，多做几次jstack，也相当于profiling了。有很多工具就是对多次的jstack结果进行合并，来分析问题的。&lt;/p&gt;
-
-&lt;p&gt;jstack方便易用，但并不是特别适合来做profiling，操作频率低，会导致safepoint指标急剧增长等等。&lt;/p&gt;
-
-&lt;p&gt;于是我们尝试使用Jvm原生提供的JFR - Java Flight Recorder 来解决问题。&lt;/p&gt;
-
-&lt;h3 id=&quot;section&quot;&gt;使用方法&lt;/h3&gt;
-
-&lt;ol&gt;
-  &lt;li&gt;
-    &lt;p&gt;jcmd pid VM.unlock_commercial_features&lt;/p&gt;
-  &lt;/li&gt;
-  &lt;li&gt;
-    &lt;p&gt;jcmd pid JFR.start duration=60s filename=/home/peiliping/dev/logs/test.jfr settings=[default,profile]&lt;/p&gt;
-  &lt;/li&gt;
-  &lt;li&gt;
-    &lt;p&gt;jcmd pid JFR.check 检查当前运行状况&lt;/p&gt;
-  &lt;/li&gt;
-  &lt;li&gt;
-    &lt;p&gt;jcmd pid JFR.stop name=test.jfr 或者 jcmd pid JFR.stop recording=3 name和recording的值参见check的结果&lt;/p&gt;
-  &lt;/li&gt;
-  &lt;li&gt;
-    &lt;p&gt;将生成的jfr文件传回到自己的电脑中&lt;/p&gt;
-  &lt;/li&gt;
-  &lt;li&gt;
-    &lt;p&gt;shell下执行jmc，启动图形化客户端，导入jfr文件，就可以看到cpu、gc、线程、io、代码热点等监控信息了&lt;/p&gt;
-  &lt;/li&gt;
-  &lt;li&gt;
-    &lt;p&gt;如果需要定制化jfr抓取的指标，可以修改setting的xml文件，/…./JDK/jdk1.8.0_51/jre/lib/jfr/&lt;/p&gt;
-  &lt;/li&gt;
-&lt;/ol&gt;
-</description>
-        <pubDate>Fri, 31 Mar 2017 10:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2017-03-31-jfr</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2017-03-31-jfr</guid>
-        
-        
-        <category>java</category>
         
       </item>
     
