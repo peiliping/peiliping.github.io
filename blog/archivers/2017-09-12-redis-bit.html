@@ -55,21 +55,27 @@
 
   <header class="post-header">
     <h1 class="post-title">Redis中的Bitmap数据结构</h1>
-    <p class="post-meta">Sep 1, 2017</p>
+    <p class="post-meta">Sep 12, 2017</p>
   </header>
 
   <article class="post-content">
     <p>Redis最早被大家熟知，是因为其高效的读写速率和丰富的数据结构。</p>
 
-<p>近两年在实时计算方面的应用也非常多，尤其是与bit有关的操作。</p>
+<p>无论是Web业务中做缓存和计数器，还是流计算做数据暂存容器，</p>
+
+<p>应用都十分广泛。尤其是Bit有关的操作，在统计类业务中颇受欢迎。</p>
 
 <h2 id="redisbit">Redis中常见的Bit操作</h2>
 
-<p>1、SetBit
-2、GetBit
-3、BitOp
-4、BitPos
-5、BitField</p>
+<p>1、SetBit （写入）</p>
+
+<p>2、GetBit （读取）</p>
+
+<p>3、BitOp  （逻辑运算）</p>
+
+<p>4、BitPos （迭代）</p>
+
+<p>5、BitField （特殊需求）</p>
 
 <h2 id="section">计算日活跃用户</h2>
 
@@ -79,96 +85,203 @@
 
 <p>在网上有很多文章介绍如何利用Redis做高效的日活统计，请自行阅读。</p>
 
-<p>使用bitmap来作为数据的存储好处就是高效、节省内存。</p>
+<p>使用Bit结构作为数据的存储，好处是高效、节省内存。</p>
+
+<p>之前我写过一篇有关Java的Roaringbitmap的Blog，可以读一下。</p>
 
 <h2 id="section-1">维度分析的需求</h2>
 
-<p>单一的日活跃统计已经不能满足需求了，在实际工作中，运营人员希望能够实现</p>
+<p>单一的日活跃统计已经不是什么技术难题了，几乎每个网站或者App都有。</p>
 
-<p>一些更为复杂的统计分析，比如漏斗模型、多维度组合分析等等。有很多公司</p>
+<p>在实际工作中，运营人员希望看到的数据不是一个简单的统计值，而是能做</p>
 
-<p>已经积累了大量的用户特征数据，开始完善用户画像，通过用户的特征来优化</p>
+<p>一些更为复杂的统计分析。比如，漏斗模型、多维度组合分析等等。</p>
 
-<p>业务，提高商业价值。简单概括，我们需要一个列式的存储，方便增加新列，</p>
+<p>通过分析来指导业务的优化，策略的修正。</p>
 
-<p>需要类似bitmap的索引能够高效完成多个维度的快速筛选。</p>
+<p>现在也有很多公司已经积累了大量的用户特征数据，开始完善用户的画像，</p>
 
-<p>近几年以BitMap索引著称的Druid，是一个非常好的选择，在维度统计方面</p>
+<p>通过用户的特征来优化业务逻辑，提升用户体验，提高商业价值。</p>
 
-<p>性能优异，缺点就是架构比较复杂，维护成本比较高。另外还有ES、Kylin等。</p>
+<p>这类需求简单概括一下就是，我们需要一个列式的存储，方便增加新列，</p>
 
-<p>也有人用Hyperloglog之类的数据结构做日活统计，但不能解决多维度的问题。</p>
+<p>需要类似Bitmap的索引，能够高效完成多个维度的快速筛选。</p>
 
-<h2 id="redis--lua">Redis + Lua</h2>
+<p>以Bitmap索引为核心技术的Druid，是一个非常好的选择，被众多互联网</p>
 
-<p>Redis提供了Bit，但不足以完成多维分析的操作，于是引入LuaScript。</p>
+<p>公司部署，用来做运营分析、广告分析、实时监控。Druid有良好的扩展性，</p>
 
-<p>使用过Redis的人都知道通过批量提交可以提升效率，如果我们的需求是先Get</p>
+<p>延迟比较低，实时强，查询速度快，在多维度分析里表现尤其优异。</p>
 
-<p>在Put，那么这个原子性就很难保证。LuaScript可以把这种业务逻辑封装好，</p>
+<p>缺点就是架构比较复杂，硬件成本比较高。也有公司选择ES和Kylin等。</p>
 
-<p>在Redis服务器上执行，因为Redis本身的单线程特性，不用再处理并发问题了。</p>
+<h2 id="redis-and-lua">Redis AND Lua</h2>
 
-<p>如果我们的计算逻辑包含迭代，那么让Lua在Redis内部完成效率会更高。</p>
+<p>Redis支持加载Lua脚本，让一些原生难以满足的需求可以更优雅的实现。</p>
 
-<h2 id="bitmmap">如何构建BitmMap索引</h2>
+<p>使用过Redis的人都知道，通过批量提交可以提升写入效率，假如我们的需求</p>
 
-<p>每个维度的每一个值都要单独构建一个BitMap，所以需要维护一个Value的列表。</p>
+<p>是先Get，根据业务逻辑再Put，就很难批量执行，很难保证原子性。</p>
 
-<p>之前在看Kylin的时候，有用一个TrieTree的结构维护Value字典信息。</p>
+<p>如果你碰到了迭代的需求，需要反复查询Redis，那么效率也会大打折扣。</p>
 
-<p>Sybase之前有一个专利叫BitWise，结合TrieTree，可以方便实现Between逻辑。</p>
+<p>Redis提供的LuaScript扩展是一个非常不错的选择，我们可以把业务逻辑</p>
 
-<p>维度值的膨胀是一个需要高度关注的问题，如果控制不好会吃掉非常多的存储空间。</p>
+<p>封装在Lua的函数中，把业务逻辑放在离数据更近的地方，类似Hbase的</p>
 
-<p>假如我们有一亿个用户ID，Bitmap就非常大，因为数据不连续，非常浪费内存。</p>
+<p>协处理器的思路，而且Redis本身是单线程的，就不用再处理原子性问题了。</p>
 
-<p>所以我们要对数据做一下分块的操作，比如每16384个连续用户ID为一个Block。</p>
+<p>网上有很多Redis调Lua的例子，这里我就不详细介绍了。</p>
 
-<p>Block的大小会影响存储的开销，如果分的太小，会导致查询性能下降。</p>
+<p>Redis提供了Bit操作，又是典型的内存数据存储，如果数据量不是特别大，</p>
 
-<p>因为数据分了Block，所以还需要维护一个Block的列表。这个地方和之前在</p>
+<p>能不能用Redis+Lua实现多维度分析日活的功能呢？下面我进行一些尝试。</p>
 
-<p>扩展Roaringbitmap的时候是一样，通过位移运算来计算offset。</p>
+<h2 id="bitmap">如何构建Bitmap索引</h2>
 
-<p>如果没有什么附加信息的话，我们仍然可以用Bitmap来维护这个列表。</p>
+<h3 id="section-2">用户标识</h3>
 
-<h2 id="section-2">如何查询</h2>
+<p>因为是分析日活跃用户，所以采用UserId作为唯一标识，有一些公司的UserId</p>
 
-<p>BitMap的操作类型就是逻辑运算(与、或、非)，那么根据选取的维度列序号和</p>
+<p>是UUID，那就需要进行一次转化，考虑到节省Bitmap的问题，ID尽量连续。</p>
 
-<p>维度值找到Bitmap，再对BitMap进行逻辑运算，结果保存在一个临时的Key中，</p>
+<h3 id="section-3">维度值</h3>
 
-<p>最后对其求bitcount，释放内存。</p>
+<p>一个用户身上可能有十几个甚至几十个维度属性值，原则上每个值都要单独构建</p>
+
+<p>一个Bitmap，所以还需要维护维度的Value列表。如果维度值过于丰富就会导致</p>
+
+<p>巨大的存储开销。之前在看Kylin的Blog时，注意到有用一个TrieTree的结构</p>
+
+<p>维度Value字典信息，好处是编码ID的信息具备ASCII的连续性，对Between逻辑</p>
+
+<p>的执行优化有帮助。在Redis里维护TrieTree有点麻烦，我们暂时用Set替代。</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>Key的结构是：T-(命名空间)-(日期)-(维度序号)-VS
+Value是：Redis的Sets
+</code></pre>
+</div>
+
+<p>维度值维护在Set里，通过控制Set的大小，来限制膨胀的发生，如果这种逻辑</p>
+
+<p>在外面已经处理过了，这里也可以简化掉，直接进行下一步操作。</p>
+
+<h3 id="bitmap-1">分块的Bitmap</h3>
+
+<p>假如我们有一亿个用户ID，每个维度值都维护容量一亿的Bitmap就非常大了。</p>
+
+<p>为了减小体积，我们将整体用户进行切分。切分的粒度小有助于节省内存，</p>
+
+<p>但是会导致查询性能变差，粒度大则会浪费更多的内存。如果Redis的Bitmap</p>
+
+<p>能够有Roaringbitmap的优化效果就完美了，对Bitmap的压缩可以参考一下</p>
+
+<p>Roaringbitmap的源码，这里就不细说了。</p>
+
+<p>块的大小可以根据自己的数据规模来确定，一般选择16384或者65536等。</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>blockSeq , lineSeq = bit.rshift(uidNumber , 14) , bit.band(uidNumber , 16383)
+</code></pre>
+</div>
+
+<p>之所以取2的N次方，是为了更快的处理分块的序号和偏移，利用位移和与运算。</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>Key的结构是：T-(命名空间)-(日期)-(维度序号)-(维度值)-BMP-(块序号)
+Value是：Redis的Bit
+</code></pre>
+</div>
+
+<p>因为做了分块的操作，所以我们还需要维护一个块信息的列表，方便我们遍历计算。</p>
+
+<p>一般来说会在这个块信息列表上存一些统计信息，比如总数。如果没有什么附加信息的话，</p>
+
+<p>我们仍然可以用Bitmap来维护这个列表，节省一点内存开销。</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>Key的结构是：T-(命名空间)-(日期)-Nest
+Value是：Redis的Bit
+</code></pre>
+</div>
+
+<p>题外话：Sybase之前有一个专利叫Bit-Wise，可以解决高基维和Between问题，</p>
+
+<p>今后我们再讨论这个话题。</p>
+
+<h2 id="section-4">如何查询</h2>
+
+<p>一般查询的条件就是 col1 = 3 and col4 = true and col10 = abc 这个样子。</p>
+
+<p>所以我们要根据维度的序号和维度的值，找到对应的BitmapKey,参见之前的key结构。</p>
+
+<p>最后我们要根据分块的列表进行遍历，汇总遍历的结果返回。</p>
+
+<p>伪代码如下：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>for index in blocksArray
+  AND result col1-3-index col4-true-index col10-abc-index
+end
+bitcount result 
+del result
+</code></pre>
+</div>
 
 <p>遍历Block列表的时候，我用到了BitPos，这个操作的参数非常麻烦，</p>
 
 <p>参数是byte级别的，返回值是bit，需要自己加逻辑去控制一下。</p>
 
-<h2 id="demo-code">demo code</h2>
+<div class="highlighter-rouge"><pre class="highlight"><code>local scripts = ngx.shared.scripts
+local shar = redis:script("LOAD" , 
+[[
+  local result = 0
+  local tableName , dateTime = KEYS[1] , KEYS[2]
+  
+  local keyT4N = {"T-" , tableName , "-" , dateTime , "-Nest"}
+  local key4N = table.concat(keyT4N)
 
-<p>在Redis里执行的脚本，负责写入数据和查询数据</p>
+  local subKeys , subKeysT = {} , {}
+  for index = 1 , #ARGV , 2 do
+    table.insert(subKeysT , {"T-" , tableName , "-" , dateTime , "-" , ARGV[index] , "-" , ARGV[index+1] , "-BMP-" , 10})
+  end
 
-<div class="highlighter-rouge"><pre class="highlight"><code>local resty_redis = require "resty.redis"
-local redis       = resty_redis:new()
-redis:set_timeout(1000)
-local ok , err    = redis:connect("127.0.0.1", 6379)
+  local bytepos = 0
+  local pos = redis.call("bitpos" , key4N , 1 , bytepos)
+  while (pos &gt;= 0)
+  do
+    for g = pos , pos + 7 - bit.band(pos , 7) do
+      local fill = redis.call("getbit" , key4N , g)
+      if fill == 1 then
+        for index , val in ipairs(subKeysT) do
+          val[10] = g
+          subKeys[index] = table.concat(val)
+        end
+        redis.call("bitop" , "AND" , "_TMP_" , unpack(subKeys))
+        local uv = redis.call("bitcount" , "_TMP_")
+        result = result + uv
+      end
+    end
 
-if err then
-  ngx.say(err)
-  return
-end
+    bytepos = bit.rshift(pos , 3) + 1 
+    pos = redis.call("bitpos" , key4N , 1 , bytepos)
+  end
+  redis.call("del" , "_TMP_")
+  return result
+]]
+)
+scripts:set("ReadScript", shar)
+</code></pre>
+</div>
 
-local scripts = ngx.shared.scripts
+<h2 id="section-5">数据写入</h2>
 
+<p>其实就是将行转列的过程</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>local scripts = ngx.shared.scripts
 local shaw = redis:script("LOAD" , 
 [[
   local tableName , dateTime , uidNumber = KEYS[1] , KEYS[2] , tonumber(KEYS[3])
   
   local blockSeq , lineSeq 
   if uidNumber &gt;= 2147483648 then
-  	blockSeq = math.modf(uidNumber / 16384)  
-  	lineSeq  = uidNumber % 16384
+  	blockSeq , lineSeq = math.modf(uidNumber / 16384) , uidNumber % 16384
   else
   	blockSeq , lineSeq = bit.rshift(uidNumber , 14) , bit.band(uidNumber , 16383)
   end
@@ -210,57 +323,11 @@ local shaw = redis:script("LOAD" ,
   return true
 ]]
 )
-
 scripts:set("WriteScript", shaw)
-ngx.say("WriteScript : " .. shaw)
-
-local shar = redis:script("LOAD" , 
-[[
-  local result = 0
-  local tableName , dateTime = KEYS[1] , KEYS[2]
-  
-  local keyT4N = {"T-" , tableName , "-" , dateTime , "-Nest"}
-  local key4N = table.concat(keyT4N)
-
-  local subKeys , subKeysT = {} , {}
-  for index = 1 , #ARGV , 2 do
-    table.insert(subKeysT , {"T-" , tableName , "-" , dateTime , "-" , ARGV[index] , "-" , ARGV[index+1] , "-BMP-" , 10})
-  end
-
-  local bytepos = 0
-  local pos = redis.call("bitpos" , key4N , 1 , bytepos)
-  while (pos &gt;= 0)
-  do
-    for g = pos , pos + 7 - bit.band(pos , 7) do
-      local fill = redis.call("getbit" , key4N , g)
-      if fill == 1 then
-        for index , val in ipairs(subKeysT) do
-          val[10] = g
-          subKeys[index] = table.concat(val)
-        end
-        redis.call("bitop" , "AND" , "_TMP_" , unpack(subKeys))
-        local uv = redis.call("bitcount" , "_TMP_")
-        result = result + uv
-      end
-    end
-
-    bytepos = bit.rshift(pos , 3) + 1 
-    pos = redis.call("bitpos" , key4N , 1 , bytepos)
-  end
-  redis.call("del" , "_TMP_")
-  return result
-]]
-)
-
-scripts:set("ReadScript", shar)
-ngx.say("ReadScript : " .. shar)
-
-redis:close()
-
 </code></pre>
 </div>
 
-<p>Openresty+lua包装的查询接口</p>
+<p>OpenrestyLua包装的查询接口</p>
 
 <div class="highlighter-rouge"><pre class="highlight"><code>local ngx_re      = require "ngx.re"
 local resty_redis = require "resty.redis"
