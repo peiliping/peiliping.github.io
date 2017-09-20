@@ -6,9 +6,241 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Wed, 13 Sep 2017 11:22:09 +0800</pubDate>
-    <lastBuildDate>Wed, 13 Sep 2017 11:22:09 +0800</lastBuildDate>
+    <pubDate>Wed, 20 Sep 2017 15:00:26 +0800</pubDate>
+    <lastBuildDate>Wed, 20 Sep 2017 15:00:26 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>如何查询Redis中的Bitmap数据</title>
+        <description>&lt;p&gt;书接上回，我们已经将日活的维度数据写入了Redis的Bitmap结构中。&lt;/p&gt;
+
+&lt;p&gt;今天设计一个简单的查询引擎，通过表达式，转化为Redis的指令，最终得到日活的结果。&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;设计一个简单的表达式&lt;/h2&gt;
+
+&lt;p&gt;最通用的表达式就是SQL了，Hive、Drill、Presto、Phoenix等等知名的&lt;/p&gt;
+
+&lt;p&gt;开源项目都在做这个事情。我们这个筛选维度和求日活的功能没有那么复杂，简单一些就好。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;(C1 = 3 &amp;amp; C2 = 1) &amp;amp; (C5 = 1 | C8 = 6)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;其中C(N)代表选择第几个维度，等号后面代表维度的值，&lt;/p&gt;
+
+&lt;p&gt;“&amp;amp;”代表AND操作，“|”代表OR操作，括号表示结合顺序。&lt;/p&gt;
+
+&lt;p&gt;这个表达式的含义我想很容易理解，跟四则混合运算差不多。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-1&quot;&gt;表达式的解释器&lt;/h2&gt;
+
+&lt;p&gt;下面看看我们如何解析这个表达式，将表达式转化为Redis执行的指令。&lt;/p&gt;
+
+&lt;p&gt;之前玩了一段时间的Lpeg，也做过一些小东西，这里还是用Lpeg来做，&lt;/p&gt;
+
+&lt;p&gt;在四则混合运算的例子上加以改进即可。&lt;/p&gt;
+
+&lt;p&gt;下面是对表达式的定义。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;function Blk(p)
+  return p * V &quot;Space&quot;
+end
+
+local G = P{
+    V &quot;Space&quot; * V &quot;Stmt&quot; ;
+    Stmt      = Cf(V &quot;Group&quot; * Cg(V &quot;LogicSig&quot; * V &quot;Group&quot;)^0 , operation) ,
+    Group     = V &quot;Element&quot; + V &quot;Open&quot; * V &quot;Stmt&quot; * V &quot;Close&quot; ,
+    Element   = Cg(Blk(V &quot;ColNum&quot;) * Blk(V &quot;EqSignal&quot;) * Blk(V &quot;ColVal&quot;) / selector) ,
+    LogicSig  = Blk(C(S &quot;&amp;amp;|&quot;)),
+
+    ColNum    = P &quot;C&quot; * C(R &quot;09&quot;^1) ,
+    EqSignal  = C(P &quot;=&quot;) ,
+    ColVal    = C((R &quot;az&quot; + R &quot;AZ&quot; + R &quot;09&quot;)^1) ,
+    ColValNum = C(R &quot;09&quot;^1) ,
+
+    Open      = Blk(P &quot;(&quot;) ,
+    Close     = Blk(P &quot;)&quot;) ,
+    Space     = S(&quot; \n\t&quot;)^0 ,
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;在解析到 C1=1 类似的结构时用selector函数处理&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;function selector(colNum , op , colVal)
+  lastKey = {&quot;b&quot; , colNum .. '-' .. colVal}
+  return lastKey
+end
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;解析到 XXX &amp;amp; YYY 或者 XXX | YYY 的结构时用operation函数处理&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;function operation(left , op , right)
+  local action = &quot;&quot;
+  if op == &quot;&amp;amp;&quot; then 
+    action = &quot;AND&quot;
+  elseif op == &quot;|&quot; then
+    action = &quot;OR&quot;
+  end
+  local tmpKey = &quot;__TMP-&quot; .. tmpCount
+  lastKey = {&quot;t&quot; , tmpKey}
+  table.insert(recycle , tmpKey)
+  tmpCount = tmpCount + 1
+  table.insert(process , {&quot;BITOP&quot; , action , tmpKey , left[1] , left[2] , right[1] , right[2]})
+  return {&quot;t&quot; , tmpKey }
+end
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;因为在Bitmap运算过程中，我们会产生一些临时的Bitmap数据，以__TMP开头的Key，&lt;/p&gt;
+
+&lt;p&gt;这些Key在运算执行结束后，需要清理掉，我们将这些Key都记录在recycle数据里。&lt;/p&gt;
+
+&lt;p&gt;下面看一个表达式解析的过程：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;(C1 = 3 &amp;amp; C2 = 1) &amp;amp; (C5 = 1 | C8 = 6)
+
+--------------------
+C1	=	3
+C2	=	1
+table: 0x41760200	&amp;amp;	table: 0x417553e0
+C5	=	1
+C8	=	6
+table: 0x417600f0	|	table: 0x41760178
+table: 0x4175db68	&amp;amp;	table: 0x4175da68
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;再看看解析的结果：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;lastKey : {&quot;t&quot; , &quot;__TMP-3&quot;}
+process : [
+           [&quot;BITOP&quot;,&quot;AND&quot;,&quot;__TMP-1&quot;,&quot;b&quot;,&quot;1-3&quot;,&quot;b&quot;,&quot;2-1&quot;],
+           [&quot;BITOP&quot;,&quot;OR&quot;,&quot;__TMP-2&quot;,&quot;b&quot;,&quot;5-1&quot;,&quot;b&quot;,&quot;8-6&quot;],
+           [&quot;BITOP&quot;,&quot;AND&quot;,&quot;__TMP-3&quot;,&quot;t&quot;,&quot;__TMP-1&quot;,&quot;t&quot;,&quot;__TMP-2&quot;],
+           [&quot;BITCOUNT&quot;,[&quot;t&quot;,&quot;__TMP-3&quot;]]
+          ]
+recycle : [&quot;__TMP-1&quot;,&quot;__TMP-2&quot;,&quot;__TMP-3&quot;]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;说明：其中的”t”代表是临时变量的key ， “b”代表的是需要结合Block块的序号的Key。&lt;/p&gt;
+
+&lt;p&gt;如果完善一些的话，我们应该对逻辑表达式进行一下处理，也就是执行计划的优化。&lt;/p&gt;
+
+&lt;p&gt;这里只是一个Demo，所以我们先跳过这一块，先把流程跑通。&lt;/p&gt;
+
+&lt;h2 id=&quot;redis&quot;&gt;将执行计划推送给Redis&lt;/h2&gt;
+
+&lt;p&gt;前一篇Blog，我们已经写了一个封装查询的LuaScript了，LuaScript会根据&lt;/p&gt;
+
+&lt;p&gt;Nest结构中的数据，遍历所有的Block块，在每个Block块中进行，逻辑表达式的运算，&lt;/p&gt;
+
+&lt;p&gt;最后把UV都SUM起来，就是返回的日活结果。&lt;/p&gt;
+
+&lt;p&gt;这里我将process和recycle的数据都打包成了json(redis的lua可以使用cjson)。&lt;/p&gt;
+
+&lt;p&gt;下面是重写的ReadScript&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;local scriptRead = redis:script(&quot;LOAD&quot; , 
+[[
+  local result = 0
+  local tableName , dateTime = KEYS[1] , KEYS[2]
+  
+  local keyT4N = {tableName , &quot;-&quot; , dateTime , &quot;-Nest&quot;}
+  local key4N = table.concat(keyT4N)
+
+  local process = cjson.decode(ARGV[1])
+  local recyple = cjson.decode(ARGV[2])
+  for index , value in ipairs(process) do
+    if value[1] == &quot;BITOP&quot; then
+      local params = {value[1] , value[2] , value[3]}
+      for seq = 4 , #value , 2 do
+        if value[seq] == &quot;b&quot; then
+          table.insert(params , {tableName , &quot;-&quot; , dateTime , &quot;-&quot; , value[seq + 1] , &quot;-BMP-&quot; , 7})
+        elseif value[seq] == &quot;t&quot; then
+          table.insert(params , value[seq + 1])
+        end
+      end
+      process[index] = params
+    elseif value[1] == &quot;BITCOUNT&quot; then
+      local params = {value[1]}
+      if value[2] == &quot;b&quot; then
+          table.insert(params , {tableName , &quot;-&quot; , dateTime , &quot;-&quot; , value[3] , &quot;-BMP-&quot; , 7})
+        elseif value[2] == &quot;t&quot; then
+          table.insert(params , value[3])
+        end
+      process[index] = params
+    end
+  end
+  
+  local bytepos = 0
+  local pos = redis.call(&quot;bitpos&quot; , key4N , 1 , bytepos)
+  while (pos &amp;gt;= 0)
+  do
+    for g = pos , pos + 7 - bit.band(pos , 7) do
+      local fill = redis.call(&quot;getbit&quot; , key4N , g)
+      if fill == 1 then
+        local t = 0
+        for index , value in ipairs(process) do
+          local ps = {}
+          for id , item in ipairs(value) do
+            if type(item) == &quot;table&quot; then
+              item[7] = g
+              ps[id] = table.concat(item)
+            else
+              ps[id] = item
+            end
+          end
+          t = redis.call(unpack(ps))
+        end
+        result = result + t
+      end
+    end
+    bytepos = bit.rshift(pos , 3) + 1 
+    pos = redis.call(&quot;bitpos&quot; , key4N , 1 , bytepos)
+  end
+  if #recyple &amp;gt; 0 then
+    redis.call(&quot;del&quot; , unpack(recyple))
+  end
+  return result
+]]
+)
+
+scripts:set(&quot;ReadScript&quot; , scriptRead)
+ngx.say(&quot;ReadScript : &quot; .. scriptRead)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;最后我们再改写一些Openresty对查询接口的封装&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;G:match(expression)
+table.insert(process , {&quot;BITCOUNT&quot; , unpack(lastKey)}) 
+
+ngx.say(json.encode(process))
+ngx.say(json.encode(recycle))
+
+local r = redis:evalsha(scripts:get(&quot;ReadScript&quot;) , 2 , tableName , dateTime , json.encode(process) , json.encode(recycle))
+ngx.say(r)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+</description>
+        <pubDate>Wed, 20 Sep 2017 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2017-09-20-redis-bit2</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2017-09-20-redis-bit2</guid>
+        
+        
+        <category>redis</category>
+        
+        <category>lua</category>
+        
+        <category>bitmap</category>
+        
+        <category>lpeg</category>
+        
+      </item>
     
       <item>
         <title>Redis中的Bitmap数据结构</title>
@@ -1256,58 +1488,6 @@ autoReconnectForPools=true
         <category>ringbuffer</category>
         
         <category>jdbc</category>
-        
-      </item>
-    
-      <item>
-        <title>Meepo</title>
-        <description>&lt;p&gt;Meepo最开始是为了Mysql到Mysql的数据迁移开发的，今年年初对其进行了重构。&lt;/p&gt;
-
-&lt;p&gt;目前可以基本替代Sqoop完成每天凌晨将Mysql数据拷贝到HDFS上的需求，数据格式为Parquet+Snappy。&lt;/p&gt;
-
-&lt;p&gt;并且Meepo还提供了AVSC文件，方便Hive更新表结构（TBLPROPERTIES (‘avro.schema.url’=’hdfs://onlinecluster/xxxxxxxxxx)）。&lt;/p&gt;
-
-&lt;p&gt;Meepo的Mysql数据表迁移功能也优化了很多：&lt;/p&gt;
-
-&lt;ol&gt;
-  &lt;li&gt;
-    &lt;p&gt;支持基本字段类型的自动匹配转化&lt;/p&gt;
-  &lt;/li&gt;
-  &lt;li&gt;
-    &lt;p&gt;自动识别表结构和主键&lt;/p&gt;
-  &lt;/li&gt;
-  &lt;li&gt;
-    &lt;p&gt;支持同时使用N个Plugin&lt;/p&gt;
-  &lt;/li&gt;
-  &lt;li&gt;
-    &lt;p&gt;提供了ReplacePlugin，用于系统升级中常见的表字段值替换需求（查另外一张表，来决定替换成什么值）&lt;/p&gt;
-  &lt;/li&gt;
-&lt;/ol&gt;
-
-&lt;p&gt;这次重构中，还引入了Disruptor的Ringbuffer，作为数据缓冲区。&lt;/p&gt;
-
-&lt;p&gt;Ringbuffer强制了对象复用，大幅度减少了GC的频率，使得Meepo可以用更小的JVM来完成任务，性能也有一定的提升。&lt;/p&gt;
-
-&lt;p&gt;在我们的测试中，Meepo的吞吐能力一直在每秒6W行以上，极限可以达到每秒15W。&lt;/p&gt;
-
-&lt;p&gt;这次重构后的测试中，也找到了更多应该暴露的Metric指标，方便对Meepo进行调优。&lt;/p&gt;
-</description>
-        <pubDate>Tue, 18 Apr 2017 09:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2017-04-18-meepo</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2017-04-18-meepo</guid>
-        
-        
-        <category>java</category>
-        
-        <category>mysql</category>
-        
-        <category>sqoop</category>
-        
-        <category>parquet</category>
-        
-        <category>avsc</category>
-        
-        <category>ringbuffer</category>
         
       </item>
     
