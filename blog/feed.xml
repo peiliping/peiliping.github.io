@@ -6,21 +6,21 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Wed, 20 Sep 2017 15:00:26 +0800</pubDate>
-    <lastBuildDate>Wed, 20 Sep 2017 15:00:26 +0800</lastBuildDate>
+    <pubDate>Sat, 23 Sep 2017 11:27:32 +0800</pubDate>
+    <lastBuildDate>Sat, 23 Sep 2017 11:27:32 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
     
       <item>
         <title>如何查询Redis中的Bitmap数据</title>
-        <description>&lt;p&gt;书接上回，我们已经将日活的维度数据写入了Redis的Bitmap结构中。&lt;/p&gt;
+        <description>&lt;p&gt;书接上回，我们已经将日活的维度数据写入Redis的Bitmap结构中。&lt;/p&gt;
 
-&lt;p&gt;今天设计一个简单的查询引擎，通过表达式，转化为Redis的指令，最终得到日活的结果。&lt;/p&gt;
+&lt;p&gt;今天再设计一个简单的查询引擎，通过表达式转化为Redis的指令集，最终得到日活的结果。&lt;/p&gt;
 
 &lt;h2 id=&quot;section&quot;&gt;设计一个简单的表达式&lt;/h2&gt;
 
-&lt;p&gt;最通用的表达式就是SQL了，Hive、Drill、Presto、Phoenix等等知名的&lt;/p&gt;
+&lt;p&gt;最通用的表达式就是SQL了，Hive、Drill、Presto、Phoenix等开源项目都在做类似的事情。&lt;/p&gt;
 
-&lt;p&gt;开源项目都在做这个事情。我们这个筛选维度和求日活的功能没有那么复杂，简单一些就好。&lt;/p&gt;
+&lt;p&gt;我们这个筛选维度求日活的功能，没有那么复杂，所以简单一些就好。&lt;/p&gt;
 
 &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;(C1 = 3 &amp;amp; C2 = 1) &amp;amp; (C5 = 1 | C8 = 6)
 &lt;/code&gt;&lt;/pre&gt;
@@ -56,7 +56,6 @@ local G = P{
     ColNum    = P &quot;C&quot; * C(R &quot;09&quot;^1) ,
     EqSignal  = C(P &quot;=&quot;) ,
     ColVal    = C((R &quot;az&quot; + R &quot;AZ&quot; + R &quot;09&quot;)^1) ,
-    ColValNum = C(R &quot;09&quot;^1) ,
 
     Open      = Blk(P &quot;(&quot;) ,
     Close     = Blk(P &quot;)&quot;) ,
@@ -148,15 +147,13 @@ recycle : [&quot;__TMP-1&quot;,&quot;__TMP-2&quot;,&quot;__TMP-3&quot;]
 [[
   local result = 0
   local tableName , dateTime = KEYS[1] , KEYS[2]
-  
-  local keyT4N = {tableName , &quot;-&quot; , dateTime , &quot;-Nest&quot;}
-  local key4N = table.concat(keyT4N)
+  local process , recycle    = cjson.decode(ARGV[1]) , cjson.decode(ARGV[2])
+  local key4N = table.concat({tableName , &quot;-&quot; , dateTime , &quot;-Nest&quot;})
 
-  local process = cjson.decode(ARGV[1])
-  local recyple = cjson.decode(ARGV[2])
   for index , value in ipairs(process) do
+    local params
     if value[1] == &quot;BITOP&quot; then
-      local params = {value[1] , value[2] , value[3]}
+      params = {value[1] , value[2] , value[3]}
       for seq = 4 , #value , 2 do
         if value[seq] == &quot;b&quot; then
           table.insert(params , {tableName , &quot;-&quot; , dateTime , &quot;-&quot; , value[seq + 1] , &quot;-BMP-&quot; , 7})
@@ -164,16 +161,15 @@ recycle : [&quot;__TMP-1&quot;,&quot;__TMP-2&quot;,&quot;__TMP-3&quot;]
           table.insert(params , value[seq + 1])
         end
       end
-      process[index] = params
     elseif value[1] == &quot;BITCOUNT&quot; then
-      local params = {value[1]}
+      params = {value[1]}
       if value[2] == &quot;b&quot; then
           table.insert(params , {tableName , &quot;-&quot; , dateTime , &quot;-&quot; , value[3] , &quot;-BMP-&quot; , 7})
         elseif value[2] == &quot;t&quot; then
           table.insert(params , value[3])
         end
-      process[index] = params
     end
+    process[index] = params
   end
   
   local bytepos = 0
@@ -183,7 +179,6 @@ recycle : [&quot;__TMP-1&quot;,&quot;__TMP-2&quot;,&quot;__TMP-3&quot;]
     for g = pos , pos + 7 - bit.band(pos , 7) do
       local fill = redis.call(&quot;getbit&quot; , key4N , g)
       if fill == 1 then
-        local t = 0
         for index , value in ipairs(process) do
           local ps = {}
           for id , item in ipairs(value) do
@@ -194,16 +189,19 @@ recycle : [&quot;__TMP-1&quot;,&quot;__TMP-2&quot;,&quot;__TMP-3&quot;]
               ps[id] = item
             end
           end
-          t = redis.call(unpack(ps))
+          if ps[1] == &quot;BITCOUNT&quot; then
+            result = result + redis.call(unpack(ps))
+          else
+            redis.call(unpack(ps))
+          end
         end
-        result = result + t
       end
     end
     bytepos = bit.rshift(pos , 3) + 1 
     pos = redis.call(&quot;bitpos&quot; , key4N , 1 , bytepos)
   end
-  if #recyple &amp;gt; 0 then
-    redis.call(&quot;del&quot; , unpack(recyple))
+  if #recycle &amp;gt; 0 then
+    redis.call(&quot;del&quot; , unpack(recycle))
   end
   return result
 ]]
@@ -218,9 +216,6 @@ ngx.say(&quot;ReadScript : &quot; .. scriptRead)
 
 &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;G:match(expression)
 table.insert(process , {&quot;BITCOUNT&quot; , unpack(lastKey)}) 
-
-ngx.say(json.encode(process))
-ngx.say(json.encode(recycle))
 
 local r = redis:evalsha(scripts:get(&quot;ReadScript&quot;) , 2 , tableName , dateTime , json.encode(process) , json.encode(recycle))
 ngx.say(r)
@@ -462,56 +457,72 @@ scripts:set(&quot;ReadScript&quot;, shar)
 
 &lt;p&gt;其实就是将行转列的过程&lt;/p&gt;
 
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;local scripts = ngx.shared.scripts
-local shaw = redis:script(&quot;LOAD&quot; , 
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;local scriptWrite = redis:script(&quot;LOAD&quot; , 
 [[
-  local tableName , dateTime , uidNumber = KEYS[1] , KEYS[2] , tonumber(KEYS[3])
-  
+  local blockSize , blockPower , intSize = 2^15 , 15 , 2^31
+  local expireTime = 7 * 86400
+
+  local tableName , dateTime , uidNumber , append = KEYS[1] , tonumber(KEYS[2]) , tonumber(KEYS[3]) , KEYS[4] == &quot;1&quot;
+  local expire = (dateTime &amp;gt; 0)
   local blockSeq , lineSeq 
-  if uidNumber &amp;gt;= 2147483648 then
-  	blockSeq , lineSeq = math.modf(uidNumber / 16384) , uidNumber % 16384
+
+  if uidNumber &amp;gt;= intSize then
+    blockSeq , lineSeq = math.modf(uidNumber / blockSize) , uidNumber % blockSize
   else
-  	blockSeq , lineSeq = bit.rshift(uidNumber , 14) , bit.band(uidNumber , 16383)
+    blockSeq , lineSeq = bit.rshift(uidNumber , blockPower) , bit.band(uidNumber , blockSize - 1)
   end
   
-  local keyT4N = {&quot;T-&quot; , tableName , &quot;-&quot; , dateTime , &quot;-Nest&quot;}
-  local keyT4V = {&quot;T-&quot; , tableName , &quot;-&quot; , dateTime , &quot;-&quot; , 6 , &quot;-&quot; , &quot;VS&quot;}
-  local keyT4M = {&quot;T-&quot; , tableName , &quot;-&quot; , dateTime , &quot;-&quot; , 6 , &quot;-&quot; , 8 , &quot;-BMP-&quot; , blockSeq}
-
-  for index , val in ipairs(ARGV) do
-    keyT4V[6] , keyT4M[6] = index , index
+  local key4N  = table.concat({tableName , &quot;-&quot; , dateTime , &quot;-Nest&quot;})
+  local keyT4V = {tableName , &quot;-&quot; , dateTime , &quot;-&quot; , 5 , &quot;-&quot; , &quot;VS&quot;}
+  local keyT4M = {tableName , &quot;-&quot; , dateTime , &quot;-&quot; , 5 , &quot;-&quot; , 7 , &quot;-BMP-&quot; , blockSeq}
+  
+  local write = function(keyT4V , keyT4M , index , val , lineSeq , expireTime)
+    local oldBit
+    keyT4V[5] , keyT4M[5] = index , index
     local key4V = table.concat(keyT4V)
-    local m = redis.call(&quot;SISMEMBER&quot; , key4V , val)
-    if m == 1 then
-      keyT4M[8] = val
+    local isExist = redis.call(&quot;SISMEMBER&quot; , key4V , val)
+    if isExist == 1 then
+      keyT4M[7] = val
       local key4M = table.concat(keyT4M)
-      redis.call(&quot;setbit&quot; , key4M , lineSeq , 1)  
+      oldBit = redis.call(&quot;setbit&quot; , key4M , lineSeq , 1)  
     else
-      local totalNum = redis.call(&quot;SCARD&quot; , key4V)
-      
-      if totalNum &amp;gt;= 1024 then
+      local count = redis.call(&quot;SCARD&quot; , key4V)
+      if count &amp;gt;= 1024 then
         val = &quot;IGNORE&quot;
       end
-      if totalNum &amp;lt;= 1024 then 
+      if count &amp;lt;= 1024 then 
         redis.call(&quot;SADD&quot; , key4V , val)
+      end      
+      if count == 0 and expire then
+        redis.call(&quot;expire&quot; , key4V , expireTime)
       end
-      
-      if totalNum == 0 then
-        redis.call(&quot;expire&quot; , key4V , 86400 * 7)    
-      end
-
-      keyT4M[8] = val
+      keyT4M[7] = val
       local key4M = table.concat(keyT4M)
-      redis.call(&quot;setbit&quot; , key4M , lineSeq , 1)
-      redis.call(&quot;expire&quot; , key4M , 86400 * 7)
+      oldBit = redis.call(&quot;setbit&quot; , key4M , lineSeq , 1)
+      if expire then
+        redis.call(&quot;expire&quot; , key4M , expireTime)
+      end
+    end
+    return oldBit
+  end
+
+  local oldBitNum = 0
+  if append then  
+    for seq = 1 , #ARGV , 2 do
+      oldBitNum = oldBitNum + write(keyT4V , keyT4M , ARGV[seq] , ARGV[seq + 1] , lineSeq , expireTime)
+    end
+  else
+    for index , val in ipairs(ARGV) do
+      oldBitNum = oldBitNum + write(keyT4V , keyT4M , index , val , lineSeq , expireTime) 
     end
   end
-  local key4N = table.concat(keyT4N)
-  redis.call(&quot;setbit&quot; , key4N , blockSeq , 1)
+  if oldBitNum == 0 then
+    redis.call(&quot;setbit&quot; , key4N , blockSeq , 1)
+  end
   return true
 ]]
 )
-scripts:set(&quot;WriteScript&quot;, shaw)
+scripts:set(&quot;WriteScript&quot;, scriptWrite)
 &lt;/code&gt;&lt;/pre&gt;
 &lt;/div&gt;
 

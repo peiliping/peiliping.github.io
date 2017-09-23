@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <title>如何查询Redis中的Bitmap数据 « Pei LiPing's Blog</title>
-  <meta name="description" content="书接上回，我们已经将日活的维度数据写入了Redis的Bitmap结构中。">
+  <meta name="description" content="书接上回，我们已经将日活的维度数据写入Redis的Bitmap结构中。">
 
   <link rel="stylesheet" href="/blog/css/main.css">
   <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2017-09-20-redis-bit2">
@@ -59,15 +59,15 @@
   </header>
 
   <article class="post-content">
-    <p>书接上回，我们已经将日活的维度数据写入了Redis的Bitmap结构中。</p>
+    <p>书接上回，我们已经将日活的维度数据写入Redis的Bitmap结构中。</p>
 
-<p>今天设计一个简单的查询引擎，通过表达式，转化为Redis的指令，最终得到日活的结果。</p>
+<p>今天再设计一个简单的查询引擎，通过表达式转化为Redis的指令集，最终得到日活的结果。</p>
 
 <h2 id="section">设计一个简单的表达式</h2>
 
-<p>最通用的表达式就是SQL了，Hive、Drill、Presto、Phoenix等等知名的</p>
+<p>最通用的表达式就是SQL了，Hive、Drill、Presto、Phoenix等开源项目都在做类似的事情。</p>
 
-<p>开源项目都在做这个事情。我们这个筛选维度和求日活的功能没有那么复杂，简单一些就好。</p>
+<p>我们这个筛选维度求日活的功能，没有那么复杂，所以简单一些就好。</p>
 
 <div class="highlighter-rouge"><pre class="highlight"><code>(C1 = 3 &amp; C2 = 1) &amp; (C5 = 1 | C8 = 6)
 </code></pre>
@@ -103,7 +103,6 @@ local G = P{
     ColNum    = P "C" * C(R "09"^1) ,
     EqSignal  = C(P "=") ,
     ColVal    = C((R "az" + R "AZ" + R "09")^1) ,
-    ColValNum = C(R "09"^1) ,
 
     Open      = Blk(P "(") ,
     Close     = Blk(P ")") ,
@@ -195,15 +194,13 @@ recycle : ["__TMP-1","__TMP-2","__TMP-3"]
 [[
   local result = 0
   local tableName , dateTime = KEYS[1] , KEYS[2]
-  
-  local keyT4N = {tableName , "-" , dateTime , "-Nest"}
-  local key4N = table.concat(keyT4N)
+  local process , recycle    = cjson.decode(ARGV[1]) , cjson.decode(ARGV[2])
+  local key4N = table.concat({tableName , "-" , dateTime , "-Nest"})
 
-  local process = cjson.decode(ARGV[1])
-  local recyple = cjson.decode(ARGV[2])
   for index , value in ipairs(process) do
+    local params
     if value[1] == "BITOP" then
-      local params = {value[1] , value[2] , value[3]}
+      params = {value[1] , value[2] , value[3]}
       for seq = 4 , #value , 2 do
         if value[seq] == "b" then
           table.insert(params , {tableName , "-" , dateTime , "-" , value[seq + 1] , "-BMP-" , 7})
@@ -211,16 +208,15 @@ recycle : ["__TMP-1","__TMP-2","__TMP-3"]
           table.insert(params , value[seq + 1])
         end
       end
-      process[index] = params
     elseif value[1] == "BITCOUNT" then
-      local params = {value[1]}
+      params = {value[1]}
       if value[2] == "b" then
           table.insert(params , {tableName , "-" , dateTime , "-" , value[3] , "-BMP-" , 7})
         elseif value[2] == "t" then
           table.insert(params , value[3])
         end
-      process[index] = params
     end
+    process[index] = params
   end
   
   local bytepos = 0
@@ -230,7 +226,6 @@ recycle : ["__TMP-1","__TMP-2","__TMP-3"]
     for g = pos , pos + 7 - bit.band(pos , 7) do
       local fill = redis.call("getbit" , key4N , g)
       if fill == 1 then
-        local t = 0
         for index , value in ipairs(process) do
           local ps = {}
           for id , item in ipairs(value) do
@@ -241,16 +236,19 @@ recycle : ["__TMP-1","__TMP-2","__TMP-3"]
               ps[id] = item
             end
           end
-          t = redis.call(unpack(ps))
+          if ps[1] == "BITCOUNT" then
+            result = result + redis.call(unpack(ps))
+          else
+            redis.call(unpack(ps))
+          end
         end
-        result = result + t
       end
     end
     bytepos = bit.rshift(pos , 3) + 1 
     pos = redis.call("bitpos" , key4N , 1 , bytepos)
   end
-  if #recyple &gt; 0 then
-    redis.call("del" , unpack(recyple))
+  if #recycle &gt; 0 then
+    redis.call("del" , unpack(recycle))
   end
   return result
 ]]
@@ -265,9 +263,6 @@ ngx.say("ReadScript : " .. scriptRead)
 
 <div class="highlighter-rouge"><pre class="highlight"><code>G:match(expression)
 table.insert(process , {"BITCOUNT" , unpack(lastKey)}) 
-
-ngx.say(json.encode(process))
-ngx.say(json.encode(recycle))
 
 local r = redis:evalsha(scripts:get("ReadScript") , 2 , tableName , dateTime , json.encode(process) , json.encode(recycle))
 ngx.say(r)
