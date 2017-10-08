@@ -6,9 +6,156 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Sat, 23 Sep 2017 11:27:32 +0800</pubDate>
-    <lastBuildDate>Sat, 23 Sep 2017 11:27:32 +0800</lastBuildDate>
+    <pubDate>Sun, 08 Oct 2017 15:36:20 +0800</pubDate>
+    <lastBuildDate>Sun, 08 Oct 2017 15:36:20 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>如何设计日活的流计算</title>
+        <description>&lt;p&gt;之前在Redis上构建了基于Bitmap索引的存储结构，在Openresty上实现了一个简易的查询引擎，&lt;/p&gt;
+
+&lt;p&gt;这里再思考一下数据的来源、采集、实时接入等问题。&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;日活数据的来源&lt;/h2&gt;
+
+&lt;p&gt;日活数据最大的可能来源就是浏览日志、登录日志等，数据的内容一般包括时间戳、UID、PageId等，&lt;/p&gt;
+
+&lt;p&gt;一般网站或者App统计日活是需要区分模块和功能的，类似友盟、TalkingData等公司的产品，以一个&lt;/p&gt;
+
+&lt;p&gt;SDK或者Agent的方式采集和发送数据。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-1&quot;&gt;数据接收&lt;/h2&gt;
+
+&lt;p&gt;客户端采集到的数据会定期发送回来，接收端并没有复杂的业务处理逻辑，基本上就是format。&lt;/p&gt;
+
+&lt;p&gt;当接收端收到数据做了基本上的合法性校验之后，可以选择写日志或者发送到队列中（比如Kafka）。&lt;/p&gt;
+
+&lt;p&gt;Openresty加Lua可以完成这部分的工作，性能会非常强悍，我比较倾向直接写本地Log，&lt;/p&gt;
+
+&lt;p&gt;然后批量发送至Kafka。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-2&quot;&gt;关于维度信息的计算&lt;/h2&gt;
+
+&lt;p&gt;因为我们是要做维度数据统计的，所以在数据处理过程中就需要为访问日志数据添加维度的信息。&lt;/p&gt;
+
+&lt;p&gt;维度信息大体可以分为两大类，一类是固定维度，一类是变动维度。固定维度就类似性别、年龄等，&lt;/p&gt;
+
+&lt;p&gt;变动维度可以是所在的地理位置等信息。维度的数据经常是需要进行编码的，就是将string转id。&lt;/p&gt;
+
+&lt;p&gt;客户端每次上传的数据中是冗余维度信息，还是在流计算中去获取转化丰富数据的维度，这个逻辑&lt;/p&gt;
+
+&lt;p&gt;通常就是getOrCreate，如果是有一个Mysql的表来存储这种数据，再加一个Redis的Cache，这种&lt;/p&gt;
+
+&lt;p&gt;中心化的设计在数据流量大的时候必然是瓶颈，所以要适当考虑在客户端做一些工作。比如，在客户&lt;/p&gt;
+
+&lt;p&gt;端启动时，进行一些基本维度的转化工作，并且将这些转化的数据进行保存，在定期提交数据时，&lt;/p&gt;
+
+&lt;p&gt;主动将数据的string转id的工作在客户端完成。当然这样的分散逻辑也导致了维护成本，当你需要进行&lt;/p&gt;
+
+&lt;p&gt;一些数据的整理和升级时，就会要跟客户端打交道了，需要设计一下数据的Version和避免过于集中的&lt;/p&gt;
+
+&lt;p&gt;数据更新导致后端压力过大。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-3&quot;&gt;关于时间窗口与聚合&lt;/h2&gt;
+
+&lt;p&gt;无论你选择了哪一种流计算框架，都会提供一个Timewindow的功能，提供基本的Map、Reduce功能。&lt;/p&gt;
+
+&lt;p&gt;如果我们的浏览访问数据存在极大的聚合利益，可以压缩几倍或者十几倍，就值得一做。&lt;/p&gt;
+
+&lt;p&gt;如果考虑到数据的修复和数据Delay等问题，一定要设计一个增量补全的逻辑，比如有put和incr操作。&lt;/p&gt;
+
+&lt;p&gt;之前看过一些文章有在Hbase上加协处理器来完成的，当然我们的Redis+Lua也是可以的。&lt;/p&gt;
+
+&lt;p&gt;数据的输出结果尽量不要直接写存储，可以再打回Kafka中，做多订阅的处理。Kafka的客户端可以把&lt;/p&gt;
+
+&lt;p&gt;单条输出转化为批量，这种设计比较容易规避流计算的一些迭代输出单条的麻烦。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-4&quot;&gt;维度数据的存储&lt;/h2&gt;
+
+&lt;p&gt;每个用户的每次访问都带有20个维度信息，这种沉重的冗余信息会让你的存储不堪重负的。&lt;/p&gt;
+
+&lt;p&gt;因为我们的目标是日活，也就是以用户为主体。当某个用户已经被处理过一次了，那么他的固定维度&lt;/p&gt;
+
+&lt;p&gt;数据最好就不用再处理了，每次只处理变动信息就好了，表的行数相对比较稳定，跟总用户数有关。&lt;/p&gt;
+
+&lt;p&gt;如果只处理日活相对比较简单，如果想要按照时间做区分，比如每小时一个列，相当于行转列。&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt;UID&lt;/th&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt;Gender&lt;/th&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt;Age&lt;/th&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt;00:00&lt;/th&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt;01:00&lt;/th&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt;02:00&lt;/th&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt;03:00&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;F&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;12&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;2&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;M&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;13&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;3&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;F&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;10&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;4&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;M&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;19&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;h2 id=&quot;section-5&quot;&gt;水平扩展&lt;/h2&gt;
+
+&lt;p&gt;如果单机Redis不能存下所有的数据，就需要有一个分布式的方案，因为我们的计算是列级别的，&lt;/p&gt;
+
+&lt;p&gt;所以同一个Uid的所有列必须在一台Redis实例中，于是我们的分布式方案只能按照Uid来分了。&lt;/p&gt;
+
+&lt;p&gt;因为我们的UID是使用16K、64K的Block块来划分的，所以我们只要对Block块进行离散就好了。&lt;/p&gt;
+
+&lt;p&gt;计算引擎的改动也会很小，这里就是一个简单的MapReduce的过程。&lt;/p&gt;
+</description>
+        <pubDate>Sun, 08 Oct 2017 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2017-10-08-redis-bit3</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2017-10-08-redis-bit3</guid>
+        
+        
+        <category>redis</category>
+        
+        <category>lua</category>
+        
+        <category>bitmap</category>
+        
+        <category>lpeg</category>
+        
+      </item>
     
       <item>
         <title>如何查询Redis中的Bitmap数据</title>
@@ -1259,246 +1406,6 @@ UNSEGMENTED ALL NODES;
         <category>vertica</category>
         
         <category>encode</category>
-        
-      </item>
-    
-      <item>
-        <title>批量写入Mysql</title>
-        <description>&lt;p&gt;Mysql是最常用的一种关系型数据库，随着各种ORM框架的演进，操作数据库也变得越来越简单。&lt;/p&gt;
-
-&lt;p&gt;但是，当你碰到一些极端需求时，还是要回到JDBC这个层面上来操作。&lt;/p&gt;
-
-&lt;p&gt;上篇博客介绍了Meepo这个数据迁移工具，其中就涉及到大量的Mysql写入操作。&lt;/p&gt;
-
-&lt;p&gt;下面介绍一下，我在批量写Mysql时碰到的一些问题。&lt;/p&gt;
-
-&lt;h3 id=&quot;section&quot;&gt;真正的批量写&lt;/h3&gt;
-
-&lt;p&gt;使用JDBC来完成批量Mysql写入的一般方法是:&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;this.connection.setAutoCommit(false);
-
-this.preparedStatement = this.connection.prepareStatement(this.sql);
-for (int i = 0; i &amp;lt; this.schema.size(); i++) {
-    this.preparedStatement.setObject(i + 1, data[i], this.schema.get(i));
-}
-this.preparedStatement.addBatch();
-
-...N次
-
-this.preparedStatement.executeBatch();
-this.connection.commit();
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;当你写完这段代码，测试性能就会发现，与单条Insert相比，并没有什么提升。&lt;/p&gt;
-
-&lt;p&gt;因为，JDBC实际上仍是以行为单位，发送和执行写入操作的，Batch是假的。&lt;/p&gt;
-
-&lt;p&gt;当你为Datasource的Url添加了参数rewriteBatchedStatements=true，才会真正批量执行。&lt;/p&gt;
-
-&lt;p&gt;具体原因可以自行搜索这个参数，网上有很多文章介绍，性能可以提升三五倍。&lt;/p&gt;
-
-&lt;h3 id=&quot;section-1&quot;&gt;选择好数据库的伴侣——数据源连接池&lt;/h3&gt;
-
-&lt;p&gt;开源的数据源连接池非常多，比如C3P0、Druid、Proxool、BoneCP、HikariCP…&lt;/p&gt;
-
-&lt;p&gt;比较常用的是阿里开源的Druid，综合表现不错。HikariCP也是不错的选择。&lt;/p&gt;
-
-&lt;p&gt;HikariCP和Druid的作者在Github上有一段关于性能测试的争论也可以看看。&lt;/p&gt;
-
-&lt;h3 id=&quot;section-2&quot;&gt;缓冲区&lt;/h3&gt;
-
-&lt;p&gt;涉及到批量操作，就意味着要和缓冲区打交道了，你可能会想到数组、队列、栈等等。&lt;/p&gt;
-
-&lt;p&gt;一般来说批量写入的缓冲区有这么几个要求：&lt;/p&gt;
-
-&lt;p&gt;1、容量空间可控，比如1024条，写满的时候可以阻塞住。&lt;/p&gt;
-
-&lt;p&gt;2、有超时机制，不要无限期等待。&lt;/p&gt;
-
-&lt;p&gt;3、性能好，最好是无锁的。&lt;/p&gt;
-
-&lt;p&gt;Disruptor的Ringbuffer可以满足上面的这些需求，只是初次上手会有一些难度。&lt;/p&gt;
-
-&lt;p&gt;Ringbuffer强制了数据对象的复用，可以减少JVM GC的次数，对性能的提升非常有帮助。&lt;/p&gt;
-
-&lt;p&gt;Ringbuffer的具体使用方法这里就不介绍了，网上有很多文章和例子。&lt;/p&gt;
-
-&lt;h3 id=&quot;section-3&quot;&gt;线程数和批量大小&lt;/h3&gt;
-
-&lt;p&gt;适当的加大并行度和批量大小，是可以提高消费速度的。&lt;/p&gt;
-
-&lt;p&gt;根据测试批量写的线程数不要超过Mysql的Cpu核数+1。&lt;/p&gt;
-
-&lt;p&gt;批量的条数由单行数据大小决定，一般1000条左右。&lt;/p&gt;
-
-&lt;h3 id=&quot;mysql&quot;&gt;Mysql性能优化&lt;/h3&gt;
-
-&lt;p&gt;Mysql性能优化，参考网上的文章，这里就不详细介绍了。&lt;/p&gt;
-
-&lt;p&gt;大多是关闭一些log，提高一些buffer，改变filesync的方式等。&lt;/p&gt;
-
-&lt;p&gt;我们是使用阿里云的RDS进行的测试，几乎不用什么调整，性能就很不错了。&lt;/p&gt;
-
-&lt;p&gt;需要注意表上的索引个数，索引是很影响写入性能的，尽量保证索引精简。&lt;/p&gt;
-
-&lt;h3 id=&quot;jdbc&quot;&gt;JDBC优化&lt;/h3&gt;
-
-&lt;p&gt;经过前面的优化后，再使用JFR对你的程序做一下热点代码的分析，就会发现集中在JDBC的代码上了。&lt;/p&gt;
-
-&lt;p&gt;仔细阅读MysqlConnector的代码就会发现，可以改造的地方还是挺多的。&lt;/p&gt;
-
-&lt;p&gt;下面举几个例子：&lt;/p&gt;
-
-&lt;p&gt;1、批量数据的暂存容器&lt;/p&gt;
-
-&lt;p&gt;提交到Preparestatment中的数据，会暂时存到一个ArrayList中。&lt;/p&gt;
-
-&lt;p&gt;ArrayList跟HashMap一样，随着数据被多次add，就会触发resize和array copy。&lt;/p&gt;
-
-&lt;p&gt;通过Arrays类的copyOf方法对原数组进行拷贝，长度为原数组的1.5倍+1。&lt;/p&gt;
-
-&lt;p&gt;在你初始化一个Preparestatment的时候，根据你的批量大小，对其进行capacity的初始化，会带来不小的性能提升。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;this.batchArgsField = StatementImpl.class.getDeclaredField(&quot;batchedArgs&quot;);
-this.batchArgsField.setAccessible(true);
-...
-this.batchArgsField.set((StatementImpl) ((DruidPooledPreparedStatement) this.preparedStatement).getStatement(), new ArrayList&amp;lt;Object&amp;gt;(stepSize));
-
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;2、日期格式化&lt;/p&gt;
-
-&lt;p&gt;一般数据库表都会有一些日期类型的字段，比如创建时间、更新时间等。&lt;/p&gt;
-
-&lt;p&gt;Java中的日期类型格式化处理性能一般，比如SimpleDateFormat就是一个关键点。&lt;/p&gt;
-
-&lt;p&gt;代码com.mysql.jdbc.PreparedStatement中的tsdf，就是用来格式化日期类型的。&lt;/p&gt;
-
-&lt;p&gt;假如你的表中日期类型字段比较多，可以考虑替换掉SimpleDateFormat的实现。&lt;/p&gt;
-
-&lt;p&gt;Mysql中的日期类型格式是比较固定的，并不需要SimpleDateFormat那么复杂的实现，&lt;/p&gt;
-
-&lt;p&gt;可以使用Calender的接口，通过字符串拼接的方式完成日期数据的格式化。&lt;/p&gt;
-
-&lt;p&gt;性能也是会有一定的提升。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;public class DateFormatter extends SimpleDateFormat {
-
-    public DateFormatter(String pattern) {
-        super(&quot;&quot;, Locale.US);
-    }
-
-    @Override public StringBuffer format(Date date, StringBuffer toAppendTo, FieldPosition pos) {
-        super.calendar.setTime(date);
-        toAppendTo.append(&quot;'&quot;);
-        toAppendTo.append(super.calendar.get(1));
-        toAppendTo.append(&quot;-&quot;);
-        if (super.calendar.get(2) &amp;lt; 9) {
-            toAppendTo.append(0);
-        }
-        toAppendTo.append(super.calendar.get(2) + 1);
-        toAppendTo.append(&quot;-&quot;);
-        if (super.calendar.get(5) &amp;lt; 10) {
-            toAppendTo.append(0);
-        }
-        toAppendTo.append(super.calendar.get(5));
-        toAppendTo.append(&quot; &quot;);
-        if (super.calendar.get(11) &amp;lt; 10) {
-            toAppendTo.append(0);
-        }
-        toAppendTo.append(super.calendar.get(11));
-        toAppendTo.append(&quot;:&quot;);
-        if (super.calendar.get(12) &amp;lt; 10) {
-            toAppendTo.append(0);
-        }
-        toAppendTo.append(super.calendar.get(12));
-        toAppendTo.append(&quot;:&quot;);
-        if (super.calendar.get(13) &amp;lt; 10) {
-            toAppendTo.append(0);
-        }
-        toAppendTo.append(super.calendar.get(13));
-        return toAppendTo;
-    }
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;3、异常处理&lt;/p&gt;
-
-&lt;p&gt;一个完善的数据处理流程，必然要考虑异常情况，比如网络闪断，数据库重启等等。&lt;/p&gt;
-
-&lt;p&gt;如何在请求失败后重试呢？一般的做法就是记录下批量写入的每一个数据，异常时重新写入一遍。&lt;/p&gt;
-
-&lt;p&gt;前面基于Ringbuffer做了数据对象的复用，为了处理异常再次引入重复对象是很难接受的。&lt;/p&gt;
-
-&lt;p&gt;最简单的办法就是利用前面初始化好的batchArgs，实际上它里面就记录了你写入的每一行数据。&lt;/p&gt;
-
-&lt;p&gt;当出现异常时，只要把它拷贝出来，写入新的Preparestatement中，就可以再次执行了。&lt;/p&gt;
-
-&lt;p&gt;注意executeBatch一定不能丢掉。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;List&amp;lt;Object&amp;gt; batchParams = ((JDBC4PreparedStatement) ((DruidPooledPreparedStatement) this.preparedStatement).getStatement()).getBatchedArgs();
-Connection tc = this.dataSource.getConnection();
-tc.setAutoCommit(false);
-PreparedStatement tp = tc.prepareStatement(this.sql);
-StatementImpl target = (StatementImpl) ((DruidPooledPreparedStatement) tp).getStatement();
-List&amp;lt;Object&amp;gt; newParams = new ArrayList&amp;lt;&amp;gt;(batchParams);
-this.batchArgsField.set(target, newParams);
-tp.executeBatch();
-tc.commit();
-tp.close();
-tc.close();
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;h3 id=&quot;sql&quot;&gt;SQL语法&lt;/h3&gt;
-
-&lt;p&gt;批量写入的SQL语法也不止一种，比较常见的有：&lt;/p&gt;
-
-&lt;p&gt;1、INSERT INTO xxxx (…) VALUES (…)&lt;/p&gt;
-
-&lt;p&gt;2、INSERT IGNORE INTO xxxx (…) VALUES (…)&lt;/p&gt;
-
-&lt;p&gt;3、REPLACE INTO xxxx (…) VALUES (…)&lt;/p&gt;
-
-&lt;p&gt;当主键冲突的时候如何处理，可以根据情况选择合适的SQL模式。&lt;/p&gt;
-
-&lt;h3 id=&quot;section-4&quot;&gt;参数&lt;/h3&gt;
-
-&lt;p&gt;最后附上我所使用的URL参数&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;rewriteBatchedStatements=true
-useUnicode=true
-characterEncoding=UTF-8
-useSSL=false
-verifyServerCertificate=false
-failOverReadOnly=false
-autoReconnect=true
-autoReconnectForPools=true
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;经过这些优化，Meepo可以每秒从Mysql中读取十几万的数据，并写入到一个无索引的新表中。&lt;/p&gt;
-
-&lt;p&gt;8G的JVM，YGC每8-10秒发生一次，Mysql的Cpu会被压满。&lt;/p&gt;
-</description>
-        <pubDate>Thu, 25 May 2017 16:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2017-05-25-batch2mysql</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2017-05-25-batch2mysql</guid>
-        
-        
-        <category>java</category>
-        
-        <category>mysql</category>
-        
-        <category>batch</category>
-        
-        <category>ringbuffer</category>
-        
-        <category>jdbc</category>
         
       </item>
     

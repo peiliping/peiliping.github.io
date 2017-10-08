@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>如何设计日活的流计算 « Pei LiPing's Blog</title>
+  <meta name="description" content="之前在Redis上构建了基于Bitmap索引的存储结构，在Openresty上实现了一个简易的查询引擎，">
+
+  <link rel="stylesheet" href="/blog/css/main.css">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2017-10-08-redis-bit3">
+  <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
+</head>
+
+
+  <body>
+
+    <header class="header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Pei LiPing's Blog</a>
+    <nav class="site-nav">
+      
+        
+      
+        
+        <a class="page-link" href="/blog/about/">About</a>
+        
+      
+        
+        <a class="page-link" href="/blog/category/">Category</a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </nav>
+  </div>
+</header>
+
+    <div class="page-content">
+      <div class="wrapper">
+        <div class="col-main">
+          <div class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">如何设计日活的流计算</h1>
+    <p class="post-meta">Oct 8, 2017</p>
+  </header>
+
+  <article class="post-content">
+    <p>之前在Redis上构建了基于Bitmap索引的存储结构，在Openresty上实现了一个简易的查询引擎，</p>
+
+<p>这里再思考一下数据的来源、采集、实时接入等问题。</p>
+
+<h2 id="section">日活数据的来源</h2>
+
+<p>日活数据最大的可能来源就是浏览日志、登录日志等，数据的内容一般包括时间戳、UID、PageId等，</p>
+
+<p>一般网站或者App统计日活是需要区分模块和功能的，类似友盟、TalkingData等公司的产品，以一个</p>
+
+<p>SDK或者Agent的方式采集和发送数据。</p>
+
+<h2 id="section-1">数据接收</h2>
+
+<p>客户端采集到的数据会定期发送回来，接收端并没有复杂的业务处理逻辑，基本上就是format。</p>
+
+<p>当接收端收到数据做了基本上的合法性校验之后，可以选择写日志或者发送到队列中（比如Kafka）。</p>
+
+<p>Openresty加Lua可以完成这部分的工作，性能会非常强悍，我比较倾向直接写本地Log，</p>
+
+<p>然后批量发送至Kafka。</p>
+
+<h2 id="section-2">关于维度信息的计算</h2>
+
+<p>因为我们是要做维度数据统计的，所以在数据处理过程中就需要为访问日志数据添加维度的信息。</p>
+
+<p>维度信息大体可以分为两大类，一类是固定维度，一类是变动维度。固定维度就类似性别、年龄等，</p>
+
+<p>变动维度可以是所在的地理位置等信息。维度的数据经常是需要进行编码的，就是将string转id。</p>
+
+<p>客户端每次上传的数据中是冗余维度信息，还是在流计算中去获取转化丰富数据的维度，这个逻辑</p>
+
+<p>通常就是getOrCreate，如果是有一个Mysql的表来存储这种数据，再加一个Redis的Cache，这种</p>
+
+<p>中心化的设计在数据流量大的时候必然是瓶颈，所以要适当考虑在客户端做一些工作。比如，在客户</p>
+
+<p>端启动时，进行一些基本维度的转化工作，并且将这些转化的数据进行保存，在定期提交数据时，</p>
+
+<p>主动将数据的string转id的工作在客户端完成。当然这样的分散逻辑也导致了维护成本，当你需要进行</p>
+
+<p>一些数据的整理和升级时，就会要跟客户端打交道了，需要设计一下数据的Version和避免过于集中的</p>
+
+<p>数据更新导致后端压力过大。</p>
+
+<h2 id="section-3">关于时间窗口与聚合</h2>
+
+<p>无论你选择了哪一种流计算框架，都会提供一个Timewindow的功能，提供基本的Map、Reduce功能。</p>
+
+<p>如果我们的浏览访问数据存在极大的聚合利益，可以压缩几倍或者十几倍，就值得一做。</p>
+
+<p>如果考虑到数据的修复和数据Delay等问题，一定要设计一个增量补全的逻辑，比如有put和incr操作。</p>
+
+<p>之前看过一些文章有在Hbase上加协处理器来完成的，当然我们的Redis+Lua也是可以的。</p>
+
+<p>数据的输出结果尽量不要直接写存储，可以再打回Kafka中，做多订阅的处理。Kafka的客户端可以把</p>
+
+<p>单条输出转化为批量，这种设计比较容易规避流计算的一些迭代输出单条的麻烦。</p>
+
+<h2 id="section-4">维度数据的存储</h2>
+
+<p>每个用户的每次访问都带有20个维度信息，这种沉重的冗余信息会让你的存储不堪重负的。</p>
+
+<p>因为我们的目标是日活，也就是以用户为主体。当某个用户已经被处理过一次了，那么他的固定维度</p>
+
+<p>数据最好就不用再处理了，每次只处理变动信息就好了，表的行数相对比较稳定，跟总用户数有关。</p>
+
+<p>如果只处理日活相对比较简单，如果想要按照时间做区分，比如每小时一个列，相当于行转列。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: center">UID</th>
+      <th style="text-align: center">Gender</th>
+      <th style="text-align: center">Age</th>
+      <th style="text-align: center">00:00</th>
+      <th style="text-align: center">01:00</th>
+      <th style="text-align: center">02:00</th>
+      <th style="text-align: center">03:00</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: center">1</td>
+      <td style="text-align: center">F</td>
+      <td style="text-align: center">12</td>
+      <td style="text-align: center">1</td>
+      <td style="text-align: center">1</td>
+      <td style="text-align: center">1</td>
+      <td style="text-align: center">1</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">2</td>
+      <td style="text-align: center">M</td>
+      <td style="text-align: center">13</td>
+      <td style="text-align: center">0</td>
+      <td style="text-align: center">0</td>
+      <td style="text-align: center">0</td>
+      <td style="text-align: center">0</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">3</td>
+      <td style="text-align: center">F</td>
+      <td style="text-align: center">10</td>
+      <td style="text-align: center">1</td>
+      <td style="text-align: center">1</td>
+      <td style="text-align: center">1</td>
+      <td style="text-align: center">1</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">4</td>
+      <td style="text-align: center">M</td>
+      <td style="text-align: center">19</td>
+      <td style="text-align: center">0</td>
+      <td style="text-align: center">0</td>
+      <td style="text-align: center">0</td>
+      <td style="text-align: center">0</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="section-5">水平扩展</h2>
+
+<p>如果单机Redis不能存下所有的数据，就需要有一个分布式的方案，因为我们的计算是列级别的，</p>
+
+<p>所以同一个Uid的所有列必须在一台Redis实例中，于是我们的分布式方案只能按照Uid来分了。</p>
+
+<p>因为我们的UID是使用16K、64K的Block块来划分的，所以我们只要对Block块进行离散就好了。</p>
+
+<p>计算引擎的改动也会很小，这里就是一个简单的MapReduce的过程。</p>
+
+  </article>
+  
+  
+
+
+
+
+</div>
+
+        </div>
+        <div class="col-second">
+          <div class="col-box col-box-author">
+  <img class="avatar" src="//www.gravatar.com/avatar/your_email_md5?d=mm&s=135" alt="Pei LiPing">
+  <div class="col-box-title name">Pei LiPing</div>
+  <p>The Cabin Of Pei LiPing.</p>
+  <p class="contact">
+    
+    
+    
+    <a href="mailto:peilipingplp@gmail.com">Email</a>
+    
+  </p>
+</div>
+
+<div class="col-box">
+  <div class="col-box-title">Newest Posts</div>
+  <ul class="post-list">
+    
+      <li><a class="post-link" href="/blog/archivers/2017-10-08-redis-bit3">如何设计日活的流计算</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2017-09-20-redis-bit2">如何查询Redis中的Bitmap数据</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2017-09-12-redis-bit">Redis中的Bitmap数据结构</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2017-09-01-lpeg">Lpeg与模式匹配</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2017-08-09-performance">关于性能优化</a></li>
+    
+  </ul>
+</div>
+
+<div class="col-box post-toc hide">
+  <div class="col-box-title">TOC</div>
+</div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+<div class="wrapper">
+&copy; 2016 Pei LiPing
+</div>
+</footer>
+
+<script src="//upcdn.b0.upaiyun.com/libs/jquery/jquery-1.9.0.min.js"></script>
+<script src="/blog/js/easybook.js"></script>
+
+  </body>
+
+</html>
