@@ -6,9 +6,154 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Fri, 17 Nov 2017 18:03:56 +0800</pubDate>
-    <lastBuildDate>Fri, 17 Nov 2017 18:03:56 +0800</lastBuildDate>
+    <pubDate>Wed, 13 Dec 2017 00:29:50 +0800</pubDate>
+    <lastBuildDate>Wed, 13 Dec 2017 00:29:50 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>关于Mysql的Binlog抽取</title>
+        <description>&lt;p&gt;这个月换了工作，双十一之前入职了京东大数据平台——实时数据组。&lt;/p&gt;
+
+&lt;p&gt;着手关于MysqlBinlog相关系统的重构工作，这次就讲讲Binlog吧。&lt;/p&gt;
+
+&lt;h2 id=&quot;binlog&quot;&gt;Binlog转实时数据流的开源动态&lt;/h2&gt;
+
+&lt;p&gt;伪装MysqlSlave来获取MysqlBinlog的技术这几年已经非常普及了，很多中等规模的公司都有相关的&lt;/p&gt;
+
+&lt;p&gt;基础技术组件，大多数是基于阿里几年前开源的Canal项目，在此基础上进行二次开发，将数据写入Kafka&lt;/p&gt;
+
+&lt;p&gt;或者其他MQ系统中去，阿里云的RDS还提供类似的服务，也非常省心。&lt;/p&gt;
+
+&lt;p&gt;17年年初的时候我也有意要做类似的项目，所以已经进行了最基础的技术选型和调研。&lt;/p&gt;
+
+&lt;p&gt;Java系中最早的binlog开源项目有tungsten-replicator 、open-replicator等，后来都慢慢废弃了。&lt;/p&gt;
+
+&lt;p&gt;之后Canal几乎统一了这个领域，但是阿里的这个开源项目最近几年的更新频率很一般。&lt;/p&gt;
+
+&lt;p&gt;最近两年比较新的项目有mysql-time-machine，zendesk的maxwell都不错。&lt;/p&gt;
+
+&lt;p&gt;shyiko的mysql-binlog-connector-java是一个BinlogClient的超精简内核，也被很多开源项目采用。&lt;/p&gt;
+
+&lt;h2 id=&quot;mysqlbinlog&quot;&gt;Mysql的Binlog&lt;/h2&gt;
+
+&lt;p&gt;Mysql的Binlog协议和格式我就不多介绍了，网上可以搜到很多。&lt;/p&gt;
+
+&lt;p&gt;值得注意的时候，Mysql一定要配置成Row模式的，而且image需要配置成Full模式的。&lt;/p&gt;
+
+&lt;p&gt;我采用shyiko的mysql-binlog-connector-java的方案进行了一下性能测试，可以达到80M/s。&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;数据解析&lt;/h2&gt;
+
+&lt;p&gt;shyiko的mysql-binlog-connector-java已经将数据解析成Java类型了，接下来只需要针对公司的规范&lt;/p&gt;
+
+&lt;p&gt;进行数据的清洗和整理即可，最后转成标准序列化格式，比如AVRO、Pb、Json等。&lt;/p&gt;
+
+&lt;p&gt;这中间性能损耗最大的地方就是序列化的开销了，要考虑异步或者多线程流等方式解决。&lt;/p&gt;
+
+&lt;p&gt;在开发解析逻辑时碰到了不少细节问题，用shyiko的mysql-binlog-connector-java解析的数据与canal&lt;/p&gt;
+
+&lt;p&gt;有一些细小的差别，比如datetime和timestamp字段解析的结果不一样，有可能受时区的影响；&lt;/p&gt;
+
+&lt;p&gt;还有像text类型的字段是byte数组，需要自己指定charset转为string；decimal也有差异，需要使用&lt;/p&gt;
+
+&lt;p&gt;numberformat进行格式化，group设置为false，并且setMinimumFractionDigits(1)。&lt;/p&gt;
+
+&lt;h2 id=&quot;kafka&quot;&gt;写Kafka有序&lt;/h2&gt;
+
+&lt;p&gt;将数据写到Kafka的速度是非常快的，但是因为Binlog的特殊性，需要一些设计，来保证数据的有序。&lt;/p&gt;
+
+&lt;p&gt;Kafka的Client会把收到的数据根据meta进行进行重新组织，按照broker的使用情况进行分批发送。&lt;/p&gt;
+
+&lt;p&gt;所以我们要根据业务情况指定Kafka的MessageKey，将相同业务含义的数据写到同一个Partition&lt;/p&gt;
+
+&lt;p&gt;下，保证有序，乱序会导致最新值被老值覆盖。&lt;/p&gt;
+
+&lt;p&gt;在写Kafka的过程中难免会有一些失败的情况发生，错误的重试机制由Kafka来保证，并且要强制设置&lt;/p&gt;
+
+&lt;p&gt;ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION = 1，以防止重试时发生数据顺序错误。&lt;/p&gt;
+
+&lt;h2 id=&quot;task&quot;&gt;Task的结构&lt;/h2&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt;P1&lt;/th&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt; &lt;/th&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt;B1&lt;/th&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt; &lt;/th&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt;P2&lt;/th&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt; &lt;/th&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt;B2&lt;/th&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt; &lt;/th&gt;
+      &lt;th style=&quot;text-align: center&quot;&gt;P3&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;单线程拉Binlog&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;&amp;gt;&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;Ringbuffer&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;&amp;gt;&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;单线程转化成AVRO对象&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;&amp;gt;&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;Ringbuffer&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;&amp;gt;&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;序列化并发送Kafka&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt; &lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt; &lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt; &lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt; &lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt; &lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;&amp;gt;&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;Ringbuffer&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;&amp;gt;&lt;/td&gt;
+      &lt;td style=&quot;text-align: center&quot;&gt;序列化并发送Kafka&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;注释：P一般对应一个线程，B对应一个Disrupter的Ringbuffer。&lt;/p&gt;
+
+&lt;p&gt;P1和P2环节的性能都非常好，所以采用的是单线程，阶段并行模式。&lt;/p&gt;
+
+&lt;p&gt;P3阶段采用并行模式，P2处理好的数据根据一些key进行选择，路由到N个B2中去，一般可以用库表名称。&lt;/p&gt;
+
+&lt;p&gt;压测时，这个Task跑起来之后可以让负载达到400%，基本上把Cpu资源跑满了。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-1&quot;&gt;持久化位点信息&lt;/h2&gt;
+
+&lt;p&gt;什么是位点信息？&lt;/p&gt;
+
+&lt;p&gt;简单来说就是binlog的filename和offset，为了保证at least once，&lt;/p&gt;
+
+&lt;p&gt;我们需要定期记录消费的位置，以便任务重启之后，继续消费，不丢数据（可有少量的重复）。&lt;/p&gt;
+
+&lt;p&gt;如果P3阶段是单线程的，那么记录位点非常简单，提交kafka成功后，记录最后一条数据的offset，&lt;/p&gt;
+
+&lt;p&gt;可以异步刷到远程存储中去，防止阻塞数据流。可是，现在P3阶段是多线程的，如何记录位点呢？&lt;/p&gt;
+
+&lt;p&gt;定期让P2对所有的B2发送一条相同的含有位点信息的心跳包（位点值为P2最后处理的一条数据的位点）&lt;/p&gt;
+
+&lt;p&gt;通过这种方式，将各个P3的信息进行更新，每次P3将数据成功发送到Kafka后就将其中的心跳包记录下来，&lt;/p&gt;
+
+&lt;p&gt;作为一个可信的回退点，注意这个心跳包一定要在数据流中流转，起到挤压数据的作用，&lt;/p&gt;
+
+&lt;p&gt;防止某些P3无数据的情况发生。相关代码参考我的sucker项目，这里就不介绍代码细节了。&lt;/p&gt;
+</description>
+        <pubDate>Wed, 29 Nov 2017 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2017-11-29-mysqlbinlog</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2017-11-29-mysqlbinlog</guid>
+        
+        
+        <category>mysql</category>
+        
+        <category>binlog</category>
+        
+      </item>
     
       <item>
         <title>如何设计日活的流计算</title>
@@ -1257,155 +1402,6 @@ int val = (int) (data &amp;amp; Integer.MAX_VALUE);
         
         
         <category>regex</category>
-        
-      </item>
-    
-      <item>
-        <title>Vertica优化之Encode</title>
-        <description>&lt;p&gt;Vertica是一个成熟的商用列式数据库，也提供免费版本（限制数据规模小于1T，集群规模小于3台）。&lt;/p&gt;
-
-&lt;p&gt;2015年尝试使用Vertica来存储时序类型的数据，主要应用在内部的JVM监控数据上。&lt;/p&gt;
-
-&lt;p&gt;每天增量在8千万行，保留最近2个月左右的数据，按时间对数据进行分区，保留总量在50亿行左右。&lt;/p&gt;
-
-&lt;p&gt;查询的SQL以sum avg count where group by order by这些关键词为主，简单的数值统计需求。&lt;/p&gt;
-
-&lt;h3 id=&quot;section&quot;&gt;时序数据的表有哪些字段&lt;/h3&gt;
-
-&lt;p&gt;谈到时序数据就会想到监控，常见的开源项目有OpenTSDB、Graphite、Druid、Influxdb等等。&lt;/p&gt;
-
-&lt;p&gt;年初Facebook开源的Beringer也掀起了一波浪潮，在规律的数据场景下，如何压缩存储数据呢？&lt;/p&gt;
-
-&lt;p&gt;时序数据表中一般会有如下几种类型的列：&lt;/p&gt;
-
-&lt;p&gt;1、时间戳，可能有不同精度的时间戳（ms、s、min、hour、day等）&lt;/p&gt;
-
-&lt;p&gt;2、metricid、typeid，用来定义数据的类别&lt;/p&gt;
-
-&lt;p&gt;3、dimensionid，数字化的维度信息，比如国家地区编码、性别、年龄、操作系统等等&lt;/p&gt;
-
-&lt;p&gt;4、tag，跟维度类似，但是由于不方便定义成id，就以原始的字符串存下来了&lt;/p&gt;
-
-&lt;p&gt;5、value，数值型用来存储最主要的信息&lt;/p&gt;
-
-&lt;h3 id=&quot;verticaencode&quot;&gt;如何选择Vertica的Encode&lt;/h3&gt;
-
-&lt;p&gt;1、经过测试时间戳类型的字段用COMMONDELTA_COMP存储空间占用最小，比BLOCK_DICT好很多。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;This compression scheme builds a dictionary of all deltas in the block and 
-then stores indexes into the delta dictionary using entropy coding.
-This scheme is ideal for sorted FLOAT and INTEGER-based
-(DATE/TIME/TIMESTAMP/INTERVAL) data columns with predictable sequences and
-only occasional sequence breaks, such as timestamps recorded at periodic 
-intervals or primary keys. For example, the following sequence compresses 
-well: 300, 600, 900,1200, 1500, 600, 1200, 1800, 2400. The following sequence 
-does not compress well: 1,3, 6, 10, 15, 21, 28, 36, 45, 55.
-If delta distribution is excellent, columns can be stored in less than one bit 
-per row. However, this scheme is very CPU intensive. If you use this scheme on 
-data with arbitrary deltas, it can cause significant data expansion.
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;2、MetricId和DimId之类的，一般来说value的变化比较少，比较适合BLOCK_DICT。&lt;/p&gt;
-
-&lt;p&gt;3、tag类型字段选择了RLE（Run Length Encoding），效果还可以。&lt;/p&gt;
-
-&lt;p&gt;4、Value的选择是最难的，前面提到的字段一般都是经过排序的，规律性很强。&lt;/p&gt;
-
-&lt;p&gt;value的变化范围比较大，还有可能是小数，又没经过排序。经过一系列测试在性能和存储空间&lt;/p&gt;
-
-&lt;p&gt;开销上权衡，最理想的encode方案是GCDDELTA&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;For INTEGER and DATE/TIME/TIMESTAMP/INTERVAL columns, and NUMERIC
-columns with 18 or fewer digits, data is recorded as the difference from the 
-smallest value in the data block divided by the greatest common divisor (GCD) of 
-all entries in the block. This encoding has no effect on other data types.
-ENCODING GCDDELTA is best used for many-valued, unsorted, integer columns or
-integer-based columns, when the values are a multiple of a common factor. For
-example, timestamps are stored internally in microseconds, so data that is only 
-precise to the millisecond are all multiples of 1000. The CPU requirements for 
-decoding GCDDELTA encoding are minimal, and the data never expands, but GCDDELTA 
-may take more encoding time than DELTAVAL.
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;h3 id=&quot;sql&quot;&gt;建表SQL&lt;/h3&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;CREATE PROJECTION public.jvm_metrics_tmp
-(
- parent_id ENCODING BLOCK_DICT,
- metric_id ENCODING BLOCK_DICT,
- dim1 ENCODING BLOCK_DICT,
- dim2 ENCODING BLOCK_DICT,
- dim3 ENCODING BLOCK_DICT,
- dim4 ENCODING BLOCK_DICT,
- mtc1 ENCODING GCDDELTA,
- mtc2 ENCODING GCDDELTA,
- mtc3 ENCODING GCDDELTA,
- mtc4 ENCODING GCDDELTA,
- mtc5 ENCODING GCDDELTA,
- mtc6 ENCODING GCDDELTA,
- mtc7 ENCODING GCDDELTA,
- mtc8 ENCODING GCDDELTA,
- tag1 ENCODING RLE,
- tag2 ENCODING RLE,
- tag3 ENCODING RLE,
- tag4 ENCODING RLE,
- timestamps ENCODING COMMONDELTA_COMP,
- timestamps_1d ENCODING COMMONDELTA_COMP,
- timestamps_1h ENCODING COMMONDELTA_COMP,
- timestamps_10m ENCODING COMMONDELTA_COMP,
- timestamps_1m ENCODING COMMONDELTA_COMP,
- partition ENCODING COMMONDELTA_COMP
-)
-AS
- SELECT jvm_metrics.parent_id,
-        jvm_metrics.metric_id,
-        jvm_metrics.dim1,
-        jvm_metrics.dim2,
-        jvm_metrics.dim3,
-        jvm_metrics.dim4,
-        jvm_metrics.mtc1,
-        jvm_metrics.mtc2,
-        jvm_metrics.mtc3,
-        jvm_metrics.mtc4,
-        jvm_metrics.mtc5,
-        jvm_metrics.mtc6,
-        jvm_metrics.mtc7,
-        jvm_metrics.mtc8,
-        jvm_metrics.tag1,
-        jvm_metrics.tag2,
-        jvm_metrics.tag3,
-        jvm_metrics.tag4,
-        jvm_metrics.timestamps,
-        jvm_metrics.timestamps_1d,
-        jvm_metrics.timestamps_1h,
-        jvm_metrics.timestamps_10m,
-        jvm_metrics.timestamps_1m,
-        jvm_metrics.partition
- FROM public.jvm_metrics
- ORDER BY jvm_metrics.dim1,
-          jvm_metrics.parent_id,
-          jvm_metrics.metric_id,
-          jvm_metrics.dim2,
-          jvm_metrics.dim3,
-          jvm_metrics.dim4,
-          jvm_metrics.tag1,
-          jvm_metrics.tag2,
-          jvm_metrics.tag3,
-          jvm_metrics.tag4,
-          jvm_metrics.timestamps
-UNSEGMENTED ALL NODES;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-</description>
-        <pubDate>Mon, 05 Jun 2017 16:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2017-06-05-verticaencoding</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2017-06-05-verticaencoding</guid>
-        
-        
-        <category>vertica</category>
-        
-        <category>encode</category>
         
       </item>
     
