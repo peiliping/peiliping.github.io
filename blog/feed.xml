@@ -6,8 +6,8 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Wed, 13 Dec 2017 00:29:50 +0800</pubDate>
-    <lastBuildDate>Wed, 13 Dec 2017 00:29:50 +0800</lastBuildDate>
+    <pubDate>Fri, 15 Dec 2017 09:47:49 +0800</pubDate>
+    <lastBuildDate>Fri, 15 Dec 2017 09:47:49 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
     
       <item>
@@ -143,6 +143,19 @@
 &lt;p&gt;作为一个可信的回退点，注意这个心跳包一定要在数据流中流转，起到挤压数据的作用，&lt;/p&gt;
 
 &lt;p&gt;防止某些P3无数据的情况发生。相关代码参考我的sucker项目，这里就不介绍代码细节了。&lt;/p&gt;
+
+&lt;p&gt;解决这个问题的思路源于Flink介绍文章中的一段话：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Stream Barrier是Flink分布式Snapshotting中的核心元素，它会作为数据流的记录被同等看待，
+
+被插入到数据流中，将数据流中记录的进行分组，并沿着数据流的方向向前推进。每个Barrier会携带
+
+一个Snapshot ID，属于该Snapshot的记录会被推向该Barrier的前方。因为Barrier非常轻量，所以
+
+并不会中断数据流。带有Barrier的数据流。
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
 </description>
         <pubDate>Wed, 29 Nov 2017 10:00:00 +0800</pubDate>
         <link>http://peiliping.github.io/blog/archivers/2017-11-29-mysqlbinlog</link>
