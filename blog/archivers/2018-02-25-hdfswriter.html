@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>分发log数据到HDFS « Pei LiPing's Blog</title>
+  <meta name="description" content="将Kafka中的数据分发到HDFS上，提到这个需求首先想到的就是Flume。">
+
+  <link rel="stylesheet" href="/blog/css/main.css">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2018-02-25-hdfswriter">
+  <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
+</head>
+
+
+  <body>
+
+    <header class="header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Pei LiPing's Blog</a>
+    <nav class="site-nav">
+      
+        
+      
+        
+        <a class="page-link" href="/blog/about/">About</a>
+        
+      
+        
+        <a class="page-link" href="/blog/category/">Category</a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </nav>
+  </div>
+</header>
+
+    <div class="page-content">
+      <div class="wrapper">
+        <div class="col-main">
+          <div class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">分发log数据到HDFS</h1>
+    <p class="post-meta">Feb 25, 2018</p>
+  </header>
+
+  <article class="post-content">
+    <p>将Kafka中的数据分发到HDFS上，提到这个需求首先想到的就是Flume。</p>
+
+<p>之前我也在Flume上做了很多改进来提高性能，因为整体框架的约束，只是修改一些皮毛。</p>
+
+<p>最近正好做了一个log分发的项目，作用和Flume非常相似，初步性能测试比Flume快很多。</p>
+
+<p>每秒钟可以从Kafka拉取300M的数据，写HDFS也大概了每秒100M。</p>
+
+<h2 id="section">切换用户</h2>
+
+<p>HDFS一般都有权限管理，最常见的就是用用户名，假设写HDFS的程序所在的linux用户叫flume，</p>
+
+<p>那么HDFS上的文件用户名就是flume。为了方便管理我们的程序肯定是统一使用一个用户来启动的，</p>
+
+<p>这就需要切换  System.setProperty(“HADOOP_USER_NAME”, this.userName);</p>
+
+<p>在适当的时候执行以上语句，就可以达到切换用户的效果，当然还有其他办法,就不一一介绍了。</p>
+
+<h2 id="codec">Codec</h2>
+
+<p>绝大多数公司写入HDFS上的数据都会经过压缩，常见的如snappy，lzo，gzip等等，</p>
+
+<p>为了灵活方便，程序里通过配置来选择压缩工具，类似SPI的一种机制。</p>
+
+<p>其中值得注意的是lzo和lzop需要单独配置一下。</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>
+List&lt;Class&lt;? extends CompressionCodec&gt;&gt; codecs = CompressionCodecFactory.getCodecClasses(conf);
+codecs.add(LzoCodec.class);
+codecs.add(LzopCodec.class);
+
+</code></pre>
+</div>
+
+<h2 id="sync">sync</h2>
+
+<p>HDFS上一般一个block大小是128M左右，所以我们在写文件的过程中一定会sync一下，</p>
+
+<p>HDFS的FileSystem API中关于sync有好多种，我们参照Flume选择了hflush，性能还是非常不错的。</p>
+
+<h2 id="section-1">分区</h2>
+
+<p>之前介绍过Flume的路径渲染极大影响了它的吞吐能力，在我们的程序中也极力避免复杂的路径渲染，</p>
+
+<p>比如单sink同时只能写一个文件等，但是分区路径的渲染还是避免不掉的，常见的分区有小时分区和天分区。</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>public enum PartitionType {
+
+    DAY {
+        @Override
+        public PartitionRender newInstance() {
+            return new DayPartitionRender();
+        }
+    }, HOUR {
+        @Override
+        public PartitionRender newInstance() {
+            return new DayHourPartitionRender();
+        }
+    };
+
+    public abstract PartitionRender newInstance();
+
+    public abstract class PartitionRender {
+
+        public abstract void render(StringBuilder base);
+
+    }
+
+    public class DayPartitionRender extends PartitionRender {
+
+        private SimpleDateFormat simpleDateFormat = new SimpleDateFormat("/'dt'=yyyy-MM-dd/HH-mm-");
+
+        @Override
+        public void render(StringBuilder base) {
+            base.append(simpleDateFormat.format(new Date()));
+        }
+    }
+
+    public class DayHourPartitionRender extends PartitionRender {
+
+        private SimpleDateFormat simpleDateFormat = new SimpleDateFormat("/'dt'=yyyy-MM-dd/'ht'=HH/HH-mm-");
+
+        @Override
+        public void render(StringBuilder base) {
+            base.append(simpleDateFormat.format(new Date()));
+        }
+    }
+
+}
+
+</code></pre>
+</div>
+
+<p>通过一个简单的枚举解决。</p>
+
+
+  </article>
+  
+  
+
+
+
+
+</div>
+
+        </div>
+        <div class="col-second">
+          <div class="col-box col-box-author">
+  <img class="avatar" src="//www.gravatar.com/avatar/your_email_md5?d=mm&s=135" alt="Pei LiPing">
+  <div class="col-box-title name">Pei LiPing</div>
+  <p>The Cabin Of Pei LiPing.</p>
+  <p class="contact">
+    
+    
+    
+    <a href="mailto:peilipingplp@gmail.com">Email</a>
+    
+  </p>
+</div>
+
+<div class="col-box">
+  <div class="col-box-title">Newest Posts</div>
+  <ul class="post-list">
+    
+      <li><a class="post-link" href="/blog/archivers/2018-02-25-hdfswriter">分发log数据到HDFS</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2018-01-20-typeconvert">类型转换</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2017-12-25-avro">关于Avro的使用</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2017-11-29-mysqlbinlog">关于Mysql的Binlog抽取</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2017-10-08-redis-bit3">如何设计日活的流计算</a></li>
+    
+  </ul>
+</div>
+
+<div class="col-box post-toc hide">
+  <div class="col-box-title">TOC</div>
+</div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+<div class="wrapper">
+&copy; 2016 Pei LiPing
+</div>
+</footer>
+
+<script src="//upcdn.b0.upaiyun.com/libs/jquery/jquery-1.9.0.min.js"></script>
+<script src="/blog/js/easybook.js"></script>
+
+  </body>
+
+</html>

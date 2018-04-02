@@ -6,9 +6,120 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Sat, 24 Feb 2018 16:52:54 +0800</pubDate>
-    <lastBuildDate>Sat, 24 Feb 2018 16:52:54 +0800</lastBuildDate>
+    <pubDate>Mon, 02 Apr 2018 15:10:21 +0800</pubDate>
+    <lastBuildDate>Mon, 02 Apr 2018 15:10:21 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>分发log数据到HDFS</title>
+        <description>&lt;p&gt;将Kafka中的数据分发到HDFS上，提到这个需求首先想到的就是Flume。&lt;/p&gt;
+
+&lt;p&gt;之前我也在Flume上做了很多改进来提高性能，因为整体框架的约束，只是修改一些皮毛。&lt;/p&gt;
+
+&lt;p&gt;最近正好做了一个log分发的项目，作用和Flume非常相似，初步性能测试比Flume快很多。&lt;/p&gt;
+
+&lt;p&gt;每秒钟可以从Kafka拉取300M的数据，写HDFS也大概了每秒100M。&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;切换用户&lt;/h2&gt;
+
+&lt;p&gt;HDFS一般都有权限管理，最常见的就是用用户名，假设写HDFS的程序所在的linux用户叫flume，&lt;/p&gt;
+
+&lt;p&gt;那么HDFS上的文件用户名就是flume。为了方便管理我们的程序肯定是统一使用一个用户来启动的，&lt;/p&gt;
+
+&lt;p&gt;这就需要切换  System.setProperty(“HADOOP_USER_NAME”, this.userName);&lt;/p&gt;
+
+&lt;p&gt;在适当的时候执行以上语句，就可以达到切换用户的效果，当然还有其他办法,就不一一介绍了。&lt;/p&gt;
+
+&lt;h2 id=&quot;codec&quot;&gt;Codec&lt;/h2&gt;
+
+&lt;p&gt;绝大多数公司写入HDFS上的数据都会经过压缩，常见的如snappy，lzo，gzip等等，&lt;/p&gt;
+
+&lt;p&gt;为了灵活方便，程序里通过配置来选择压缩工具，类似SPI的一种机制。&lt;/p&gt;
+
+&lt;p&gt;其中值得注意的是lzo和lzop需要单独配置一下。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
+List&amp;lt;Class&amp;lt;? extends CompressionCodec&amp;gt;&amp;gt; codecs = CompressionCodecFactory.getCodecClasses(conf);
+codecs.add(LzoCodec.class);
+codecs.add(LzopCodec.class);
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;sync&quot;&gt;sync&lt;/h2&gt;
+
+&lt;p&gt;HDFS上一般一个block大小是128M左右，所以我们在写文件的过程中一定会sync一下，&lt;/p&gt;
+
+&lt;p&gt;HDFS的FileSystem API中关于sync有好多种，我们参照Flume选择了hflush，性能还是非常不错的。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-1&quot;&gt;分区&lt;/h2&gt;
+
+&lt;p&gt;之前介绍过Flume的路径渲染极大影响了它的吞吐能力，在我们的程序中也极力避免复杂的路径渲染，&lt;/p&gt;
+
+&lt;p&gt;比如单sink同时只能写一个文件等，但是分区路径的渲染还是避免不掉的，常见的分区有小时分区和天分区。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;public enum PartitionType {
+
+    DAY {
+        @Override
+        public PartitionRender newInstance() {
+            return new DayPartitionRender();
+        }
+    }, HOUR {
+        @Override
+        public PartitionRender newInstance() {
+            return new DayHourPartitionRender();
+        }
+    };
+
+    public abstract PartitionRender newInstance();
+
+    public abstract class PartitionRender {
+
+        public abstract void render(StringBuilder base);
+
+    }
+
+    public class DayPartitionRender extends PartitionRender {
+
+        private SimpleDateFormat simpleDateFormat = new SimpleDateFormat(&quot;/'dt'=yyyy-MM-dd/HH-mm-&quot;);
+
+        @Override
+        public void render(StringBuilder base) {
+            base.append(simpleDateFormat.format(new Date()));
+        }
+    }
+
+    public class DayHourPartitionRender extends PartitionRender {
+
+        private SimpleDateFormat simpleDateFormat = new SimpleDateFormat(&quot;/'dt'=yyyy-MM-dd/'ht'=HH/HH-mm-&quot;);
+
+        @Override
+        public void render(StringBuilder base) {
+            base.append(simpleDateFormat.format(new Date()));
+        }
+    }
+
+}
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;通过一个简单的枚举解决。&lt;/p&gt;
+
+</description>
+        <pubDate>Sun, 25 Feb 2018 13:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2018-02-25-hdfswriter</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2018-02-25-hdfswriter</guid>
+        
+        
+        <category>hdfs</category>
+        
+        <category>log</category>
+        
+        <category>flume</category>
+        
+      </item>
     
       <item>
         <title>类型转换</title>
@@ -1369,117 +1480,6 @@ int val = (int) (data &amp;amp; Integer.MAX_VALUE);
         <category>java</category>
         
         <category>bitmap</category>
-        
-      </item>
-    
-      <item>
-        <title>Flume优化</title>
-        <description>&lt;p&gt;Flume是Apache大数据套件中比较亲民的，安装、配置简单，功能丰富，而且极易定制化。&lt;/p&gt;
-
-&lt;p&gt;Flume的整体设计也是非常值得学习的。之前美团在官方技术blog中，着重讲述了其在Flume&lt;/p&gt;
-
-&lt;p&gt;上的定制化开发和性能优化，也让Flume普及率大大提高了。&lt;/p&gt;
-
-&lt;p&gt;一般使用Flume主要是作为agent抓取日志或者从Kafka读取消息写入HDFS、Hbase等，&lt;/p&gt;
-
-&lt;p&gt;而作为消息通道的功能，这几年渐渐被性能卓越的Kafka所取代。&lt;/p&gt;
-
-&lt;p&gt;而在日志抓取领域，Flume的功能性和性能一直都不是最佳选择。&lt;/p&gt;
-
-&lt;p&gt;下面介绍一下我在Flume定制开发和性能优化中的一些实践。&lt;/p&gt;
-
-&lt;h2 id=&quot;kafkasourcesink&quot;&gt;KafkaSourceSink&lt;/h2&gt;
-
-&lt;p&gt;在我的应用场景中，Flume主要是从Kafka拉取数据写入到HDFS上，还有就是从Kafka到Kafka。&lt;/p&gt;
-
-&lt;p&gt;Kafka这几年的发展很快，从比较流行的0.8.2.2到现在的0.10.X版本，API的兼容不是很好。&lt;/p&gt;
-
-&lt;p&gt;Flume的官方版本支持的是0.9.X，需要定制一下Kafka的版本支持。把KafkaSource和Sink&lt;/p&gt;
-
-&lt;p&gt;中,跟KafkaAPI打交道的方法都封装在抽象类中，提供多种版本的实现，这样就具备了不同Kafka&lt;/p&gt;
-
-&lt;p&gt;版本之间的消息迁移，主要用途就是在业务升级Kafka版本时，作为辅助的数据迁移工具，&lt;/p&gt;
-
-&lt;p&gt;业务方可以分别升级Producer端和Consumer端，减少升级的难度，控制升级的风险。&lt;/p&gt;
-
-&lt;h2 id=&quot;section&quot;&gt;优化性能&lt;/h2&gt;
-
-&lt;p&gt;整体来说Flume的性能并不高，很多组件为了实现通用性，都放弃了性能。&lt;/p&gt;
-
-&lt;p&gt;通过JFR的火焰图，我们找到了一些可以优化的点，下面列举一些。&lt;/p&gt;
-
-&lt;h3 id=&quot;hdfseventsink&quot;&gt;HDFSEventSink&lt;/h3&gt;
-
-&lt;p&gt;HDFSEventSink最大的问题是HDFSPath路径的渲染，将EventHeader里的Tag写入Path路径中，&lt;/p&gt;
-
-&lt;p&gt;还有一些预设的变量，比如年月日时分秒。这种渲染逻辑是每条数据都要执行的，所以开销非常大。&lt;/p&gt;
-
-&lt;p&gt;解决办法：&lt;/p&gt;
-
-&lt;p&gt;尽量少的使用变量，可以在Source端将路径的相关信息都拼凑好，写成一两个tag，&lt;/p&gt;
-
-&lt;p&gt;最后在sink端做简单的字符串拼接，性能至少可以提升两三倍。&lt;/p&gt;
-
-&lt;p&gt;注意：日期格式的渲染也要考虑，如果每条数据都将timestamp格式化成YMD也是非常耗时的，&lt;/p&gt;
-
-&lt;p&gt;可以适当引入cache来解决这个问题，比如将timestamp整除60000，缓存一分钟的格式化结果。&lt;/p&gt;
-
-&lt;p&gt;网上见到很多人的flume例子中，都是写TextFile到HDFS的，我是选择写的SequenceFile，&lt;/p&gt;
-
-&lt;p&gt;并且加了Snappy的压缩。SequenceFile比TextFile的好处就不讲了，网上有很多介绍。&lt;/p&gt;
-
-&lt;p&gt;另外sequenceFile也有一点点可以改的地方，将HDFSWritableSerializer的KeyClass修改掉，&lt;/p&gt;
-
-&lt;p&gt;Flume源码里是LongWritable，可以改成NullWritable。修改过的SequenceFile并不影响使用，&lt;/p&gt;
-
-&lt;p&gt;HDFS的文件大小会有百分之X的下降，相应的网络传输也会有一些收益。&lt;/p&gt;
-
-&lt;h3 id=&quot;eventsimpleevent&quot;&gt;Event、SimpleEvent&lt;/h3&gt;
-
-&lt;p&gt;在Flume体系中，Event是数据的载体，一共有两部分组成，一个Header，一个Body。&lt;/p&gt;
-
-&lt;p&gt;Header是一个HashMap，这里的HashMap是可以优化的，参见我上一篇文章吧。&lt;/p&gt;
-
-&lt;p&gt;这里有一个陷阱需要注意，SimpleEvent的实现中，Header是每次创建时就new了一个HashMap。&lt;/p&gt;
-
-&lt;p&gt;按照Flume源码中Kafkasource的逻辑EventBuilder.withBody(eventBody, headers)，&lt;/p&gt;
-
-&lt;p&gt;你在外面构建的headers(map),会在event初始化时复制一遍，这里可以优化一下。&lt;/p&gt;
-
-&lt;h3 id=&quot;channelprocessor&quot;&gt;ChannelProcessor&lt;/h3&gt;
-
-&lt;p&gt;ChannelProcessor的实现比较丰富，但不一定你都需要用到，这里首先可以做了一下裁剪。&lt;/p&gt;
-
-&lt;p&gt;在我的Flume中不会用到optional和InterceptorChain，所以先将相关逻辑删掉了。&lt;/p&gt;
-
-&lt;p&gt;processEventBatch方法的参数events，在下面的实现逻辑中被复制到了reqChannelQueue里，&lt;/p&gt;
-
-&lt;p&gt;在我的Source中，一个batch操作的数据都是指向同一个channel的，所以这个复制也没有意义。&lt;/p&gt;
-
-&lt;p&gt;只需要判断第一个元素的header，选择req的Channel，直接执行Put即可。&lt;/p&gt;
-
-&lt;p&gt;如果一个batch的数据可能是流向不同channel的，那么尽量在source端拆分好。&lt;/p&gt;
-
-&lt;p&gt;source端承载数据的list是可以反复重用的，而且capacity也可以预设大小，避免resize。&lt;/p&gt;
-
-&lt;h3 id=&quot;section-1&quot;&gt;最后&lt;/h3&gt;
-
-&lt;p&gt;写好的代码如果你是以plugin的形式来开发flume的话，那上面的部分代码是没法生效的。&lt;/p&gt;
-
-&lt;p&gt;比如ChannelProcessor，有一个简单的办法，在不用修改Flume源码的情况下，就可以生效。&lt;/p&gt;
-
-&lt;p&gt;找到Flume/bin目录下的flume-ng启动脚本，在这里修改一下java -cp 后面的参数顺序，&lt;/p&gt;
-
-&lt;p&gt;保证你的plugin目录，在flume/lib目录之前，就可以优先加载所覆写的类了。&lt;/p&gt;
-</description>
-        <pubDate>Wed, 05 Jul 2017 10:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2017-07-05-flume</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2017-07-05-flume</guid>
-        
-        
-        <category>flume</category>
-        
-        <category>java</category>
         
       </item>
     
