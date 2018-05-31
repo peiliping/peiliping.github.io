@@ -6,9 +6,66 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Wed, 11 Apr 2018 22:35:34 +0800</pubDate>
-    <lastBuildDate>Wed, 11 Apr 2018 22:35:34 +0800</lastBuildDate>
+    <pubDate>Thu, 31 May 2018 23:07:15 +0800</pubDate>
+    <lastBuildDate>Thu, 31 May 2018 23:07:15 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title></title>
+        <description>&lt;p&gt;之前做的几个项目陆续上线了，碰到了不少稀奇古怪的问题，还有一些运营的问题，这里总结一下。&lt;/p&gt;
+
+&lt;h2 id=&quot;mysql&quot;&gt;mysql字段类型&lt;/h2&gt;
+
+&lt;p&gt;之前binlog测试都还算顺利，上线后发现了一些不常用的字段类型没有覆盖到，导致了一些数据异常。&lt;/p&gt;
+
+&lt;h3 id=&quot;bit&quot;&gt;Bit&lt;/h3&gt;
+
+&lt;p&gt;mysql的bit类型字段在binlog中解析出来默认是bitset，按照默认逻辑tostring的话会输出{0,1}。&lt;/p&gt;
+
+&lt;p&gt;canal的处理是把bitset转成long型，也就是把bitset转为long就可以了。&lt;/p&gt;
+
+&lt;h3 id=&quot;enum&quot;&gt;enum&lt;/h3&gt;
+
+&lt;p&gt;mysql的enum类型之前我是从来没有用过的，这次也碰到了。enum类型的字段在JDBC中是char，&lt;/p&gt;
+
+&lt;p&gt;所以需要在char类型中做一下区分。&lt;/p&gt;
+
+&lt;h2 id=&quot;kafka-consumer&quot;&gt;监控kafka consumer&lt;/h2&gt;
+
+&lt;p&gt;消费kafka都需要关注积压情况，以此来判断是否需要扩分区或者是消费者。&lt;/p&gt;
+
+&lt;p&gt;普遍的做法是关注生产的offset和消费者的offset差，有不少开源的监控工具都是这样做的。&lt;/p&gt;
+
+&lt;p&gt;然后根据经验设定一个阈值，超过了就告警。&lt;/p&gt;
+
+&lt;p&gt;但是这个阈值的设定非常繁琐，阈值的大小与业务量的大小有关，跟提交offset的频率有关，&lt;/p&gt;
+
+&lt;p&gt;跟监控程序扫描的频率有关，大多数阈值设定都非常大，灵敏度不高。&lt;/p&gt;
+
+&lt;p&gt;我新上线的几个系统都是使用消费延迟时间来做告警的，在数据写入kafka（0.10以上的版本）的时候，&lt;/p&gt;
+
+&lt;p&gt;将timestamp设定为当前时间，或者是一个业务时间。消费kafka的consumer，按照Partition做一个统计，&lt;/p&gt;
+
+&lt;p&gt;consumer端将消费的数据时间戳和当前时间进行比对，来判断是否延迟，如果连续几分钟监控的延迟都&lt;/p&gt;
+
+&lt;p&gt;大于10分钟，那么就认定程序当前消费能力不足，需要增加副本数来解决。&lt;/p&gt;
+
+&lt;p&gt;如果你使用的kafka是0.8.2的话，没有timestamp的位置，可以通过key来传递。&lt;/p&gt;
+</description>
+        <pubDate>Thu, 22 Mar 2018 13:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2018-04-15-maintain</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2018-04-15-maintain</guid>
+        
+        
+        <category>mysqlbinlog</category>
+        
+        <category>log</category>
+        
+        <category>hdfs</category>
+        
+        <category>kafka</category>
+        
+      </item>
     
       <item>
         <title>MysqlBinlog中的事务</title>
@@ -1408,122 +1465,6 @@ redis:close()
         <category>lua</category>
         
         <category>模式匹配</category>
-        
-      </item>
-    
-      <item>
-        <title>关于性能优化</title>
-        <description>&lt;p&gt;最近两周一直在对去年开发的logwatch进行重构和升级，修复一些小bug、&lt;/p&gt;
-
-&lt;p&gt;扩展了对文件名的正则支持、升级了相关的三方依赖库，重新规划了目录结构，&lt;/p&gt;
-
-&lt;p&gt;当然，优化性能也是很重要的一个目标。&lt;/p&gt;
-
-&lt;h2 id=&quot;section&quot;&gt;越来越难的性能优化&lt;/h2&gt;
-
-&lt;p&gt;去年开发logwatch替换logstash的时候，就是因为logstash的性能差。&lt;/p&gt;
-
-&lt;p&gt;所以着重在优化logwatch的性能上，上线的版本可以达到每秒5万行NginxLog。&lt;/p&gt;
-
-&lt;p&gt;当时主要的优化手段是提高正则解析的效率，以最低的回溯代价完成解析。&lt;/p&gt;
-
-&lt;p&gt;而后在一些关键数据结构上做到重用，大大降低了table的性能开销。&lt;/p&gt;
-
-&lt;p&gt;最后有针对性的优化了KafkaClient的参数，保证高效率的消息传递。&lt;/p&gt;
-
-&lt;p&gt;这次再要优化性能已经非常困难了，从profiler的统计看，热点已经不在Lua了。&lt;/p&gt;
-
-&lt;p&gt;所以优化的方向主要是提升依赖的三方库的性能，优化的目标是7万以上。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-1&quot;&gt;三方依赖&lt;/h2&gt;
-
-&lt;p&gt;最吃cpu的三方库就是cjson，花了点时间寻找性能更好的json库。&lt;/p&gt;
-
-&lt;p&gt;参考了网上的一些测试结果，和自己的简单测试，发现rapidjson是最快的。&lt;/p&gt;
-
-&lt;p&gt;rapidjson相关的资料在网上可以搜到，大概比cjson快了一倍多。&lt;/p&gt;
-
-&lt;p&gt;因为lua本身提供的基础库非常有限，甚至连Sleep这样的功能都没有原生提供。&lt;/p&gt;
-
-&lt;p&gt;这次升级和优化时，也将一些通过os.exec来执行的命令替换成相关的三方库。&lt;/p&gt;
-
-&lt;p&gt;比如，引入了LuaFileSystem来丰富对目录和文件的操作，通过ffi来实现sleep。&lt;/p&gt;
-
-&lt;p&gt;虽然这些改进不能明显的提高性能，但是可以降低吞吐量的波动性。&lt;/p&gt;
-
-&lt;p&gt;在数据压缩方面由snappy换成了lz4，测试结果表明lz4还是会更快一些。&lt;/p&gt;
-
-&lt;p&gt;修改kafka的参数socket.blocking.max.ms也可以提高一些性能，测试结果显示&lt;/p&gt;
-
-&lt;p&gt;80-100之间是最佳状态。&lt;/p&gt;
-
-&lt;p&gt;关于Lua的Ipairs和Pairs网上有很多介绍的资料了，性能上ipairs肯定是更好的，&lt;/p&gt;
-
-&lt;p&gt;但是pairs的操作更方便，代码更整洁。所以要根据情况来取舍。&lt;/p&gt;
-
-&lt;p&gt;高密度执行的语句中，尽量使用ipairs，反之可以用pairs。&lt;/p&gt;
-
-&lt;p&gt;经过一番折腾，可以在理想环境(haswell或者broadwell的cpu、网络延迟低)下，&lt;/p&gt;
-
-&lt;p&gt;达到每秒8万以上的吞吐量，一般情况也可以超过7万。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-2&quot;&gt;是否过度优化&lt;/h2&gt;
-
-&lt;p&gt;跟朋友讨论时也谈到logwatch是不是过度优化了性能，应该去实现更多的功能，&lt;/p&gt;
-
-&lt;p&gt;很少有业务能把日志打印量做到每秒几万行，这样的性能几乎无用武之地。&lt;/p&gt;
-
-&lt;p&gt;这里谈一下我的看法：&lt;/p&gt;
-
-&lt;p&gt;性能测试都会基于一定的前提或者一定的测试数据，多少会有一些局限性。&lt;/p&gt;
-
-&lt;p&gt;我的测试数据是来自生产环境上的nginxlog，每行均长是200字节。&lt;/p&gt;
-
-&lt;p&gt;这个测试数据的标准不算很高，我问过几家公司的朋友他们的均长在300左右。&lt;/p&gt;
-
-&lt;p&gt;因为业务的差别和logformat的差异，每家都会不太一样。&lt;/p&gt;
-
-&lt;p&gt;当然即使是300的均长，logwatch的吞吐能力也在6W以上，足够满足需求。&lt;/p&gt;
-
-&lt;p&gt;日志采集的探针是一个小组件，每个人都希望他是低负担的，低成本的。&lt;/p&gt;
-
-&lt;p&gt;如果性能做的好，在部署上就不会带来任何负担。比如，不用单独为它准备&lt;/p&gt;
-
-&lt;p&gt;一个cpucore，或者扩充系统内存之类的。logwatch在生产环境下，&lt;/p&gt;
-
-&lt;p&gt;每秒处理500行log，占用24m内存，单核的百分之1.5的cpu。&lt;/p&gt;
-
-&lt;p&gt;不一定每个使用它的场景都会有那么好的cpu和网络，这些不确定性也会导致&lt;/p&gt;
-
-&lt;p&gt;性能有所下降，提升性能会让它适应能力更强。&lt;/p&gt;
-
-&lt;p&gt;网上看过很多日志采集的方案，最近一年多比较流行的方案是在本地只做基本的&lt;/p&gt;
-
-&lt;p&gt;行和多行切分，其他的解析操作全部扔到后面去做，比如Kafka的Consumer。&lt;/p&gt;
-
-&lt;p&gt;这当然是一个不错的方案，但是将如此重Cpu的工作全部放在后端处理，意味着&lt;/p&gt;
-
-&lt;p&gt;你需要一个比较大的资源池，也会有一些相应的管理成本。&lt;/p&gt;
-
-&lt;p&gt;在我看来适当的将日志解析的工作放在前端agent执行，是更经济的做法。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-3&quot;&gt;最后&lt;/h2&gt;
-
-&lt;p&gt;任何一种选型或者方案都不会是完美的，要看你对哪一方面更敏感，&lt;/p&gt;
-
-&lt;p&gt;明确知道这个方案的边界，尽量避免触礁，被滥用是很多项目失败的根本原因。&lt;/p&gt;
-
-</description>
-        <pubDate>Wed, 09 Aug 2017 09:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2017-08-09-performance</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2017-08-09-performance</guid>
-        
-        
-        <category>性能</category>
-        
-        <category>优化</category>
-        
-        <category>logwatch</category>
         
       </item>
     
