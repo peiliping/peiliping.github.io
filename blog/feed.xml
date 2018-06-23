@@ -6,9 +6,76 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Mon, 04 Jun 2018 18:38:01 +0800</pubDate>
-    <lastBuildDate>Mon, 04 Jun 2018 18:38:01 +0800</lastBuildDate>
+    <pubDate>Sat, 23 Jun 2018 22:24:27 +0800</pubDate>
+    <lastBuildDate>Sat, 23 Jun 2018 22:24:27 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>聊聊对channel的认识</title>
+        <description>&lt;p&gt;今天聊一聊channel的话题，最近几年从事的工作内容都跟消息流和数据通道有关系，&lt;/p&gt;
+
+&lt;p&gt;结合最近项目的调优，说说我对channel的认识。&lt;/p&gt;
+
+&lt;h2 id=&quot;ringbuffer&quot;&gt;ringbuffer&lt;/h2&gt;
+
+&lt;p&gt;说到channel，就不能不提disrupter的ringbuffer，最近几年非常热门的开源项目。&lt;/p&gt;
+
+&lt;p&gt;ringbuffer强调对象的高度复用，减少GC的次数，有无数据的timeout的回调，方便实现batch逻辑，&lt;/p&gt;
+
+&lt;p&gt;多种策略的选择，应对多种业务时效场景。&lt;/p&gt;
+
+&lt;h2 id=&quot;selector&quot;&gt;selector&lt;/h2&gt;
+
+&lt;p&gt;无论是实时流计算，还是消息通道，都会有一个类似selector的组件，基于某些字段对消息进行分类，&lt;/p&gt;
+
+&lt;p&gt;将event投递到不同的channel中，主要是为了解决一定程度的顺序问题，&lt;/p&gt;
+
+&lt;p&gt;比如将相同主键的消息顺序输出。flume中的selector就是针对header中的某个key进行mapping，&lt;/p&gt;
+
+&lt;p&gt;实现了灵活强大的分流功能。当然使用key也尽量不要出现热点，要不然整体的消费能力就会提早到达瓶颈。&lt;/p&gt;
+
+&lt;h2 id=&quot;broadcast&quot;&gt;broadcast&lt;/h2&gt;
+
+&lt;p&gt;broadcast功能在channel中也是非常实用的，比如checkpoint相关的event向下游传递，如果下游有&lt;/p&gt;
+
+&lt;p&gt;多个channel，那么就需要一个broadcast功能。在业务中broadcast的应用也非常广，比如上游计算&lt;/p&gt;
+
+&lt;p&gt;导致了某种meta信息的变更，就可以通过broadcast的功能通知下游，这种方式比借助外部存储要高效的多，&lt;/p&gt;
+
+&lt;p&gt;而且天然不用解决多version的问题。&lt;/p&gt;
+
+&lt;h2 id=&quot;balance&quot;&gt;balance&lt;/h2&gt;
+
+&lt;p&gt;如果你碰到了一拆N的channel场景，并且对数据的顺序不那么敏感时，肯定希望能最大限度的发挥下游&lt;/p&gt;
+
+&lt;p&gt;channel的能力，很多人都在selector上选择roundrobin，或者是基于timestamp取模的方法，如果下游&lt;/p&gt;
+
+&lt;p&gt;的消费能力非常强，这种做法是没有问题的。但如果你在下游sink是重IO类型的，这种做法就不会达到&lt;/p&gt;
+
+&lt;p&gt;你想要的效果了。你会发现流经常会因为某一条下游的blocking，导致整条链路卡主，你使用了多条通道&lt;/p&gt;
+
+&lt;p&gt;，但性能并没有成线性增长。这个问题在我的分发kafka消息至hdfs时就碰到了，一旦HDFS的响应速度下降&lt;/p&gt;
+
+&lt;p&gt;整个job的吞吐量大大降低，增加channel并没有解决这个问题，只能增加jvm实例来解决，非常耗资源。&lt;/p&gt;
+
+&lt;p&gt;这时，你需要的是类似负载均衡方面的WLC算法的解决方案。首先，你需要让下游的channel暴露出自己&lt;/p&gt;
+
+&lt;p&gt;的余量。然后根据余量的情况选择最为空闲的节点，这样你增加的channel才会有意义。当然如果你有&lt;/p&gt;
+
+&lt;p&gt;大量的broadcast消息，也会极大的影响你的性能。&lt;/p&gt;
+</description>
+        <pubDate>Thu, 10 May 2018 18:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2018-05-10-channel</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2018-05-10-channel</guid>
+        
+        
+        <category>channel</category>
+        
+        <category>hdfs</category>
+        
+        <category>kafka</category>
+        
+      </item>
     
       <item>
         <title>项目问题总结</title>
@@ -1408,63 +1475,6 @@ redis:close()
         <category>lua</category>
         
         <category>bitmap</category>
-        
-      </item>
-    
-      <item>
-        <title>Lpeg与模式匹配</title>
-        <description>&lt;p&gt;去年年底，开发第一版logwatch的时候，就有关注到Lpeg这个项目。&lt;/p&gt;
-
-&lt;p&gt;调研期间看了mozilla的heka项目，在解析日志时引入了lua的sandbox，&lt;/p&gt;
-
-&lt;p&gt;其定义的解析函数主要依赖Lpeg来实现，（LPEG可以称为PEG的Lua实现）。&lt;/p&gt;
-
-&lt;p&gt;PEG相关知识自行google–&amp;gt;解析表达文法。&lt;/p&gt;
-
-&lt;h2 id=&quot;lpeg&quot;&gt;日志领域的Lpeg&lt;/h2&gt;
-
-&lt;p&gt;为什么mozilla的heka要引入lua和lpeg呢？&lt;/p&gt;
-
-&lt;p&gt;heka是基于go开发的高性能日志处理工具，lua也是以性能著称的，&lt;/p&gt;
-
-&lt;p&gt;而且增加或者修改lua文件并不需要重新编译，非常理想的插件模式。&lt;/p&gt;
-
-&lt;p&gt;对于一般的日志文件解析来说正则就足够强大了，但这个世界并不完美，&lt;/p&gt;
-
-&lt;p&gt;总有一些特殊情况，导致了复杂度。假如日志文件里存在一种以上的格式，&lt;/p&gt;
-
-&lt;p&gt;如何高效的进行解析？如何解析抽取UserAgent这样的字段？&lt;/p&gt;
-
-&lt;p&gt;模式匹配是一个很不错的选择，lua领域的lpeg就可以完成这个工作。&lt;/p&gt;
-
-&lt;p&gt;几年前我在看一个解析UserAgent的java库，大概实现思路是要跑N条正则，&lt;/p&gt;
-
-&lt;p&gt;看看哪个可以完成解析，这样的效率显然是很低。&lt;/p&gt;
-
-&lt;h2 id=&quot;lpeg-1&quot;&gt;初识Lpeg&lt;/h2&gt;
-
-&lt;p&gt;Lpeg的入门还是有一些难度的，语法比较怪异，相关的例子也不是很多。&lt;/p&gt;
-
-&lt;p&gt;我在git上建了一个项目，记录了我练习的一些例子，从最简单的计算器、&lt;/p&gt;
-
-&lt;p&gt;到一个日期格式自动识别转化的工具、再到一个简易的模板(支持变量替&lt;/p&gt;
-
-&lt;p&gt;换和for循环语句)。&lt;a href=&quot;https://github.com/peiliping/lpeg-test/tree/master/basic&quot;&gt;【lpeg-test】&lt;/a&gt;。&lt;/p&gt;
-
-&lt;p&gt;如果你想用lpeg来自制一门脚本语言parser的话，还是要借助一些高级库，&lt;/p&gt;
-
-&lt;p&gt;比如&lt;a href=&quot;https://github.com/sqmedeiros/lpeglabel&quot;&gt;【label】&lt;/a&gt;、&lt;a href=&quot;https://github.com/andremm/lua-parser&quot;&gt;【parser】&lt;/a&gt;、&lt;a href=&quot;https://github.com/luapower/lexer&quot;&gt;【lexer】&lt;/a&gt;&lt;/p&gt;
-</description>
-        <pubDate>Fri, 01 Sep 2017 09:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2017-09-01-lpeg</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2017-09-01-lpeg</guid>
-        
-        
-        <category>lpeg</category>
-        
-        <category>lua</category>
-        
-        <category>模式匹配</category>
         
       </item>
     
