@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>618备战 « Pei LiPing's Blog</title>
+  <meta name="description" content="在JD第一次参加了大促的备战工作，我所负责的系统也要应对618当天的流量洪峰。">
+
+  <link rel="stylesheet" href="/blog/css/main.css">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2018-06-16-618">
+  <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
+</head>
+
+
+  <body>
+
+    <header class="header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Pei LiPing's Blog</a>
+    <nav class="site-nav">
+      
+        
+      
+        
+        <a class="page-link" href="/blog/about/">About</a>
+        
+      
+        
+        <a class="page-link" href="/blog/category/">Category</a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </nav>
+  </div>
+</header>
+
+    <div class="page-content">
+      <div class="wrapper">
+        <div class="col-main">
+          <div class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">618备战</h1>
+    <p class="post-meta">Jun 19, 2018</p>
+  </header>
+
+  <article class="post-content">
+    <p>在JD第一次参加了大促的备战工作，我所负责的系统也要应对618当天的流量洪峰。</p>
+
+<p>这半年开发的三个实时相关的工具都上线了，binlog采集、准实时hive表数据、日志分发。</p>
+
+<p>在618备战期间，我对这半年的开发有很多的思考，主要是平台运营、工具特性，性能与监控等方面。</p>
+
+<h2 id="section">平台型和工具型</h2>
+
+<p>作为一个工具，你可以只关心功能，关心配置的灵活度，水平扩展能力和性能的极限。</p>
+
+<p>但是作为一个平台型的东西，这些是远远不够的。</p>
+
+<p>比如平台上的任务一定是绝大多数任务压力很小，有少数任务流量压力很大。</p>
+
+<p>业务上也会出现，某些任务只在一些特定的时间流量压力大，而其他时间流量很低。</p>
+
+<p>数据的表现上有条数多，或者单条体积大。甚至还要考虑有一些任务所使用的网络比其他任务要差一些。</p>
+
+<p>单从工具的角度来说，我们的三个tool的表现都非常优异，每种任务都可以使用3-4个性能档位配置，</p>
+
+<p>工具的配置非常灵活，暴露的可调节的参数也非常多，核心逻辑采用状态机等设计模式，</p>
+
+<p>非常好的兼容能力。性能上也做了诸多优化，binlog采集的性能甚至超过了正常从库同步的性能。</p>
+
+<h2 id="section-1">临时解决问题</h2>
+
+<p>在任务上线的初期，经历了两周的阵痛，每天都有很多细碎的问题，比如某些任务延迟了，</p>
+
+<p>某些任务长时间无流量，某些任务经常报错等等。经过两周对监控的调整，大大降低了告警的次数，</p>
+
+<p>并且摸索出一套简单的运营办法，可以解决绝大多数问题。但是偶尔还是会有特例，</p>
+
+<p>在备战618的过程中，还是需要花非常多的时间去梳理核心任务和数据量大的任务，提前进行扩容。</p>
+
+<p>甚至在618前的一两个小时里，我们还在梳理增长迅猛的任务，并适当的扩容。</p>
+
+<p>这种工作无论你花多少时间，多么有耐心，还是会有遗漏的情况，因为这些都是实时数据或者</p>
+
+<p>准实时数据，临时人工处理一定已经晚了。</p>
+
+<h2 id="section-2">基础准备</h2>
+
+<p>因为现实业务上的复杂性，所以我们的任务本身需要做一些基础的准备。</p>
+
+<p>第一、做好水平扩展能力，可以通过增加一个docker副本来实现性能的水平扩展。</p>
+
+<p>第二、当不能通过水平扩展提升能力时，可以通过增加资源来提供能力，比如cpu、mem。</p>
+
+<p>其实很多业务系统经常是增加了资源并不能提升处理能力，或者说不满足预期。</p>
+
+<p>第三、Job本身能够估算出自己的余量，这一点非常重要，能做到这一点的少之又少。</p>
+
+<p>第四、能够借助像docker、k8s等方式对运行时环境进行管理。</p>
+
+<h2 id="section-3">未来</h2>
+
+<p>在产品端开发和运行时任务之间应该有一个运营质量管理系统，将监控和伸缩容量等结合起来，</p>
+
+<p>通过规则集或者AI相关技术，来解决需要大量人力时间的工作。</p>
+
+<p>在docker盛行的年代，传统运维方式发生了变化，监控也随之发生了变化，</p>
+
+<p>同样运营方法也在产生着巨大的变化，接来下几个月我会投入Flink相关的开发工作中，</p>
+
+<p>建设一个实时计算的平台，运营的实时化问题，会被我当成一个业务场景来对待，</p>
+
+<p>希望今年年底前能够彻底拜托人工运营的现状。</p>
+
+  </article>
+  
+  
+
+
+
+
+</div>
+
+        </div>
+        <div class="col-second">
+          <div class="col-box col-box-author">
+  <img class="avatar" src="//www.gravatar.com/avatar/your_email_md5?d=mm&s=135" alt="Pei LiPing">
+  <div class="col-box-title name">Pei LiPing</div>
+  <p>The Cabin Of Pei LiPing.</p>
+  <p class="contact">
+    
+    
+    
+    <a href="mailto:peilipingplp@gmail.com">Email</a>
+    
+  </p>
+</div>
+
+<div class="col-box">
+  <div class="col-box-title">Newest Posts</div>
+  <ul class="post-list">
+    
+      <li><a class="post-link" href="/blog/archivers/2018-06-16-618">618备战</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2018-05-10-channel">聊聊对channel的认识</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2018-04-15-maintain">项目问题总结</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2018-03-22-binlogtransaction">MysqlBinlog中的事务</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2018-02-25-hdfswriter">分发log数据到HDFS</a></li>
+    
+  </ul>
+</div>
+
+<div class="col-box post-toc hide">
+  <div class="col-box-title">TOC</div>
+</div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+<div class="wrapper">
+&copy; 2016 Pei LiPing
+</div>
+</footer>
+
+<script src="//upcdn.b0.upaiyun.com/libs/jquery/jquery-1.9.0.min.js"></script>
+<script src="/blog/js/easybook.js"></script>
+
+  </body>
+
+</html>

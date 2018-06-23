@@ -6,9 +6,88 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Sat, 23 Jun 2018 22:24:27 +0800</pubDate>
-    <lastBuildDate>Sat, 23 Jun 2018 22:24:27 +0800</lastBuildDate>
+    <pubDate>Sun, 24 Jun 2018 00:09:15 +0800</pubDate>
+    <lastBuildDate>Sun, 24 Jun 2018 00:09:15 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>618备战</title>
+        <description>&lt;p&gt;在JD第一次参加了大促的备战工作，我所负责的系统也要应对618当天的流量洪峰。&lt;/p&gt;
+
+&lt;p&gt;这半年开发的三个实时相关的工具都上线了，binlog采集、准实时hive表数据、日志分发。&lt;/p&gt;
+
+&lt;p&gt;在618备战期间，我对这半年的开发有很多的思考，主要是平台运营、工具特性，性能与监控等方面。&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;平台型和工具型&lt;/h2&gt;
+
+&lt;p&gt;作为一个工具，你可以只关心功能，关心配置的灵活度，水平扩展能力和性能的极限。&lt;/p&gt;
+
+&lt;p&gt;但是作为一个平台型的东西，这些是远远不够的。&lt;/p&gt;
+
+&lt;p&gt;比如平台上的任务一定是绝大多数任务压力很小，有少数任务流量压力很大。&lt;/p&gt;
+
+&lt;p&gt;业务上也会出现，某些任务只在一些特定的时间流量压力大，而其他时间流量很低。&lt;/p&gt;
+
+&lt;p&gt;数据的表现上有条数多，或者单条体积大。甚至还要考虑有一些任务所使用的网络比其他任务要差一些。&lt;/p&gt;
+
+&lt;p&gt;单从工具的角度来说，我们的三个tool的表现都非常优异，每种任务都可以使用3-4个性能档位配置，&lt;/p&gt;
+
+&lt;p&gt;工具的配置非常灵活，暴露的可调节的参数也非常多，核心逻辑采用状态机等设计模式，&lt;/p&gt;
+
+&lt;p&gt;非常好的兼容能力。性能上也做了诸多优化，binlog采集的性能甚至超过了正常从库同步的性能。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-1&quot;&gt;临时解决问题&lt;/h2&gt;
+
+&lt;p&gt;在任务上线的初期，经历了两周的阵痛，每天都有很多细碎的问题，比如某些任务延迟了，&lt;/p&gt;
+
+&lt;p&gt;某些任务长时间无流量，某些任务经常报错等等。经过两周对监控的调整，大大降低了告警的次数，&lt;/p&gt;
+
+&lt;p&gt;并且摸索出一套简单的运营办法，可以解决绝大多数问题。但是偶尔还是会有特例，&lt;/p&gt;
+
+&lt;p&gt;在备战618的过程中，还是需要花非常多的时间去梳理核心任务和数据量大的任务，提前进行扩容。&lt;/p&gt;
+
+&lt;p&gt;甚至在618前的一两个小时里，我们还在梳理增长迅猛的任务，并适当的扩容。&lt;/p&gt;
+
+&lt;p&gt;这种工作无论你花多少时间，多么有耐心，还是会有遗漏的情况，因为这些都是实时数据或者&lt;/p&gt;
+
+&lt;p&gt;准实时数据，临时人工处理一定已经晚了。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-2&quot;&gt;基础准备&lt;/h2&gt;
+
+&lt;p&gt;因为现实业务上的复杂性，所以我们的任务本身需要做一些基础的准备。&lt;/p&gt;
+
+&lt;p&gt;第一、做好水平扩展能力，可以通过增加一个docker副本来实现性能的水平扩展。&lt;/p&gt;
+
+&lt;p&gt;第二、当不能通过水平扩展提升能力时，可以通过增加资源来提供能力，比如cpu、mem。&lt;/p&gt;
+
+&lt;p&gt;其实很多业务系统经常是增加了资源并不能提升处理能力，或者说不满足预期。&lt;/p&gt;
+
+&lt;p&gt;第三、Job本身能够估算出自己的余量，这一点非常重要，能做到这一点的少之又少。&lt;/p&gt;
+
+&lt;p&gt;第四、能够借助像docker、k8s等方式对运行时环境进行管理。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-3&quot;&gt;未来&lt;/h2&gt;
+
+&lt;p&gt;在产品端开发和运行时任务之间应该有一个运营质量管理系统，将监控和伸缩容量等结合起来，&lt;/p&gt;
+
+&lt;p&gt;通过规则集或者AI相关技术，来解决需要大量人力时间的工作。&lt;/p&gt;
+
+&lt;p&gt;在docker盛行的年代，传统运维方式发生了变化，监控也随之发生了变化，&lt;/p&gt;
+
+&lt;p&gt;同样运营方法也在产生着巨大的变化，接来下几个月我会投入Flink相关的开发工作中，&lt;/p&gt;
+
+&lt;p&gt;建设一个实时计算的平台，运营的实时化问题，会被我当成一个业务场景来对待，&lt;/p&gt;
+
+&lt;p&gt;希望今年年底前能够彻底拜托人工运营的现状。&lt;/p&gt;
+</description>
+        <pubDate>Tue, 19 Jun 2018 20:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2018-06-16-618</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2018-06-16-618</guid>
+        
+        
+        <category>618</category>
+        
+      </item>
     
       <item>
         <title>聊聊对channel的认识</title>
@@ -1146,335 +1225,6 @@ ngx.say(r)
         <category>bitmap</category>
         
         <category>lpeg</category>
-        
-      </item>
-    
-      <item>
-        <title>Redis中的Bitmap数据结构</title>
-        <description>&lt;p&gt;Redis最早被大家熟知，是因为其高效的读写速率和丰富的数据结构。&lt;/p&gt;
-
-&lt;p&gt;无论是Web业务中做缓存和计数器，还是流计算做数据暂存容器，&lt;/p&gt;
-
-&lt;p&gt;应用都十分广泛。尤其是Bit有关的操作，在统计类业务中颇受欢迎。&lt;/p&gt;
-
-&lt;h2 id=&quot;redisbit&quot;&gt;Redis中常见的Bit操作&lt;/h2&gt;
-
-&lt;p&gt;1、SetBit （写入）&lt;/p&gt;
-
-&lt;p&gt;2、GetBit （读取）&lt;/p&gt;
-
-&lt;p&gt;3、BitOp  （逻辑运算）&lt;/p&gt;
-
-&lt;p&gt;4、BitPos （迭代）&lt;/p&gt;
-
-&lt;p&gt;5、BitField （特殊需求）&lt;/p&gt;
-
-&lt;h2 id=&quot;section&quot;&gt;计算日活跃用户&lt;/h2&gt;
-
-&lt;p&gt;计算日活是一个非常古老的话题，也是面试题目中很常见的一个问题。&lt;/p&gt;
-
-&lt;p&gt;其变种问题有：有限内存的数据排序，在线用户统计等等。&lt;/p&gt;
-
-&lt;p&gt;在网上有很多文章介绍如何利用Redis做高效的日活统计，请自行阅读。&lt;/p&gt;
-
-&lt;p&gt;使用Bit结构作为数据的存储，好处是高效、节省内存。&lt;/p&gt;
-
-&lt;p&gt;之前我写过一篇有关Java的Roaringbitmap的Blog，可以读一下。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-1&quot;&gt;维度分析的需求&lt;/h2&gt;
-
-&lt;p&gt;单一的日活跃统计已经不是什么技术难题了，几乎每个网站或者App都有。&lt;/p&gt;
-
-&lt;p&gt;在实际工作中，运营人员希望看到的数据不是一个简单的统计值，而是能做&lt;/p&gt;
-
-&lt;p&gt;一些更为复杂的统计分析。比如，漏斗模型、多维度组合分析等等。&lt;/p&gt;
-
-&lt;p&gt;通过分析来指导业务的优化，策略的修正。&lt;/p&gt;
-
-&lt;p&gt;现在也有很多公司已经积累了大量的用户特征数据，开始完善用户的画像，&lt;/p&gt;
-
-&lt;p&gt;通过用户的特征来优化业务逻辑，提升用户体验，提高商业价值。&lt;/p&gt;
-
-&lt;p&gt;这类需求简单概括一下就是，我们需要一个列式的存储，方便增加新列，&lt;/p&gt;
-
-&lt;p&gt;需要类似Bitmap的索引，能够高效完成多个维度的快速筛选。&lt;/p&gt;
-
-&lt;p&gt;以Bitmap索引为核心技术的Druid，是一个非常好的选择，被众多互联网&lt;/p&gt;
-
-&lt;p&gt;公司部署，用来做运营分析、广告分析、实时监控。Druid有良好的扩展性，&lt;/p&gt;
-
-&lt;p&gt;延迟比较低，实时强，查询速度快，在多维度分析里表现尤其优异。&lt;/p&gt;
-
-&lt;p&gt;缺点就是架构比较复杂，硬件成本比较高。也有公司选择ES和Kylin等。&lt;/p&gt;
-
-&lt;h2 id=&quot;redis-and-lua&quot;&gt;Redis AND Lua&lt;/h2&gt;
-
-&lt;p&gt;Redis支持加载Lua脚本，让一些原生难以满足的需求可以更优雅的实现。&lt;/p&gt;
-
-&lt;p&gt;使用过Redis的人都知道，通过批量提交可以提升写入效率，假如我们的需求&lt;/p&gt;
-
-&lt;p&gt;是先Get，根据业务逻辑再Put，就很难批量执行，很难保证原子性。&lt;/p&gt;
-
-&lt;p&gt;如果你碰到了迭代的需求，需要反复查询Redis，那么效率也会大打折扣。&lt;/p&gt;
-
-&lt;p&gt;Redis提供的LuaScript扩展是一个非常不错的选择，我们可以把业务逻辑&lt;/p&gt;
-
-&lt;p&gt;封装在Lua的函数中，把业务逻辑放在离数据更近的地方，类似Hbase的&lt;/p&gt;
-
-&lt;p&gt;协处理器的思路，而且Redis本身是单线程的，就不用再处理原子性问题了。&lt;/p&gt;
-
-&lt;p&gt;网上有很多Redis调Lua的例子，这里我就不详细介绍了。&lt;/p&gt;
-
-&lt;p&gt;Redis提供了Bit操作，又是典型的内存数据存储，如果数据量不是特别大，&lt;/p&gt;
-
-&lt;p&gt;能不能用Redis+Lua实现多维度分析日活的功能呢？下面我进行一些尝试。&lt;/p&gt;
-
-&lt;h2 id=&quot;bitmap&quot;&gt;如何构建Bitmap索引&lt;/h2&gt;
-
-&lt;h3 id=&quot;section-2&quot;&gt;用户标识&lt;/h3&gt;
-
-&lt;p&gt;因为是分析日活跃用户，所以采用UserId作为唯一标识，有一些公司的UserId&lt;/p&gt;
-
-&lt;p&gt;是UUID，那就需要进行一次转化，考虑到节省Bitmap的问题，ID尽量连续。&lt;/p&gt;
-
-&lt;h3 id=&quot;section-3&quot;&gt;维度值&lt;/h3&gt;
-
-&lt;p&gt;一个用户身上可能有十几个甚至几十个维度属性值，原则上每个值都要单独构建&lt;/p&gt;
-
-&lt;p&gt;一个Bitmap，所以还需要维护维度的Value列表。如果维度值过于丰富就会导致&lt;/p&gt;
-
-&lt;p&gt;巨大的存储开销。之前在看Kylin的Blog时，注意到有用一个TrieTree的结构&lt;/p&gt;
-
-&lt;p&gt;维度Value字典信息，好处是编码ID的信息具备ASCII的连续性，对Between逻辑&lt;/p&gt;
-
-&lt;p&gt;的执行优化有帮助。在Redis里维护TrieTree有点麻烦，我们暂时用Set替代。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Key的结构是：T-(命名空间)-(日期)-(维度序号)-VS
-Value是：Redis的Sets
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;维度值维护在Set里，通过控制Set的大小，来限制膨胀的发生，如果这种逻辑&lt;/p&gt;
-
-&lt;p&gt;在外面已经处理过了，这里也可以简化掉，直接进行下一步操作。&lt;/p&gt;
-
-&lt;h3 id=&quot;bitmap-1&quot;&gt;分块的Bitmap&lt;/h3&gt;
-
-&lt;p&gt;假如我们有一亿个用户ID，每个维度值都维护容量一亿的Bitmap就非常大了。&lt;/p&gt;
-
-&lt;p&gt;为了减小体积，我们将整体用户进行切分。切分的粒度小有助于节省内存，&lt;/p&gt;
-
-&lt;p&gt;但是会导致查询性能变差，粒度大则会浪费更多的内存。如果Redis的Bitmap&lt;/p&gt;
-
-&lt;p&gt;能够有Roaringbitmap的优化效果就完美了，对Bitmap的压缩可以参考一下&lt;/p&gt;
-
-&lt;p&gt;Roaringbitmap的源码，这里就不细说了。&lt;/p&gt;
-
-&lt;p&gt;块的大小可以根据自己的数据规模来确定，一般选择16384或者65536等。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;blockSeq , lineSeq = bit.rshift(uidNumber , 14) , bit.band(uidNumber , 16383)
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;之所以取2的N次方，是为了更快的处理分块的序号和偏移，利用位移和与运算。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Key的结构是：T-(命名空间)-(日期)-(维度序号)-(维度值)-BMP-(块序号)
-Value是：Redis的Bit
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;因为做了分块的操作，所以我们还需要维护一个块信息的列表，方便我们遍历计算。&lt;/p&gt;
-
-&lt;p&gt;一般来说会在这个块信息列表上存一些统计信息，比如总数。如果没有什么附加信息的话，&lt;/p&gt;
-
-&lt;p&gt;我们仍然可以用Bitmap来维护这个列表，节省一点内存开销。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Key的结构是：T-(命名空间)-(日期)-Nest
-Value是：Redis的Bit
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;题外话：Sybase之前有一个专利叫Bit-Wise，可以解决高基维和Between问题，&lt;/p&gt;
-
-&lt;p&gt;&lt;a href=&quot;http://infocenter.sybase.com/help/index.jsp?topic=/com.sybase.infocenter.dc38159.1600/doc/html/rhi1334843412230.html&quot;&gt;参考1&lt;/a&gt;
-&lt;a href=&quot;http://blog.163.com/liaoxiangui@126/blog/static/795696402012101510276877/&quot;&gt;参考2&lt;/a&gt;&lt;/p&gt;
-
-&lt;p&gt;今后我们再讨论这个话题。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-4&quot;&gt;如何查询&lt;/h2&gt;
-
-&lt;p&gt;一般查询的条件就是 col1 = 3 and col4 = true and col10 = abc 这个样子。&lt;/p&gt;
-
-&lt;p&gt;所以我们要根据维度的序号和维度的值，找到对应的BitmapKey,参见之前的key结构。&lt;/p&gt;
-
-&lt;p&gt;最后我们要根据分块的列表进行遍历，汇总遍历的结果返回。&lt;/p&gt;
-
-&lt;p&gt;伪代码如下：&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;for index in blocksArray
-  AND result col1-3-index col4-true-index col10-abc-index
-end
-bitcount result 
-del result
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;遍历Block列表的时候，我用到了BitPos，这个操作的参数非常麻烦，&lt;/p&gt;
-
-&lt;p&gt;参数是byte级别的，返回值是bit，需要自己加逻辑去控制一下。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;local scripts = ngx.shared.scripts
-local shar = redis:script(&quot;LOAD&quot; , 
-[[
-  local result = 0
-  local tableName , dateTime = KEYS[1] , KEYS[2]
-  
-  local keyT4N = {&quot;T-&quot; , tableName , &quot;-&quot; , dateTime , &quot;-Nest&quot;}
-  local key4N = table.concat(keyT4N)
-
-  local subKeys , subKeysT = {} , {}
-  for index = 1 , #ARGV , 2 do
-    table.insert(subKeysT , {&quot;T-&quot; , tableName , &quot;-&quot; , dateTime , &quot;-&quot; , ARGV[index] , &quot;-&quot; , ARGV[index+1] , &quot;-BMP-&quot; , 10})
-  end
-
-  local bytepos = 0
-  local pos = redis.call(&quot;bitpos&quot; , key4N , 1 , bytepos)
-  while (pos &amp;gt;= 0)
-  do
-    for g = pos , pos + 7 - bit.band(pos , 7) do
-      local fill = redis.call(&quot;getbit&quot; , key4N , g)
-      if fill == 1 then
-        for index , val in ipairs(subKeysT) do
-          val[10] = g
-          subKeys[index] = table.concat(val)
-        end
-        redis.call(&quot;bitop&quot; , &quot;AND&quot; , &quot;_TMP_&quot; , unpack(subKeys))
-        local uv = redis.call(&quot;bitcount&quot; , &quot;_TMP_&quot;)
-        result = result + uv
-      end
-    end
-
-    bytepos = bit.rshift(pos , 3) + 1 
-    pos = redis.call(&quot;bitpos&quot; , key4N , 1 , bytepos)
-  end
-  redis.call(&quot;del&quot; , &quot;_TMP_&quot;)
-  return result
-]]
-)
-scripts:set(&quot;ReadScript&quot;, shar)
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;h2 id=&quot;section-5&quot;&gt;数据写入&lt;/h2&gt;
-
-&lt;p&gt;其实就是将行转列的过程&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;local scriptWrite = redis:script(&quot;LOAD&quot; , 
-[[
-  local blockSize , blockPower , intSize = 2^15 , 15 , 2^31
-  local expireTime = 7 * 86400
-
-  local tableName , dateTime , uidNumber , append = KEYS[1] , tonumber(KEYS[2]) , tonumber(KEYS[3]) , KEYS[4] == &quot;1&quot;
-  local expire = (dateTime &amp;gt; 0)
-  local blockSeq , lineSeq 
-
-  if uidNumber &amp;gt;= intSize then
-    blockSeq , lineSeq = math.modf(uidNumber / blockSize) , uidNumber % blockSize
-  else
-    blockSeq , lineSeq = bit.rshift(uidNumber , blockPower) , bit.band(uidNumber , blockSize - 1)
-  end
-  
-  local key4N  = table.concat({tableName , &quot;-&quot; , dateTime , &quot;-Nest&quot;})
-  local keyT4V = {tableName , &quot;-&quot; , dateTime , &quot;-&quot; , 5 , &quot;-&quot; , &quot;VS&quot;}
-  local keyT4M = {tableName , &quot;-&quot; , dateTime , &quot;-&quot; , 5 , &quot;-&quot; , 7 , &quot;-BMP-&quot; , blockSeq}
-  
-  local write = function(keyT4V , keyT4M , index , val , lineSeq , expireTime)
-    local oldBit
-    keyT4V[5] , keyT4M[5] = index , index
-    local key4V = table.concat(keyT4V)
-    local isExist = redis.call(&quot;SISMEMBER&quot; , key4V , val)
-    if isExist == 1 then
-      keyT4M[7] = val
-      local key4M = table.concat(keyT4M)
-      oldBit = redis.call(&quot;setbit&quot; , key4M , lineSeq , 1)  
-    else
-      local count = redis.call(&quot;SCARD&quot; , key4V)
-      if count &amp;gt;= 1024 then
-        val = &quot;IGNORE&quot;
-      end
-      if count &amp;lt;= 1024 then 
-        redis.call(&quot;SADD&quot; , key4V , val)
-      end      
-      if count == 0 and expire then
-        redis.call(&quot;expire&quot; , key4V , expireTime)
-      end
-      keyT4M[7] = val
-      local key4M = table.concat(keyT4M)
-      oldBit = redis.call(&quot;setbit&quot; , key4M , lineSeq , 1)
-      if expire then
-        redis.call(&quot;expire&quot; , key4M , expireTime)
-      end
-    end
-    return oldBit
-  end
-
-  local oldBitNum = 0
-  if append then  
-    for seq = 1 , #ARGV , 2 do
-      oldBitNum = oldBitNum + write(keyT4V , keyT4M , ARGV[seq] , ARGV[seq + 1] , lineSeq , expireTime)
-    end
-  else
-    for index , val in ipairs(ARGV) do
-      oldBitNum = oldBitNum + write(keyT4V , keyT4M , index , val , lineSeq , expireTime) 
-    end
-  end
-  if oldBitNum == 0 then
-    redis.call(&quot;setbit&quot; , key4N , blockSeq , 1)
-  end
-  return true
-]]
-)
-scripts:set(&quot;WriteScript&quot;, scriptWrite)
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;OpenrestyLua包装的查询接口&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;local ngx_re      = require &quot;ngx.re&quot;
-local resty_redis = require &quot;resty.redis&quot;
-local redis       = resty_redis:new()
-redis:set_timeout(1000)
-local ok , err    = redis:connect(&quot;127.0.0.1&quot;, 6379)
-
-if err then
-  ngx.say(err)
-  return
-end
-
-local scripts = ngx.shared.scripts
-
-local tableName = ngx.var.arg_table
-local dateTime  = ngx.var.arg_datetime
-
-local dimsStr   = ngx.var.arg_dims
-local dims      = ngx_re.split(dimsStr , &quot;,&quot;)
-
-local r = redis:evalsha(scripts:get(&quot;ReadScript&quot;) , 2 , tableName , dateTime , unpack(dims))
-ngx.say(r)
-redis:close()
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-</description>
-        <pubDate>Tue, 12 Sep 2017 09:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2017-09-12-redis-bit</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2017-09-12-redis-bit</guid>
-        
-        
-        <category>redis</category>
-        
-        <category>lua</category>
-        
-        <category>bitmap</category>
         
       </item>
     
