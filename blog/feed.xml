@@ -6,9 +6,80 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Wed, 27 Jun 2018 13:59:32 +0800</pubDate>
-    <lastBuildDate>Wed, 27 Jun 2018 13:59:32 +0800</lastBuildDate>
+    <pubDate>Mon, 02 Jul 2018 11:25:48 +0800</pubDate>
+    <lastBuildDate>Mon, 02 Jul 2018 11:25:48 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>估算Job的余量</title>
+        <description>&lt;p&gt;在运维日志分发任务的时候，经常碰到一些突发性的数据量增大，导致分发资源不足，最后数据延迟了。&lt;/p&gt;
+
+&lt;p&gt;之前，只能依赖监控Kafka的消息积压情况，如果积压非常多，就增加任务的副本数或者增大任务的&lt;/p&gt;
+
+&lt;p&gt;资源规格（分配更多的cpu和内存）。增加多少副本或者资源只能凭经验去判断，无法量化，每个任务的&lt;/p&gt;
+
+&lt;p&gt;数据单条大小是不一样的，连接的HDFS集群也是不一样的，所处的网络环境也会有差异，这些变量都&lt;/p&gt;
+
+&lt;p&gt;导致了无法用一个固定的指标衡量或者预警。&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;自旋时间&lt;/h2&gt;
+
+&lt;p&gt;经过一段时间的思考和测试我们选择了一个叫做自旋时间的指标来做衡量。&lt;/p&gt;
+
+&lt;p&gt;我们的任务中使用了ringbuffer作为生产消费模型中的缓冲队列，在高资源规格的任务中，会有多个&lt;/p&gt;
+
+&lt;p&gt;并行的ringbuffer。之前我的blog提到过，我们在选择哪一条channel时有一个复合策略，就是roundrobin&lt;/p&gt;
+
+&lt;p&gt;+余量最大。当source下游的所有ringbuffer都处于full状态时，source就一直处于wait状态（自旋），&lt;/p&gt;
+
+&lt;p&gt;这个自旋的时间被我们统计了下来，通过nanotime的delta来统计。如果每分钟里自旋的累加时间超过5s，&lt;/p&gt;
+
+&lt;p&gt;我们就会认为该任务的消费能力低于生产能力，需要扩大资源规格，具体含义就是写HDFS的性能低于拉&lt;/p&gt;
+
+&lt;p&gt;kafka的性能。在我们的测试中，3个channel同时写HDFS，能超过单线程拉kafka的速度。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-1&quot;&gt;告警的策略&lt;/h2&gt;
+
+&lt;p&gt;有一些kafka的数据是定期上报的，所以会存在短期数据量很大的情况，如果我们设置的报警策略非常敏感&lt;/p&gt;
+
+&lt;p&gt;的话，会导致频繁告警，所以经过一段时间的微调，我们最终选定15分钟内有10次超过5s的自旋，就任务&lt;/p&gt;
+
+&lt;p&gt;该任务需要增加资源规格了。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-2&quot;&gt;副本与资源规格&lt;/h2&gt;
+
+&lt;p&gt;需要注意的是增加副本和增加资源规格其实都能达到降低任务繁忙度的目的，但是增加资源规格从整体&lt;/p&gt;
+
+&lt;p&gt;上来说是更为经济的选择，增加副本还依赖于kafka的partition数量。&lt;/p&gt;
+
+&lt;p&gt;在运维这批任务的时候，我们会有一个基本的原则：&lt;/p&gt;
+
+&lt;p&gt;1、副本数不超过kafka分区数的二分之一，保证至少还有一倍的临时扩容余量。&lt;/p&gt;
+
+&lt;p&gt;2、如果是单副本任务，优先增加副本。&lt;/p&gt;
+
+&lt;p&gt;3、副本数超过5个的话，尽量扩资源规格。&lt;/p&gt;
+
+&lt;p&gt;4、如果单个任务平均每秒处理的数据超过50m，则选择增加副本数量。&lt;/p&gt;
+
+&lt;p&gt;另外，这个自旋时间并不能替代数据延迟的告警，只是用来衡量单任务是否达到性能瓶颈。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-3&quot;&gt;未来&lt;/h2&gt;
+
+&lt;p&gt;这些扩容的规则还在慢慢积累，不断的在增加Metric的丰富度，希望未来可以通过对metric的实时处理，&lt;/p&gt;
+
+&lt;p&gt;得到运营决策，将系统的运营工作自动化起来。&lt;/p&gt;
+</description>
+        <pubDate>Sun, 01 Jul 2018 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2018-07-01-spin</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2018-07-01-spin</guid>
+        
+        
+        <category>scale</category>
+        
+        <category>spin</category>
+        
+      </item>
     
       <item>
         <title>618备战</title>
@@ -989,233 +1060,6 @@ codecs.add(LzopCodec.class);
         <pubDate>Sun, 08 Oct 2017 10:00:00 +0800</pubDate>
         <link>http://peiliping.github.io/blog/archivers/2017-10-08-redis-bit3</link>
         <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2017-10-08-redis-bit3</guid>
-        
-        
-        <category>redis</category>
-        
-        <category>lua</category>
-        
-        <category>bitmap</category>
-        
-        <category>lpeg</category>
-        
-      </item>
-    
-      <item>
-        <title>如何查询Redis中的Bitmap数据</title>
-        <description>&lt;p&gt;书接上回，我们已经将日活的维度数据写入Redis的Bitmap结构中。&lt;/p&gt;
-
-&lt;p&gt;今天再设计一个简单的查询引擎，通过表达式转化为Redis的指令集，最终得到日活的结果。&lt;/p&gt;
-
-&lt;h2 id=&quot;section&quot;&gt;设计一个简单的表达式&lt;/h2&gt;
-
-&lt;p&gt;最通用的表达式就是SQL了，Hive、Drill、Presto、Phoenix等开源项目都在做类似的事情。&lt;/p&gt;
-
-&lt;p&gt;我们这个筛选维度求日活的功能，没有那么复杂，所以简单一些就好。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;(C1 = 3 &amp;amp; C2 = 1) &amp;amp; (C5 = 1 | C8 = 6)
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;其中C(N)代表选择第几个维度，等号后面代表维度的值，&lt;/p&gt;
-
-&lt;p&gt;“&amp;amp;”代表AND操作，“|”代表OR操作，括号表示结合顺序。&lt;/p&gt;
-
-&lt;p&gt;这个表达式的含义我想很容易理解，跟四则混合运算差不多。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-1&quot;&gt;表达式的解释器&lt;/h2&gt;
-
-&lt;p&gt;下面看看我们如何解析这个表达式，将表达式转化为Redis执行的指令。&lt;/p&gt;
-
-&lt;p&gt;之前玩了一段时间的Lpeg，也做过一些小东西，这里还是用Lpeg来做，&lt;/p&gt;
-
-&lt;p&gt;在四则混合运算的例子上加以改进即可。&lt;/p&gt;
-
-&lt;p&gt;下面是对表达式的定义。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;function Blk(p)
-  return p * V &quot;Space&quot;
-end
-
-local G = P{
-    V &quot;Space&quot; * V &quot;Stmt&quot; ;
-    Stmt      = Cf(V &quot;Group&quot; * Cg(V &quot;LogicSig&quot; * V &quot;Group&quot;)^0 , operation) ,
-    Group     = V &quot;Element&quot; + V &quot;Open&quot; * V &quot;Stmt&quot; * V &quot;Close&quot; ,
-    Element   = Cg(Blk(V &quot;ColNum&quot;) * Blk(V &quot;EqSignal&quot;) * Blk(V &quot;ColVal&quot;) / selector) ,
-    LogicSig  = Blk(C(S &quot;&amp;amp;|&quot;)),
-
-    ColNum    = P &quot;C&quot; * C(R &quot;09&quot;^1) ,
-    EqSignal  = C(P &quot;=&quot;) ,
-    ColVal    = C((R &quot;az&quot; + R &quot;AZ&quot; + R &quot;09&quot;)^1) ,
-
-    Open      = Blk(P &quot;(&quot;) ,
-    Close     = Blk(P &quot;)&quot;) ,
-    Space     = S(&quot; \n\t&quot;)^0 ,
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;在解析到 C1=1 类似的结构时用selector函数处理&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;function selector(colNum , op , colVal)
-  lastKey = {&quot;b&quot; , colNum .. '-' .. colVal}
-  return lastKey
-end
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;解析到 XXX &amp;amp; YYY 或者 XXX | YYY 的结构时用operation函数处理&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;function operation(left , op , right)
-  local action = &quot;&quot;
-  if op == &quot;&amp;amp;&quot; then 
-    action = &quot;AND&quot;
-  elseif op == &quot;|&quot; then
-    action = &quot;OR&quot;
-  end
-  local tmpKey = &quot;__TMP-&quot; .. tmpCount
-  lastKey = {&quot;t&quot; , tmpKey}
-  table.insert(recycle , tmpKey)
-  tmpCount = tmpCount + 1
-  table.insert(process , {&quot;BITOP&quot; , action , tmpKey , left[1] , left[2] , right[1] , right[2]})
-  return {&quot;t&quot; , tmpKey }
-end
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;因为在Bitmap运算过程中，我们会产生一些临时的Bitmap数据，以__TMP开头的Key，&lt;/p&gt;
-
-&lt;p&gt;这些Key在运算执行结束后，需要清理掉，我们将这些Key都记录在recycle数据里。&lt;/p&gt;
-
-&lt;p&gt;下面看一个表达式解析的过程：&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;(C1 = 3 &amp;amp; C2 = 1) &amp;amp; (C5 = 1 | C8 = 6)
-
---------------------
-C1	=	3
-C2	=	1
-table: 0x41760200	&amp;amp;	table: 0x417553e0
-C5	=	1
-C8	=	6
-table: 0x417600f0	|	table: 0x41760178
-table: 0x4175db68	&amp;amp;	table: 0x4175da68
-
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;再看看解析的结果：&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;lastKey : {&quot;t&quot; , &quot;__TMP-3&quot;}
-process : [
-           [&quot;BITOP&quot;,&quot;AND&quot;,&quot;__TMP-1&quot;,&quot;b&quot;,&quot;1-3&quot;,&quot;b&quot;,&quot;2-1&quot;],
-           [&quot;BITOP&quot;,&quot;OR&quot;,&quot;__TMP-2&quot;,&quot;b&quot;,&quot;5-1&quot;,&quot;b&quot;,&quot;8-6&quot;],
-           [&quot;BITOP&quot;,&quot;AND&quot;,&quot;__TMP-3&quot;,&quot;t&quot;,&quot;__TMP-1&quot;,&quot;t&quot;,&quot;__TMP-2&quot;],
-           [&quot;BITCOUNT&quot;,[&quot;t&quot;,&quot;__TMP-3&quot;]]
-          ]
-recycle : [&quot;__TMP-1&quot;,&quot;__TMP-2&quot;,&quot;__TMP-3&quot;]
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;说明：其中的”t”代表是临时变量的key ， “b”代表的是需要结合Block块的序号的Key。&lt;/p&gt;
-
-&lt;p&gt;如果完善一些的话，我们应该对逻辑表达式进行一下处理，也就是执行计划的优化。&lt;/p&gt;
-
-&lt;p&gt;这里只是一个Demo，所以我们先跳过这一块，先把流程跑通。&lt;/p&gt;
-
-&lt;h2 id=&quot;redis&quot;&gt;将执行计划推送给Redis&lt;/h2&gt;
-
-&lt;p&gt;前一篇Blog，我们已经写了一个封装查询的LuaScript了，LuaScript会根据&lt;/p&gt;
-
-&lt;p&gt;Nest结构中的数据，遍历所有的Block块，在每个Block块中进行，逻辑表达式的运算，&lt;/p&gt;
-
-&lt;p&gt;最后把UV都SUM起来，就是返回的日活结果。&lt;/p&gt;
-
-&lt;p&gt;这里我将process和recycle的数据都打包成了json(redis的lua可以使用cjson)。&lt;/p&gt;
-
-&lt;p&gt;下面是重写的ReadScript&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;local scriptRead = redis:script(&quot;LOAD&quot; , 
-[[
-  local result = 0
-  local tableName , dateTime = KEYS[1] , KEYS[2]
-  local process , recycle    = cjson.decode(ARGV[1]) , cjson.decode(ARGV[2])
-  local key4N = table.concat({tableName , &quot;-&quot; , dateTime , &quot;-Nest&quot;})
-
-  for index , value in ipairs(process) do
-    local params
-    if value[1] == &quot;BITOP&quot; then
-      params = {value[1] , value[2] , value[3]}
-      for seq = 4 , #value , 2 do
-        if value[seq] == &quot;b&quot; then
-          table.insert(params , {tableName , &quot;-&quot; , dateTime , &quot;-&quot; , value[seq + 1] , &quot;-BMP-&quot; , 7})
-        elseif value[seq] == &quot;t&quot; then
-          table.insert(params , value[seq + 1])
-        end
-      end
-    elseif value[1] == &quot;BITCOUNT&quot; then
-      params = {value[1]}
-      if value[2] == &quot;b&quot; then
-          table.insert(params , {tableName , &quot;-&quot; , dateTime , &quot;-&quot; , value[3] , &quot;-BMP-&quot; , 7})
-        elseif value[2] == &quot;t&quot; then
-          table.insert(params , value[3])
-        end
-    end
-    process[index] = params
-  end
-  
-  local bytepos = 0
-  local pos = redis.call(&quot;bitpos&quot; , key4N , 1 , bytepos)
-  while (pos &amp;gt;= 0)
-  do
-    for g = pos , pos + 7 - bit.band(pos , 7) do
-      local fill = redis.call(&quot;getbit&quot; , key4N , g)
-      if fill == 1 then
-        for index , value in ipairs(process) do
-          local ps = {}
-          for id , item in ipairs(value) do
-            if type(item) == &quot;table&quot; then
-              item[7] = g
-              ps[id] = table.concat(item)
-            else
-              ps[id] = item
-            end
-          end
-          if ps[1] == &quot;BITCOUNT&quot; then
-            result = result + redis.call(unpack(ps))
-          else
-            redis.call(unpack(ps))
-          end
-        end
-      end
-    end
-    bytepos = bit.rshift(pos , 3) + 1 
-    pos = redis.call(&quot;bitpos&quot; , key4N , 1 , bytepos)
-  end
-  if #recycle &amp;gt; 0 then
-    redis.call(&quot;del&quot; , unpack(recycle))
-  end
-  return result
-]]
-)
-
-scripts:set(&quot;ReadScript&quot; , scriptRead)
-ngx.say(&quot;ReadScript : &quot; .. scriptRead)
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;最后我们再改写一些Openresty对查询接口的封装&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;G:match(expression)
-table.insert(process , {&quot;BITCOUNT&quot; , unpack(lastKey)}) 
-
-local r = redis:evalsha(scripts:get(&quot;ReadScript&quot;) , 2 , tableName , dateTime , json.encode(process) , json.encode(recycle))
-ngx.say(r)
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-</description>
-        <pubDate>Wed, 20 Sep 2017 10:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2017-09-20-redis-bit2</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2017-09-20-redis-bit2</guid>
         
         
         <category>redis</category>

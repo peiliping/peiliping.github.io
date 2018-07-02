@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>估算Job的余量 « Pei LiPing's Blog</title>
+  <meta name="description" content="在运维日志分发任务的时候，经常碰到一些突发性的数据量增大，导致分发资源不足，最后数据延迟了。">
+
+  <link rel="stylesheet" href="/blog/css/main.css">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2018-07-01-spin">
+  <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
+</head>
+
+
+  <body>
+
+    <header class="header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Pei LiPing's Blog</a>
+    <nav class="site-nav">
+      
+        
+      
+        
+        <a class="page-link" href="/blog/about/">About</a>
+        
+      
+        
+        <a class="page-link" href="/blog/category/">Category</a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </nav>
+  </div>
+</header>
+
+    <div class="page-content">
+      <div class="wrapper">
+        <div class="col-main">
+          <div class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">估算Job的余量</h1>
+    <p class="post-meta">Jul 1, 2018</p>
+  </header>
+
+  <article class="post-content">
+    <p>在运维日志分发任务的时候，经常碰到一些突发性的数据量增大，导致分发资源不足，最后数据延迟了。</p>
+
+<p>之前，只能依赖监控Kafka的消息积压情况，如果积压非常多，就增加任务的副本数或者增大任务的</p>
+
+<p>资源规格（分配更多的cpu和内存）。增加多少副本或者资源只能凭经验去判断，无法量化，每个任务的</p>
+
+<p>数据单条大小是不一样的，连接的HDFS集群也是不一样的，所处的网络环境也会有差异，这些变量都</p>
+
+<p>导致了无法用一个固定的指标衡量或者预警。</p>
+
+<h2 id="section">自旋时间</h2>
+
+<p>经过一段时间的思考和测试我们选择了一个叫做自旋时间的指标来做衡量。</p>
+
+<p>我们的任务中使用了ringbuffer作为生产消费模型中的缓冲队列，在高资源规格的任务中，会有多个</p>
+
+<p>并行的ringbuffer。之前我的blog提到过，我们在选择哪一条channel时有一个复合策略，就是roundrobin</p>
+
+<p>+余量最大。当source下游的所有ringbuffer都处于full状态时，source就一直处于wait状态（自旋），</p>
+
+<p>这个自旋的时间被我们统计了下来，通过nanotime的delta来统计。如果每分钟里自旋的累加时间超过5s，</p>
+
+<p>我们就会认为该任务的消费能力低于生产能力，需要扩大资源规格，具体含义就是写HDFS的性能低于拉</p>
+
+<p>kafka的性能。在我们的测试中，3个channel同时写HDFS，能超过单线程拉kafka的速度。</p>
+
+<h2 id="section-1">告警的策略</h2>
+
+<p>有一些kafka的数据是定期上报的，所以会存在短期数据量很大的情况，如果我们设置的报警策略非常敏感</p>
+
+<p>的话，会导致频繁告警，所以经过一段时间的微调，我们最终选定15分钟内有10次超过5s的自旋，就任务</p>
+
+<p>该任务需要增加资源规格了。</p>
+
+<h2 id="section-2">副本与资源规格</h2>
+
+<p>需要注意的是增加副本和增加资源规格其实都能达到降低任务繁忙度的目的，但是增加资源规格从整体</p>
+
+<p>上来说是更为经济的选择，增加副本还依赖于kafka的partition数量。</p>
+
+<p>在运维这批任务的时候，我们会有一个基本的原则：</p>
+
+<p>1、副本数不超过kafka分区数的二分之一，保证至少还有一倍的临时扩容余量。</p>
+
+<p>2、如果是单副本任务，优先增加副本。</p>
+
+<p>3、副本数超过5个的话，尽量扩资源规格。</p>
+
+<p>4、如果单个任务平均每秒处理的数据超过50m，则选择增加副本数量。</p>
+
+<p>另外，这个自旋时间并不能替代数据延迟的告警，只是用来衡量单任务是否达到性能瓶颈。</p>
+
+<h2 id="section-3">未来</h2>
+
+<p>这些扩容的规则还在慢慢积累，不断的在增加Metric的丰富度，希望未来可以通过对metric的实时处理，</p>
+
+<p>得到运营决策，将系统的运营工作自动化起来。</p>
+
+  </article>
+  
+  
+
+
+
+
+</div>
+
+        </div>
+        <div class="col-second">
+          <div class="col-box col-box-author">
+  <img class="avatar" src="//www.gravatar.com/avatar/your_email_md5?d=mm&s=135" alt="Pei LiPing">
+  <div class="col-box-title name">Pei LiPing</div>
+  <p>The Cabin Of Pei LiPing.</p>
+  <p class="contact">
+    
+    
+    
+    <a href="mailto:peilipingplp@gmail.com">Email</a>
+    
+  </p>
+</div>
+
+<div class="col-box">
+  <div class="col-box-title">Newest Posts</div>
+  <ul class="post-list">
+    
+      <li><a class="post-link" href="/blog/archivers/2018-07-01-spin">估算Job的余量</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2018-06-16-618">618备战</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2018-05-10-channel">聊聊对channel的认识</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2018-04-15-maintain">项目问题总结</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2018-03-22-binlogtransaction">MysqlBinlog中的事务</a></li>
+    
+  </ul>
+</div>
+
+<div class="col-box post-toc hide">
+  <div class="col-box-title">TOC</div>
+</div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+<div class="wrapper">
+&copy; 2016 Pei LiPing
+</div>
+</footer>
+
+<script src="//upcdn.b0.upaiyun.com/libs/jquery/jquery-1.9.0.min.js"></script>
+<script src="/blog/js/easybook.js"></script>
+
+  </body>
+
+</html>
