@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>初识flink « Pei LiPing's Blog</title>
+  <meta name="description" content="2016年的时候，开始关注flink，觉得是一个非常不错的流计算项目，当时也做了一些简单的demo，">
+
+  <link rel="stylesheet" href="/blog/css/main.css">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2018-08-19-flink">
+  <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
+</head>
+
+
+  <body>
+
+    <header class="header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Pei LiPing's Blog</a>
+    <nav class="site-nav">
+      
+        
+      
+        
+        <a class="page-link" href="/blog/about/">About</a>
+        
+      
+        
+        <a class="page-link" href="/blog/category/">Category</a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </nav>
+  </div>
+</header>
+
+    <div class="page-content">
+      <div class="wrapper">
+        <div class="col-main">
+          <div class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">初识flink</h1>
+    <p class="post-meta">Aug 19, 2018</p>
+  </header>
+
+  <article class="post-content">
+    <p>2016年的时候，开始关注flink，觉得是一个非常不错的流计算项目，当时也做了一些简单的demo，</p>
+
+<p>了解其简单的应用，之后的两年里flink社区发展迅猛，包括阿里的强力支撑blink，在稳定性和性能</p>
+
+<p>方面都有很大的提升，8月份我们开始筹划上线flink on k8s服务，做了一些基础性的调研工作。</p>
+
+<h2 id="flink-on-k8s">flink on k8s</h2>
+
+<p>我们在github上搜索了不少关于flink on k8s的资料，基本上都不太靠谱，所以基础镜像方面我们</p>
+
+<p>是自己制作的，这个过程非常耗时，但事后来看非常的必要，我们对flink有了更为深入的了解。</p>
+
+<p>jobmanager和taskmanager我们是分为2个deployment，跟唯品会的方案不太相同（statefulset）。</p>
+
+<p>我们将flink的shell脚本、yaml配置等内容进行了通读，对其参数做了详细的标注，最后将这些</p>
+
+<p>参数进行合并，整理出大概20多个有效配置项和默认值，之后我们又将这些参数进行分类，大致分为</p>
+
+<p>两类：容器级参数和业务参数。</p>
+
+<p>举个例子：容器内存大小就属于容器级别参数，集群名称也属于容器级参数（相当于deploymentname）。</p>
+
+<p>每个taskmanager有多少个slot，就属于业务参数。jvm的各种堆大小属于容器内存大小的衍生参数，</p>
+
+<p>有一个统一的计算公式得到，并不进行传递。</p>
+
+<p>容器级别的参数由docker的env进行传递，业务参数通过http接口获得。</p>
+
+<p>所以我们的docker启动时，首先获取env中的参数，然后通过脚本调http接口获得一个json，再结合</p>
+
+<p>本地的default.property文件中的默认值，进行合并，最后渲染配置文件和shell脚本，这里用了一个</p>
+
+<p>python的模板引擎，类似javaweb中的velocity，freemaker等。</p>
+
+<h2 id="section">联通</h2>
+
+<p>flinkjobmanager的HA是通过zk来实现的，taskmanager和jobmanager之间的服务发现也要基于zk，</p>
+
+<p>所以在docker模式下是可以很容易组成集群的。比较麻烦的一个问题是jobmanager的webui port，</p>
+
+<p>由于我们的k8s上是使用物理机IP的，所以port是非常宝贵的资源，如果我们的port只能使用固定的端口，</p>
+
+<p>意味着一台物理机只能启动一个jobmanager，所以在启动docker时，我们要指定要container的port，</p>
+
+<p>这样k8s就能根据port来调度，不会发生冲突。为了解决port资源的问题，我们向k8s申请了专用port范围，</p>
+
+<p>我们的集群随机从范围里选择一个port来启动任务。</p>
+
+<h2 id="section-1">内存使用比率</h2>
+
+<p>内存比例相关的参数是我们调试最多的一个环节，flink启动脚本中关于内存的计算非常复杂，</p>
+
+<p>下面列举一些核心的点：</p>
+
+<p>networkbuffer的大小</p>
+
+<p>是否使用堆外内存来支持flink框架的计算逻辑</p>
+
+<p>堆外与堆内的分配比例</p>
+
+<p>jvm各个分代的大小</p>
+
+<p>垃圾回收器的选择</p>
+
+
+  </article>
+  
+  
+
+
+
+
+</div>
+
+        </div>
+        <div class="col-second">
+          <div class="col-box col-box-author">
+  <img class="avatar" src="//www.gravatar.com/avatar/your_email_md5?d=mm&s=135" alt="Pei LiPing">
+  <div class="col-box-title name">Pei LiPing</div>
+  <p>The Cabin Of Pei LiPing.</p>
+  <p class="contact">
+    
+    
+    
+    <a href="mailto:peilipingplp@gmail.com">Email</a>
+    
+  </p>
+</div>
+
+<div class="col-box">
+  <div class="col-box-title">Newest Posts</div>
+  <ul class="post-list">
+    
+      <li><a class="post-link" href="/blog/archivers/2018-08-19-flink">初识flink</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2018-07-01-spin">估算Job的余量</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2018-06-16-618">618备战</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2018-05-10-channel">聊聊对channel的认识</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2018-04-15-maintain">项目问题总结</a></li>
+    
+  </ul>
+</div>
+
+<div class="col-box post-toc hide">
+  <div class="col-box-title">TOC</div>
+</div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+<div class="wrapper">
+&copy; 2016 Pei LiPing
+</div>
+</footer>
+
+<script src="//upcdn.b0.upaiyun.com/libs/jquery/jquery-1.9.0.min.js"></script>
+<script src="/blog/js/easybook.js"></script>
+
+  </body>
+
+</html>
