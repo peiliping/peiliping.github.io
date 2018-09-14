@@ -6,9 +6,79 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Thu, 06 Sep 2018 15:41:47 +0800</pubDate>
-    <lastBuildDate>Thu, 06 Sep 2018 15:41:47 +0800</lastBuildDate>
+    <pubDate>Fri, 14 Sep 2018 14:04:28 +0800</pubDate>
+    <lastBuildDate>Fri, 14 Sep 2018 14:04:28 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>初识flink2</title>
+        <description>&lt;p&gt;续上一篇Blog，我们从网上下载二进制的Flink包，在其外围进行一些脚本改造，&lt;/p&gt;
+
+&lt;p&gt;docker镜像的开发，可以让我们把Flink在K8s上跑起来了，接下来就是要接触Flink的源码了。&lt;/p&gt;
+
+&lt;p&gt;说道源码还是挺头大的一个事，目前apache下面的跟大数据相关的项目你下载下来就会发现&lt;/p&gt;
+
+&lt;p&gt;子项目子模块非常多，maven编译一下少说十几分钟，hadoop这种级别的项目编译1个小时都正常。&lt;/p&gt;
+
+&lt;h2 id=&quot;flink&quot;&gt;Flink分支&lt;/h2&gt;
+
+&lt;p&gt;将Flink从Git上clone下来，选择一个你中意的分支或者tag，注意Flink的分支和tag的命名规则。&lt;/p&gt;
+
+&lt;p&gt;因为我们后面要持续对Flink进行开发，而且要不断合并社区的更新，这里需要一些git的技巧。&lt;/p&gt;
+
+&lt;p&gt;我们主要是在1.5.X这个系列上进行开发，所以将Flink项目的1.5分支同步到我们自己的仓库里，&lt;/p&gt;
+
+&lt;p&gt;如果后面Flink发布了1.5.4的小版本，也会合并到1.5的分支上，我们只需要同步这些更新到我们&lt;/p&gt;
+
+&lt;p&gt;的仓库即可。&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;打包&lt;/h2&gt;
+
+&lt;p&gt;Flink官网给了一个打包的命令，在我和同事的笔记本上执行了一下，大概20分钟左右。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;mvn package -DskipTests -Dhadoop.version=2.7.X
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;因为初步接触Flink，我们打包非常频繁，调试一些问题增加日志之类的需求，所以这个打包&lt;/p&gt;
+
+&lt;p&gt;的速度是无法接受的，大概分析了一下他的打包过程，于是修改了一下打包的命令。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;mvn package -DskipTests -Dcheckstyle.skip=true -Dhadoop.version=2.7.X
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;增加了忽略checkstyple过程，速度提升了一倍，十分钟左右可以打包完成。&lt;/p&gt;
+
+&lt;p&gt;如果你还想继续加速打包，可以考虑对pom进行裁剪，比如你不用mesos、yarn这些模块，&lt;/p&gt;
+
+&lt;p&gt;或者你不需要各种connect，也是可以忽略的。但是注意maven的依赖，忽略的子项目有可能&lt;/p&gt;
+
+&lt;p&gt;包含了Flink必须的一些依赖包，而且Flink的pom中大量的使用了shade，处理起来非常麻烦。&lt;/p&gt;
+
+&lt;p&gt;注意，如果你在主POM里裁剪掉了部分的module，一定要记得在dist子项目中也去掉相关的&lt;/p&gt;
+
+&lt;p&gt;dependency，要不然它会从maven仓库再下载一份。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-1&quot;&gt;类冲突&lt;/h2&gt;
+
+&lt;p&gt;测试自定义版Flink的时候，我们与类冲突搏斗了三四天，主要的报错是noclassdeffounderror。&lt;/p&gt;
+
+&lt;p&gt;网上搜索相关错误，会告诉你与此类的static部分有关系，我们碰到的问题大多是hadoop有关的，&lt;/p&gt;
+
+&lt;p&gt;每次处理hadoop的依赖都是一万个XXX。因为公司的现状，我们需要使用定制化的hadoop。&lt;/p&gt;
+
+&lt;p&gt;最终我们在原版打包的基础上，通过控制classpath里jar的顺序，将公司的hdfs替换上去了。&lt;/p&gt;
+</description>
+        <pubDate>Thu, 13 Sep 2018 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2018-09-13-flink2</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2018-09-13-flink2</guid>
+        
+        
+        <category>flink</category>
+        
+      </item>
     
       <item>
         <title>初识flink</title>
@@ -840,164 +910,6 @@ codecs.add(LzopCodec.class);
         
         
         <category>avro</category>
-        
-      </item>
-    
-      <item>
-        <title>关于Mysql的Binlog抽取</title>
-        <description>&lt;p&gt;这个月换了工作，双十一之前入职了京东大数据平台——实时数据组。&lt;/p&gt;
-
-&lt;p&gt;着手关于MysqlBinlog相关系统的重构工作，这次就讲讲Binlog吧。&lt;/p&gt;
-
-&lt;h2 id=&quot;binlog&quot;&gt;Binlog转实时数据流的开源动态&lt;/h2&gt;
-
-&lt;p&gt;伪装MysqlSlave来获取MysqlBinlog的技术这几年已经非常普及了，很多中等规模的公司都有相关的&lt;/p&gt;
-
-&lt;p&gt;基础技术组件，大多数是基于阿里几年前开源的Canal项目，在此基础上进行二次开发，将数据写入Kafka&lt;/p&gt;
-
-&lt;p&gt;或者其他MQ系统中去，阿里云的RDS还提供类似的服务，也非常省心。&lt;/p&gt;
-
-&lt;p&gt;17年年初的时候我也有意要做类似的项目，所以已经进行了最基础的技术选型和调研。&lt;/p&gt;
-
-&lt;p&gt;Java系中最早的binlog开源项目有tungsten-replicator 、open-replicator等，后来都慢慢废弃了。&lt;/p&gt;
-
-&lt;p&gt;之后Canal几乎统一了这个领域，但是阿里的这个开源项目最近几年的更新频率很一般。&lt;/p&gt;
-
-&lt;p&gt;最近两年比较新的项目有mysql-time-machine，zendesk的maxwell都不错。&lt;/p&gt;
-
-&lt;p&gt;shyiko的mysql-binlog-connector-java是一个BinlogClient的超精简内核，也被很多开源项目采用。&lt;/p&gt;
-
-&lt;h2 id=&quot;mysqlbinlog&quot;&gt;Mysql的Binlog&lt;/h2&gt;
-
-&lt;p&gt;Mysql的Binlog协议和格式我就不多介绍了，网上可以搜到很多。&lt;/p&gt;
-
-&lt;p&gt;值得注意的时候，Mysql一定要配置成Row模式的，而且image需要配置成Full模式的。&lt;/p&gt;
-
-&lt;p&gt;我采用shyiko的mysql-binlog-connector-java的方案进行了一下性能测试，可以达到80M/s。&lt;/p&gt;
-
-&lt;h2 id=&quot;section&quot;&gt;数据解析&lt;/h2&gt;
-
-&lt;p&gt;shyiko的mysql-binlog-connector-java已经将数据解析成Java类型了，接下来只需要针对公司的规范&lt;/p&gt;
-
-&lt;p&gt;进行数据的清洗和整理即可，最后转成标准序列化格式，比如AVRO、Pb、Json等。&lt;/p&gt;
-
-&lt;p&gt;这中间性能损耗最大的地方就是序列化的开销了，要考虑异步或者多线程流等方式解决。&lt;/p&gt;
-
-&lt;p&gt;在开发解析逻辑时碰到了不少细节问题，用shyiko的mysql-binlog-connector-java解析的数据与canal&lt;/p&gt;
-
-&lt;p&gt;有一些细小的差别，比如datetime和timestamp字段解析的结果不一样，有可能受时区的影响；&lt;/p&gt;
-
-&lt;p&gt;还有像text类型的字段是byte数组，需要自己指定charset转为string；decimal也有差异，需要使用&lt;/p&gt;
-
-&lt;p&gt;numberformat进行格式化，group设置为false，并且setMinimumFractionDigits(1)。&lt;/p&gt;
-
-&lt;h2 id=&quot;kafka&quot;&gt;写Kafka有序&lt;/h2&gt;
-
-&lt;p&gt;将数据写到Kafka的速度是非常快的，但是因为Binlog的特殊性，需要一些设计，来保证数据的有序。&lt;/p&gt;
-
-&lt;p&gt;Kafka的Client会把收到的数据根据meta进行进行重新组织，按照broker的使用情况进行分批发送。&lt;/p&gt;
-
-&lt;p&gt;所以我们要根据业务情况指定Kafka的MessageKey，将相同业务含义的数据写到同一个Partition&lt;/p&gt;
-
-&lt;p&gt;下，保证有序，乱序会导致最新值被老值覆盖。&lt;/p&gt;
-
-&lt;p&gt;在写Kafka的过程中难免会有一些失败的情况发生，错误的重试机制由Kafka来保证，并且要强制设置&lt;/p&gt;
-
-&lt;p&gt;ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION = 1，以防止重试时发生数据顺序错误。&lt;/p&gt;
-
-&lt;h2 id=&quot;task&quot;&gt;Task的结构&lt;/h2&gt;
-
-&lt;table&gt;
-  &lt;thead&gt;
-    &lt;tr&gt;
-      &lt;th style=&quot;text-align: center&quot;&gt;P1&lt;/th&gt;
-      &lt;th style=&quot;text-align: center&quot;&gt; &lt;/th&gt;
-      &lt;th style=&quot;text-align: center&quot;&gt;B1&lt;/th&gt;
-      &lt;th style=&quot;text-align: center&quot;&gt; &lt;/th&gt;
-      &lt;th style=&quot;text-align: center&quot;&gt;P2&lt;/th&gt;
-      &lt;th style=&quot;text-align: center&quot;&gt; &lt;/th&gt;
-      &lt;th style=&quot;text-align: center&quot;&gt;B2&lt;/th&gt;
-      &lt;th style=&quot;text-align: center&quot;&gt; &lt;/th&gt;
-      &lt;th style=&quot;text-align: center&quot;&gt;P3&lt;/th&gt;
-    &lt;/tr&gt;
-  &lt;/thead&gt;
-  &lt;tbody&gt;
-    &lt;tr&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;单线程拉Binlog&lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;&amp;gt;&lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;Ringbuffer&lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;&amp;gt;&lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;单线程转化成AVRO对象&lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;&amp;gt;&lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;Ringbuffer&lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;&amp;gt;&lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;序列化并发送Kafka&lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/tbody&gt;
-  &lt;tbody&gt;
-    &lt;tr&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt; &lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt; &lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt; &lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt; &lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt; &lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;&amp;gt;&lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;Ringbuffer&lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;&amp;gt;&lt;/td&gt;
-      &lt;td style=&quot;text-align: center&quot;&gt;序列化并发送Kafka&lt;/td&gt;
-    &lt;/tr&gt;
-  &lt;/tbody&gt;
-&lt;/table&gt;
-
-&lt;p&gt;注释：P一般对应一个线程，B对应一个Disrupter的Ringbuffer。&lt;/p&gt;
-
-&lt;p&gt;P1和P2环节的性能都非常好，所以采用的是单线程，阶段并行模式。&lt;/p&gt;
-
-&lt;p&gt;P3阶段采用并行模式，P2处理好的数据根据一些key进行选择，路由到N个B2中去，一般可以用库表名称。&lt;/p&gt;
-
-&lt;p&gt;压测时，这个Task跑起来之后可以让负载达到400%，基本上把Cpu资源跑满了。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-1&quot;&gt;持久化位点信息&lt;/h2&gt;
-
-&lt;p&gt;什么是位点信息？&lt;/p&gt;
-
-&lt;p&gt;简单来说就是binlog的filename和offset，为了保证at least once，&lt;/p&gt;
-
-&lt;p&gt;我们需要定期记录消费的位置，以便任务重启之后，继续消费，不丢数据（可有少量的重复）。&lt;/p&gt;
-
-&lt;p&gt;如果P3阶段是单线程的，那么记录位点非常简单，提交kafka成功后，记录最后一条数据的offset，&lt;/p&gt;
-
-&lt;p&gt;可以异步刷到远程存储中去，防止阻塞数据流。可是，现在P3阶段是多线程的，如何记录位点呢？&lt;/p&gt;
-
-&lt;p&gt;定期让P2对所有的B2发送一条相同的含有位点信息的心跳包（位点值为P2最后处理的一条数据的位点）&lt;/p&gt;
-
-&lt;p&gt;通过这种方式，将各个P3的信息进行更新，每次P3将数据成功发送到Kafka后就将其中的心跳包记录下来，&lt;/p&gt;
-
-&lt;p&gt;作为一个可信的回退点，注意这个心跳包一定要在数据流中流转，起到挤压数据的作用，&lt;/p&gt;
-
-&lt;p&gt;防止某些P3无数据的情况发生。相关代码参考我的sucker项目，这里就不介绍代码细节了。&lt;/p&gt;
-
-&lt;p&gt;解决这个问题的思路源于Flink介绍文章中的一段话：&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Stream Barrier是Flink分布式Snapshotting中的核心元素，它会作为数据流的记录被同等看待，
-
-被插入到数据流中，将数据流中记录的进行分组，并沿着数据流的方向向前推进。每个Barrier会携带
-
-一个Snapshot ID，属于该Snapshot的记录会被推向该Barrier的前方。因为Barrier非常轻量，所以
-
-并不会中断数据流。带有Barrier的数据流。
-
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-</description>
-        <pubDate>Wed, 29 Nov 2017 10:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2017-11-29-mysqlbinlog</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2017-11-29-mysqlbinlog</guid>
-        
-        
-        <category>mysql</category>
-        
-        <category>binlog</category>
         
       </item>
     

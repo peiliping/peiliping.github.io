@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>初识flink2 « Pei LiPing's Blog</title>
+  <meta name="description" content="续上一篇Blog，我们从网上下载二进制的Flink包，在其外围进行一些脚本改造，">
+
+  <link rel="stylesheet" href="/blog/css/main.css">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2018-09-13-flink2">
+  <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
+</head>
+
+
+  <body>
+
+    <header class="header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Pei LiPing's Blog</a>
+    <nav class="site-nav">
+      
+        
+      
+        
+        <a class="page-link" href="/blog/about/">About</a>
+        
+      
+        
+        <a class="page-link" href="/blog/category/">Category</a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </nav>
+  </div>
+</header>
+
+    <div class="page-content">
+      <div class="wrapper">
+        <div class="col-main">
+          <div class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">初识flink2</h1>
+    <p class="post-meta">Sep 13, 2018</p>
+  </header>
+
+  <article class="post-content">
+    <p>续上一篇Blog，我们从网上下载二进制的Flink包，在其外围进行一些脚本改造，</p>
+
+<p>docker镜像的开发，可以让我们把Flink在K8s上跑起来了，接下来就是要接触Flink的源码了。</p>
+
+<p>说道源码还是挺头大的一个事，目前apache下面的跟大数据相关的项目你下载下来就会发现</p>
+
+<p>子项目子模块非常多，maven编译一下少说十几分钟，hadoop这种级别的项目编译1个小时都正常。</p>
+
+<h2 id="flink">Flink分支</h2>
+
+<p>将Flink从Git上clone下来，选择一个你中意的分支或者tag，注意Flink的分支和tag的命名规则。</p>
+
+<p>因为我们后面要持续对Flink进行开发，而且要不断合并社区的更新，这里需要一些git的技巧。</p>
+
+<p>我们主要是在1.5.X这个系列上进行开发，所以将Flink项目的1.5分支同步到我们自己的仓库里，</p>
+
+<p>如果后面Flink发布了1.5.4的小版本，也会合并到1.5的分支上，我们只需要同步这些更新到我们</p>
+
+<p>的仓库即可。</p>
+
+<h2 id="section">打包</h2>
+
+<p>Flink官网给了一个打包的命令，在我和同事的笔记本上执行了一下，大概20分钟左右。</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>mvn package -DskipTests -Dhadoop.version=2.7.X
+
+</code></pre>
+</div>
+
+<p>因为初步接触Flink，我们打包非常频繁，调试一些问题增加日志之类的需求，所以这个打包</p>
+
+<p>的速度是无法接受的，大概分析了一下他的打包过程，于是修改了一下打包的命令。</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>mvn package -DskipTests -Dcheckstyle.skip=true -Dhadoop.version=2.7.X
+</code></pre>
+</div>
+
+<p>增加了忽略checkstyple过程，速度提升了一倍，十分钟左右可以打包完成。</p>
+
+<p>如果你还想继续加速打包，可以考虑对pom进行裁剪，比如你不用mesos、yarn这些模块，</p>
+
+<p>或者你不需要各种connect，也是可以忽略的。但是注意maven的依赖，忽略的子项目有可能</p>
+
+<p>包含了Flink必须的一些依赖包，而且Flink的pom中大量的使用了shade，处理起来非常麻烦。</p>
+
+<p>注意，如果你在主POM里裁剪掉了部分的module，一定要记得在dist子项目中也去掉相关的</p>
+
+<p>dependency，要不然它会从maven仓库再下载一份。</p>
+
+<h2 id="section-1">类冲突</h2>
+
+<p>测试自定义版Flink的时候，我们与类冲突搏斗了三四天，主要的报错是noclassdeffounderror。</p>
+
+<p>网上搜索相关错误，会告诉你与此类的static部分有关系，我们碰到的问题大多是hadoop有关的，</p>
+
+<p>每次处理hadoop的依赖都是一万个XXX。因为公司的现状，我们需要使用定制化的hadoop。</p>
+
+<p>最终我们在原版打包的基础上，通过控制classpath里jar的顺序，将公司的hdfs替换上去了。</p>
+
+  </article>
+  
+  
+
+
+
+
+</div>
+
+        </div>
+        <div class="col-second">
+          <div class="col-box col-box-author">
+  <img class="avatar" src="//www.gravatar.com/avatar/your_email_md5?d=mm&s=135" alt="Pei LiPing">
+  <div class="col-box-title name">Pei LiPing</div>
+  <p>The Cabin Of Pei LiPing.</p>
+  <p class="contact">
+    
+    
+    
+    <a href="mailto:peilipingplp@gmail.com">Email</a>
+    
+  </p>
+</div>
+
+<div class="col-box">
+  <div class="col-box-title">Newest Posts</div>
+  <ul class="post-list">
+    
+      <li><a class="post-link" href="/blog/archivers/2018-09-13-flink2">初识flink2</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2018-08-19-flink">初识flink</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2018-07-01-spin">估算Job的余量</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2018-06-16-618">618备战</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2018-05-10-channel">聊聊对channel的认识</a></li>
+    
+  </ul>
+</div>
+
+<div class="col-box post-toc hide">
+  <div class="col-box-title">TOC</div>
+</div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+<div class="wrapper">
+&copy; 2016 Pei LiPing
+</div>
+</footer>
+
+<script src="//upcdn.b0.upaiyun.com/libs/jquery/jquery-1.9.0.min.js"></script>
+<script src="/blog/js/easybook.js"></script>
+
+  </body>
+
+</html>
