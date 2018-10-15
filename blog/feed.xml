@@ -6,9 +6,116 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Fri, 14 Sep 2018 14:04:28 +0800</pubDate>
-    <lastBuildDate>Fri, 14 Sep 2018 14:04:28 +0800</lastBuildDate>
+    <pubDate>Mon, 15 Oct 2018 12:05:01 +0800</pubDate>
+    <lastBuildDate>Mon, 15 Oct 2018 12:05:01 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>初识flink3</title>
+        <description>&lt;p&gt;Flink的更新非常快，1.5的小版本一直都有更新，十一国庆前，我们将自己的定制版分支merge了&lt;/p&gt;
+
+&lt;p&gt;官方的1.5.4，修复了taskmanager堆内外的内存比例，flink-stream使用堆外的量并不是很大，&lt;/p&gt;
+
+&lt;p&gt;我们配置了7:3。&lt;/p&gt;
+
+&lt;h2 id=&quot;asyncio&quot;&gt;AsyncIO&lt;/h2&gt;
+
+&lt;p&gt;阿里给Flink社区提交了很多patch，印象比较深的是AsyncIO，在流式计算中IO导致性能瓶颈，&lt;/p&gt;
+
+&lt;p&gt;是最常见的一个现象，异步化的改造能提升不少性能。Async的Operator实现并不是很复杂，&lt;/p&gt;
+
+&lt;p&gt;简单来说就是创建一个buffer，将Stream数据填充进来并行处理，返回结果时控制一下数据的&lt;/p&gt;
+
+&lt;p&gt;顺序，跟我们最常见的单机多线程的数据处理本质上是一样的。&lt;/p&gt;
+
+&lt;p&gt;但是异步化会带来一个非常严重的后果，那就是IO的接收方会承受巨大的压力，通过调节buffer&lt;/p&gt;
+
+&lt;p&gt;的大小和并行度，我们轻松的获得了几千几万的并行能力，但是这个IO服务（无论是RPC还是DB）&lt;/p&gt;
+
+&lt;p&gt;接收了如性能压测般的流量，最终的结果就是IO服务拥塞，无法提供正常服务了。&lt;/p&gt;
+
+&lt;p&gt;AsyncIO的思路是没有问题的，但是各种Java世界中的各种Client的API风格并非为了Stream而生，&lt;/p&gt;
+
+&lt;p&gt;理想的API风格是kafka Producer的样子，流转批 + 异步回调。&lt;/p&gt;
+
+&lt;h2 id=&quot;stream-batch&quot;&gt;Stream-&amp;gt;Batch&lt;/h2&gt;
+
+&lt;p&gt;为了能让AsyncIO发挥作用，我们需要收敛IO的次数，将多次IO合并为一次Batch，基于Batch再做&lt;/p&gt;
+
+&lt;p&gt;AsyncIO的操作，这样可以在减小并行度的情况下，能保证较高的吞吐量，减少协议部分的开销，&lt;/p&gt;
+
+&lt;p&gt;如果你用过redis的pipeline，差不多一样的道理。&lt;/p&gt;
+
+&lt;p&gt;当然Stream-&amp;gt;Batch并不是那么简单的事情，需要考虑的细节非常多，比如对checkpoint的处理，&lt;/p&gt;
+
+&lt;p&gt;watermarket如何触发等，防止破坏了FLink本身的一致性。&lt;/p&gt;
+
+&lt;p&gt;我们的思路是将AsyncIO和Stream转Batch结合在一起实现，提供一层类似KafkaProducer风格的&lt;/p&gt;
+
+&lt;p&gt;API，将Stream-&amp;gt;Batch转为标准的定义，最后结合AsyncIO的特征来实现，AsyncIO对watermarket&lt;/p&gt;
+
+&lt;p&gt;和checkpoint是有特殊处理的，这部分逻辑要尽量保持复用。&lt;/p&gt;
+
+&lt;h2 id=&quot;batch-sink&quot;&gt;Batch Sink&lt;/h2&gt;
+
+&lt;p&gt;所有任务Sink都是需要Batch特性的，如果是kafkaSink那真的非常简单，天然支持。我读了一下&lt;/p&gt;
+
+&lt;p&gt;业务方的代码，他们在Sink这个环节的实现都非常简陋，大多数都无法保证不丢数据，比如基于&lt;/p&gt;
+
+&lt;p&gt;一个简单的flatmap来实现。&lt;/p&gt;
+
+&lt;p&gt;于是我们开发了BatchSink抽象，提供时间、大小、条数的控制条件，还有checkpoint触发flush。&lt;/p&gt;
+
+&lt;p&gt;值得一提的是flush中的retry实现，批量操作失败如何重试呢？&lt;/p&gt;
+
+&lt;p&gt;这是一个非常好的问题，一年多前我在开发meepo时就有这样的困惑，当时主要是读写mysql，&lt;/p&gt;
+
+&lt;p&gt;我将mysql client的源码读了大半，实现了非常低开销的基于preparestatement的retry。&lt;/p&gt;
+
+&lt;p&gt;但这种方式并不一定适用于所有的client，于是我们在batchsink中嵌入了一个小的ringbuffer，&lt;/p&gt;
+
+&lt;p&gt;用来缓存这个批次的数据，在flush成功后清空ringbuffer。retry时复用handlerElement方法，&lt;/p&gt;
+
+&lt;p&gt;将这一批次的数据进行replay，当然也支持noreplay的retry方法。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt; protected void sendBatch(int times, boolean bySnapshot) {
+        Validate.isTrue(this.batchConfig.getMaxRetriesNum() &amp;gt; times, &quot;sendbatch retry-times : &quot; + times);
+        try {
+            if (times &amp;gt; 0) {
+                initBatch(true);
+                if (this.batchConfig.isNeedReplayWhenRetry()) {
+                    int l = this.buffer.curSize();
+                    for (int i = 0; i &amp;lt; l; i++) {
+                        Optional&amp;lt;IN&amp;gt; record = this.buffer.get();
+                        Validate.notNull(record);
+                        IN e = Optional.empty() == record ? null : record.get();
+                        handleRecord(e);
+                        this.buffer.add(e);
+                    }
+                }
+            }
+            flushAndClose(bySnapshot);
+        } catch (Exception e) {
+            LOG.error(&quot;FlushAndCloseError : &quot;, e);
+            try {
+                Thread.sleep(this.batchConfig.getBatchDelayPeriodMs());
+            } catch (InterruptedException e1) {
+                throw new RuntimeException(&quot;Failed to send batchRecords&quot;, e1);
+            }
+            sendBatch(times + 1, bySnapshot);
+        }
+    }
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+</description>
+        <pubDate>Mon, 15 Oct 2018 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2018-10-15-flink3</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2018-10-15-flink3</guid>
+        
+        
+        <category>flink</category>
+        
+      </item>
     
       <item>
         <title>初识flink2</title>
@@ -861,55 +968,6 @@ codecs.add(LzopCodec.class);
         <category>convert</category>
         
         <category>parser</category>
-        
-      </item>
-    
-      <item>
-        <title>关于Avro的使用</title>
-        <description>&lt;p&gt;14年开始尝试Flume的时候了解到Avro相关的东西，但一直都没有很深入的使用。&lt;/p&gt;
-
-&lt;p&gt;最近在做Binlog采集时，写入Kafka的数据格式要求是Avro，在使用中了解碰到了一些小问题&lt;/p&gt;
-
-&lt;p&gt;在这里分享一下。&lt;/p&gt;
-
-&lt;h2 id=&quot;section&quot;&gt;复用&lt;/h2&gt;
-
-&lt;p&gt;序列化和反序列化时需要BinaryEncoder和BinaryDecoder，这个对象是可以反复使用的。&lt;/p&gt;
-
-&lt;p&gt;反序列化接口是支持对象复用的，但是经过测试复用对象性能反而下降了。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-1&quot;&gt;并发&lt;/h2&gt;
-
-&lt;p&gt;序列化和反序列化都需要一个Json格式的Schema信息，或者叫Avsc。&lt;/p&gt;
-
-&lt;p&gt;最开始多线程反序列化Avro数据时，是使用同一个Schema对象的，但是随着线程的增加，&lt;/p&gt;
-
-&lt;p&gt;并发的效率提升并不明显，通过对线程状态的搜索，发现Schema对象上有Sync修饰，&lt;/p&gt;
-
-&lt;p&gt;详见JsonProperties类。解决办法也很简单，每个线程使用一个独立的Schema对象就可以了。&lt;/p&gt;
-
-&lt;h2 id=&quot;avrostring&quot;&gt;Avro中的String&lt;/h2&gt;
-
-&lt;p&gt;Avro中的String可以是Java的String类型，还可以是使实现了CharSequence的UTF8。&lt;/p&gt;
-
-&lt;p&gt;当然UTF8的Charsequence直接tostring就会转为Java的String了，但是Map的key就非常难处理。&lt;/p&gt;
-
-&lt;p&gt;假如你的数据对象中有一个Map的field，并且Map的Key是String，通过get(“abc”)来获取&lt;/p&gt;
-
-&lt;p&gt;value是不可行的，因为”abc”和UTF8(“abc”)的hashcode完全不同。只能遍历老的map，然后&lt;/p&gt;
-
-&lt;p&gt;key.tostring()，再放入一个新的map中去，非常浪费性能。&lt;/p&gt;
-
-&lt;p&gt;Avro是可以声明schema的string是java的string的来解决，还可以复写SpecificDatumReader&lt;/p&gt;
-
-&lt;p&gt;这个类，特殊处理一下readMapKey方法，当是UTF8时调用一下tostring方法，转成java的string。&lt;/p&gt;
-</description>
-        <pubDate>Wed, 29 Nov 2017 10:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2017-12-25-avro</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2017-12-25-avro</guid>
-        
-        
-        <category>avro</category>
         
       </item>
     
