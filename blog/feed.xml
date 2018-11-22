@@ -6,9 +6,120 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Mon, 15 Oct 2018 12:05:01 +0800</pubDate>
-    <lastBuildDate>Mon, 15 Oct 2018 12:05:01 +0800</lastBuildDate>
+    <pubDate>Thu, 22 Nov 2018 12:10:33 +0800</pubDate>
+    <lastBuildDate>Thu, 22 Nov 2018 12:10:33 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>初识flink4</title>
+        <description>&lt;p&gt;我们最近merge了flink1.5.5的官方更新，并对batchsink进行深入开发。&lt;/p&gt;
+
+&lt;h2 id=&quot;monkey&quot;&gt;Monkey&lt;/h2&gt;
+
+&lt;p&gt;上次介绍我们的batchsink具备常规的功能，能够支持按照lingertime、数据大小、数据条数&lt;/p&gt;
+
+&lt;p&gt;进行batch的拆分。这个月我们在其中嵌入了一个叫monkey的字段，动态调节batch大小。&lt;/p&gt;
+
+&lt;p&gt;具体使用方法如下：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  public boolean checkFull() {
+        return WP.get() - RP.get() == this.size - this.monkey;
+    }
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;通过引入一个变量，实现了ringbuffer大小的动态调节。&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;动态调节的时机&lt;/h2&gt;
+
+&lt;p&gt;我们将ringbuffer的每一圈的开始作为汇报监控指标和调节monkey值的时机。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;int sq = mod(cur);
+if (this.adjustment != null &amp;amp;&amp;amp; sq == 0) {
+  this.monkey = this.adjustment.onFirstEvent(ele, RING[mod(cur + 1)], (cur / this.size), this.monkey,
+  this.size);
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;汇报时将当前写入数据的slot和即将被写入数据的slot当成参数传递个adjustment，&lt;/p&gt;
+
+&lt;p&gt;还提供了圈数、oldmonkey值和圈大小等信息，返回值是新的monkey值。&lt;/p&gt;
+
+&lt;h2 id=&quot;adjustment&quot;&gt;Adjustment&lt;/h2&gt;
+
+&lt;p&gt;那么monkey的动态可以做什么呢？我们想实现对batchsize的自动化测试。&lt;/p&gt;
+
+&lt;p&gt;每当我们给一个开源的软件填写batchsize参数配置时，大多是拍脑袋出来的，&lt;/p&gt;
+
+&lt;p&gt;也可能做了一些简单的性能测试，这个过程比较枯燥，就是反复修改值，反复运行。&lt;/p&gt;
+
+&lt;p&gt;通过monkey的动态，我们可以将每一个batch大小进行几十次测试，然后按照&lt;/p&gt;
+
+&lt;p&gt;一个步长变更batch大小，继续进行测试，将原来手工的方式变成自动化的。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;    public long onFirstEvent(Element&amp;lt;T&amp;gt; first, Element&amp;lt;T&amp;gt; second, long cycles, long oldMonkey, long maxSize) {
+        if (cycles &amp;gt; 0) {
+            log.warn(&quot;Cycle {} , Monkey {} , Cost {} ms , Volume {} , Record {} .&quot;, cycles, oldMonkey, first.getTimestampW() -
+                    second.getTimestampW(), first.getAccVolume() - second.getAccVolume(), maxSize);
+
+            this.metrics.add(new double[]{oldMonkey, (first.getTimestampW() - second.getTimestampW()), ((double) maxSize *
+                    1000) / (first.getTimestampW() - second.getTimestampW())});
+
+            if (cycles % this.intervalCycle == 0) {
+                formulaFitting();
+
+                if (maxSize - oldMonkey &amp;lt;= this.monkeyStepSize) {
+                    this.result.forEach(doubles -&amp;gt; log.warn(&quot;evaluate : &quot; + Arrays.toString(doubles)));
+                    this.result.clear();
+                    return this.roundTrip ? 0 : oldMonkey;
+                } else {
+                    return oldMonkey + this.monkeyStepSize;
+                }
+            }
+        }
+        return oldMonkey;
+    }
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;简单的几行代码，我们就基本实现了这个需求。每运行N圈后，将monkey增加一个monkeystepsize。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-1&quot;&gt;评价&lt;/h2&gt;
+
+&lt;p&gt;经过一系列的测试后，我们如何评估最佳的batchsize呢？&lt;/p&gt;
+
+&lt;p&gt;在运行时，我们已经将一些指标记录到了metrics里，包括monkey大小，跑一圈的cost，还有每秒吞吐条数。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;   double totalRate = 0;
+        for (int i = 0; i &amp;lt; this.metrics.size(); i++) {
+            totalRate += this.metrics.get(i)[2];
+        }
+        double avgRate = totalRate / this.metrics.size();
+        double acc = 0;
+        for (int i = 0; i &amp;lt; this.metrics.size(); i++) {
+            acc += Math.pow(this.metrics.get(i)[2] - avgRate, 2);
+        }
+        this.result.add(new double[]{this.metrics.get(0)[0], totalRate / this.metrics.size(), acc / (this.metrics.size() - 1)});
+        this.metrics.clear();
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;然后我们对metrics进行一些简单的数据分析，计算均值还有方差，来评价最优解。&lt;/p&gt;
+
+&lt;p&gt;在我们的测试中，平均速度差距不大，但是方差有明显的变化趋势，随着batch大小的增长，&lt;/p&gt;
+
+&lt;p&gt;方差越来越大，通过观察jvm的内存变化推测为，由于batchcache的数据量增大，数据更&lt;/p&gt;
+
+&lt;p&gt;容易进入到old区，导致fgc的频率提高，ygc的时间变长，导致速度的波动较大。&lt;/p&gt;
+</description>
+        <pubDate>Thu, 22 Nov 2018 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2018-11-22-flink4</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2018-11-22-flink4</guid>
+        
+        
+        <category>flink</category>
+        
+      </item>
     
       <item>
         <title>初识flink3</title>
@@ -773,201 +884,6 @@ codecs.add(LzopCodec.class);
         <category>log</category>
         
         <category>flume</category>
-        
-      </item>
-    
-      <item>
-        <title>类型转换</title>
-        <description>&lt;p&gt;之前几个月一直在忙一个binlog抽取的项目，将mysqlbinlog拉出来，写入kafka，&lt;/p&gt;
-
-&lt;p&gt;之后消费kafka中的数据写到HDFS，文件格式为orcfile+snappy。&lt;/p&gt;
-
-&lt;h2 id=&quot;section&quot;&gt;背景&lt;/h2&gt;
-
-&lt;p&gt;上一篇blog讲过kafka中的数据是以avro为载体的，其中的数据字段存在一个map中，&lt;/p&gt;
-
-&lt;p&gt;map的key和value都是charsequence，也就是说我们的数据在经过avro之后失去了类型信息。&lt;/p&gt;
-
-&lt;p&gt;我们的目标端是写入hdfs上的orcFile，如果是写sequencefile，基本上我们就不关心类型了。&lt;/p&gt;
-
-&lt;p&gt;阿里早期的数据仓库中，几乎所有的字段类型都是string的，这样做显然会有空间的浪费，&lt;/p&gt;
-
-&lt;p&gt;但也比较方便，不容易出错，方便管理。在前一家公司里，我负责的离线数据都是以parquet为主的，&lt;/p&gt;
-
-&lt;p&gt;orc相比parquet查询的性能会更快一些。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-1&quot;&gt;类型转换&lt;/h2&gt;
-
-&lt;p&gt;orc是有字段类型概念的，那么我们如何将string转成具体的类型呢？&lt;/p&gt;
-
-&lt;p&gt;首先我们要知道原始类型（mysql中的类型），还要知道hive表中的字段类型（orc类型）。&lt;/p&gt;
-
-&lt;p&gt;知道了这两端的类型，我们就有可能完成这个工作了。最简单的处理办法就是笛卡尔积。&lt;/p&gt;
-
-&lt;p&gt;把每种组合的处理函数写好，进行配置就可以了。这样做的缺点非常明显，就是工作量大。&lt;/p&gt;
-
-&lt;p&gt;如果有一天我们不再使用orc格式的类型，换成parquet或者其他的，那么还需要大量的重复工作。&lt;/p&gt;
-
-&lt;p&gt;于是解决这个问题的关键是降低耦合度，降低复杂度。&lt;/p&gt;
-
-&lt;p&gt;之前在阅读阿里开源的datax的时候看到过一个类似问题的解决方案，引入状态机。&lt;/p&gt;
-
-&lt;p&gt;mysql的常见字段类型大概不到20种，为每种类型创建一个type类，并提供转成其他类型的方法。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;public interface JavaType {
-
-    Boolean toBoolean(String value);
-
-    Integer toInt(String value);
-
-    Long toLong(String value);
-
-    Date toDate(String value);
-
-    Float toFloat(String value);
-
-    Double toDouble(String value);
-
-    default String toString(String value) {
-        return value;
-    }
-
-    default void unsupport() {
-        throw new RuntimeException(&quot;type error&quot;);
-    }
-
-}
-
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;碰到把boolean转date显然是不可能实现的，那么就直接unsupport好了。&lt;/p&gt;
-
-&lt;p&gt;接下来解决orc端的问题&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt; TINYINT(new C_LongColumnVector()) {
-        @Override
-        public TypeDescription toOrcTypeDescption() {
-            return TypeDescription.createByte();
-        }
-    }, SMALLINT(new C_LongColumnVector()) {
-        @Override
-        public TypeDescription toOrcTypeDescption() {
-            return TypeDescription.createShort();
-        }
-    }, INT(new C_LongColumnVector()) {
-        @Override
-        public TypeDescription toOrcTypeDescption() {
-            return TypeDescription.createInt();
-        }
-    }, BIGINT(new C_LongColumnVector()) {
-        @Override
-        public TypeDescription toOrcTypeDescption() {
-            return TypeDescription.createLong();
-        }
-    }, BOOLEAN(new C_BooleanColumnVector()) {
-        @Override
-        public TypeDescription toOrcTypeDescption() {
-            return TypeDescription.createBoolean();
-        }
-    }, FLOAT(new C_DoubleColumnVector()) {
-        @Override
-        public TypeDescription toOrcTypeDescption() {
-            return TypeDescription.createFloat();
-        }
-    }, DOUBLE(new C_DoubleColumnVector()) {
-        @Override
-        public TypeDescription toOrcTypeDescption() {
-            return TypeDescription.createDouble();
-        }
-    }, DECIMAL(new C_DecimalColumnVector()) {
-        @Override
-        public TypeDescription toOrcTypeDescption() {
-            return TypeDescription.createDecimal();
-        }
-    }, STRING(new C_BytesColumnVector()) {
-        @Override
-        public TypeDescription toOrcTypeDescption() {
-            return TypeDescription.createString();
-        }
-    }, BINARY(new C_BytesColumnVector()) {
-        @Override
-        public TypeDescription toOrcTypeDescption() {
-            return TypeDescription.createBinary();
-        }
-    }, CHAR(new C_BytesColumnVector()) {
-        @Override
-        public TypeDescription toOrcTypeDescption() {
-            return TypeDescription.createChar();
-        }
-    }, VARCHAR(new C_BytesColumnVector()) {
-        @Override
-        public TypeDescription toOrcTypeDescption() {
-            return TypeDescription.createVarchar();
-        }
-    }, TIMESTAMP(new C_TimeStampColumnVector()) {
-        @Override
-        public TypeDescription toOrcTypeDescption() {
-            return TypeDescription.createTimestamp();
-        }
-    }, DATE(new C_DateColumnVector()) {
-        @Override
-        public TypeDescription toOrcTypeDescption() {
-            return TypeDescription.createDate();
-        }
-    };
-
-    private Convert convert;
-
-    OrcTypeEnum(Convert convert) {
-        this.convert = convert;
-    }
-
-    public static OrcTypeEnum findType(String type) {
-        return OrcTypeEnum.valueOf(type.toUpperCase());
-    }
-
-    public abstract TypeDescription toOrcTypeDescption();
-
-    public void setValue(ColumnVector vector, int row, String value, JavaType typeConvert) {
-        convert.eval(vector, row, value, typeConvert);
-    }
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;为orc的每种类型创建一个convert，大概十来种的样子。&lt;/p&gt;
-
-&lt;p&gt;通过这种方式，我们不仅解决了正常的类型转化需求，还能够天然支持date to long 和long to date这样的复杂需求，&lt;/p&gt;
-
-&lt;p&gt;极大的提高了工具的灵活度。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-2&quot;&gt;函数化&lt;/h2&gt;
-
-&lt;p&gt;之前datax的方案是引入一个实体类对原始类型的数据进行包装，如果每一个字段都经过一次包装会严重增加体积，&lt;/p&gt;
-
-&lt;p&gt;ygc的频率会提高，所以在我们的方案中是函数化的，相关类型进行编号，性能也有一些提升。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;    public void writeData(List&amp;lt;String&amp;gt; result, List&amp;lt;ColumnInfo&amp;gt; columnInfos, List&amp;lt;JavaType&amp;gt; javaTypeList) {
-        int row = this.batch.size++;
-        for (int i = 0; i &amp;lt; result.size(); i++) {
-            ColumnInfo col = columnInfos.get(i);
-            col.getHiveTypeEnum().setValue(batch.cols[i], row, result.get(i), javaTypeList.get(col.getJavaTypeFunctionId()));
-        }
-    }
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-</description>
-        <pubDate>Sat, 20 Jan 2018 10:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2018-01-20-typeconvert</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2018-01-20-typeconvert</guid>
-        
-        
-        <category>type</category>
-        
-        <category>convert</category>
-        
-        <category>parser</category>
         
       </item>
     
