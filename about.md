@@ -35,7 +35,13 @@ public: true
 
 > 2015年1月  ~ 2015年10月	大数据团队TL，组建团队，搭建Hadoop集群和周边配套系统的开发，满足离线统计计算的基本需求
 
-> 2015年11月 ~ 2017年06月	运维团队TL，团队主要工作是运维系统开发、基础软件的升级和定制化、监控体系建设、性能测试与优化
+> 2015年11月 ~ 2017年11月	运维团队TL，团队主要工作是运维系统开发、基础软件的升级和定制化、监控体系建设、性能测试与优化
+
+> 2017年11月                    入职京东大数据-实时计算研发团队
+
+> 2017年11月 ~ 2018年7月	完成了binlog采集、kafka消息分发、准实时数据导入等实时系统的研发工作
+
+> 2018年7月  ~ 2018年12月	基于社区Flink1.5进行制定，完成了JD的FlinkOnK8s的研发工作，并持续迭代
 
 ### 主要技能 ###
 
@@ -49,8 +55,10 @@ public: true
 
 > 高性能日志采集工具[【Logwatch】](https://github.com/peiliping/logwatch)和[【正则在日志解析中的使用】](http://peiliping.github.io/blog/archivers/2017-06-15-regex)
 
-> 基于Flume二次开发，实现Kafka->HDFS, Kafka->Kafka的数据流转功能，优化了Flume的性能，适配运维系统做了一些动态配置管理的功能。
-
 > 监控Jvm的PerfData指标数据和Flags，存储选择Vertica，日增量8KW行以上，方便Jvm问题的排查和性能优化。
+
+> 高性能binlog采集与分发系统Fregata，支撑JD的实时基础数据，数仓准实时化。
+
+> FlinkOnK8s，完成了JD-Flink从Yarn到K8s的迁移，重新封装了BatchSink、AsyncFunction等核心组件。
 
 
