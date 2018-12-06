@@ -6,9 +6,157 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Fri, 30 Nov 2018 14:28:45 +0800</pubDate>
-    <lastBuildDate>Fri, 30 Nov 2018 14:28:45 +0800</lastBuildDate>
+    <pubDate>Thu, 06 Dec 2018 16:19:17 +0800</pubDate>
+    <lastBuildDate>Thu, 06 Dec 2018 16:19:17 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>初始flink5</title>
+        <description>&lt;p&gt;先简单介绍一下我们Flink的一个优化，关于asyncfunction的优化&lt;/p&gt;
+
+&lt;h2 id=&quot;asyncfunction&quot;&gt;AsyncFunction&lt;/h2&gt;
+
+&lt;p&gt;阿里为flink社区提供了async的patch，为解决流计算中的IO性能提升带来了新思路，&lt;/p&gt;
+
+&lt;p&gt;但我个人觉得这个问题并没有真正解决，Asyncfunction更像是一个饮鸩止渴的方案。&lt;/p&gt;
+
+&lt;p&gt;随着异步线程的增加，很快会将外部服务打满，性能极具下降。&lt;/p&gt;
+
+&lt;p&gt;我们的优化思路是这样的，在与外部系统交互时，尽量使用小批量，而不是单条数据处理。&lt;/p&gt;
+
+&lt;p&gt;将async和batch结合起来，提升asyncfunction的效率。&lt;/p&gt;
+
+&lt;p&gt;具体的实现：&lt;/p&gt;
+
+&lt;p&gt;引入一个ringbuffer作为缓冲，asyncfunction在asyncinvoke时，将数据写入buffer中，&lt;/p&gt;
+
+&lt;p&gt;配置N个消费线程，消费ringbuffer里的数据，进行batch的积攒，并配置ringbuffer的timeout，&lt;/p&gt;
+
+&lt;p&gt;一次来实现N条最大M秒的批量数据积攒，在消费线程内，对积攒的批量数据进行处理，&lt;/p&gt;
+
+&lt;p&gt;返回结果的拆分，最后调用ResultFuture，将数据交还给asyncfunction。&lt;/p&gt;
+
+&lt;h2 id=&quot;batchasyncfunction&quot;&gt;通用BatchAsyncFunction的实现&lt;/h2&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
+  @Override
+    public void asyncInvoke(IN input, ResultFuture&amp;lt;OUT&amp;gt; resultFuture) throws Exception {
+        long seq = this.ringBuffer.next();
+        Event event = this.ringBuffer.get(seq);
+        event.data = input;
+        event.resultFuture = resultFuture;
+        this.ringBuffer.publish(seq);
+    }
+
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;通用批量消费线程的抽象&lt;/h2&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
+public abstract class Processor&amp;lt;D, T, P&amp;gt; implements WorkHandler&amp;lt;Event&amp;lt;D, T&amp;gt;&amp;gt;, TimeoutHandler, LifecycleAware {
+
+    protected AsyncConfig asyncConfig;
+
+    private boolean initedBatch;
+
+    private List&amp;lt;Triple&amp;lt;D, ResultFuture&amp;lt;T&amp;gt;, P&amp;gt;&amp;gt; batch;
+
+    private long lastBatchTime;
+
+    public Processor(AsyncConfig asyncConfig) {
+        this.asyncConfig = asyncConfig;
+        this.batch = Lists.newArrayList();
+    }
+
+    @Override
+    public void onStart() {
+        cleanAfterBatch();
+    }
+
+    @Override
+    public void onEvent(Event&amp;lt;D, T&amp;gt; event) throws Exception {
+        if (!this.initedBatch) {
+            initBatch(false);
+            this.initedBatch = true;
+        }
+
+        P param = buildBatchParams(event.data);
+        this.batch.add(Triple.of(event.data, event.resultFuture, param));
+
+        if ((this.batch.size() &amp;gt;= this.asyncConfig.getRingbufferMaxBatchSize()) || (System.currentTimeMillis() - this
+                .lastBatchTime &amp;gt;= this.asyncConfig.getRingbufferLingerMs())) {
+            execBatch(0);
+            cleanAfterBatch();
+        }
+    }
+
+    @Override
+    public void onTimeout(long l) throws Exception {
+        if (this.initedBatch) {
+            execBatch(0);
+            cleanAfterBatch();
+        }
+    }
+
+    @Override
+    public void onShutdown() {
+        if (this.initedBatch) {
+            execBatch(0);
+            cleanAfterBatch();
+        }
+    }
+
+    protected abstract void initBatch(boolean retry);
+
+    protected abstract P buildBatchParams(D data);
+
+    protected void cleanAfterBatch() {
+        this.initedBatch = false;
+        this.batch.clear();
+        this.lastBatchTime = System.currentTimeMillis();
+    }
+
+    protected void execBatch(int times) {
+        Validate.isTrue(this.asyncConfig.getAsyncMaxRetry() &amp;gt; times, &quot;execbatch retry-times : &quot; + times);
+        try {
+            if (times &amp;gt; 0) {
+                initBatch(true);
+            }
+            commitAndGetResultsAndCloseBatch();
+            this.batch.forEach(triple -&amp;gt; pushData(triple.getLeft(), triple.getMiddle(), triple.getRight()));
+        } catch (Exception e) {
+            try {
+                Thread.sleep(this.asyncConfig.getAsyncRetryIntervalMs());
+            } catch (InterruptedException e1) {
+                throw new RuntimeException(&quot;Failed to exec batch&quot;, e1);
+            }
+            execBatch(times + 1);
+        }
+    }
+
+    protected abstract void commitAndGetResultsAndCloseBatch() throws Exception;
+
+    protected abstract void pushData(D data, ResultFuture&amp;lt;T&amp;gt; resultFuture, P param);
+
+}
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+</description>
+        <pubDate>Wed, 05 Dec 2018 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2018-12-05-flink5</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2018-12-05-flink5</guid>
+        
+        
+        <category>clone</category>
+        
+        <category>invoke</category>
+        
+        <category>beancopy</category>
+        
+      </item>
     
       <item>
         <title>初识flink4</title>
@@ -773,117 +921,6 @@ xid
         <category>mysqlbinlog</category>
         
         <category>transaction</category>
-        
-      </item>
-    
-      <item>
-        <title>分发log数据到HDFS</title>
-        <description>&lt;p&gt;将Kafka中的数据分发到HDFS上，提到这个需求首先想到的就是Flume。&lt;/p&gt;
-
-&lt;p&gt;之前我也在Flume上做了很多改进来提高性能，因为整体框架的约束，只是修改一些皮毛。&lt;/p&gt;
-
-&lt;p&gt;最近正好做了一个log分发的项目，作用和Flume非常相似，初步性能测试比Flume快很多。&lt;/p&gt;
-
-&lt;p&gt;每秒钟可以从Kafka拉取300M的数据，写HDFS也大概了每秒100M。&lt;/p&gt;
-
-&lt;h2 id=&quot;section&quot;&gt;切换用户&lt;/h2&gt;
-
-&lt;p&gt;HDFS一般都有权限管理，最常见的就是用用户名，假设写HDFS的程序所在的linux用户叫flume，&lt;/p&gt;
-
-&lt;p&gt;那么HDFS上的文件用户名就是flume。为了方便管理我们的程序肯定是统一使用一个用户来启动的，&lt;/p&gt;
-
-&lt;p&gt;这就需要切换  System.setProperty(“HADOOP_USER_NAME”, this.userName);&lt;/p&gt;
-
-&lt;p&gt;在适当的时候执行以上语句，就可以达到切换用户的效果，当然还有其他办法,就不一一介绍了。&lt;/p&gt;
-
-&lt;h2 id=&quot;codec&quot;&gt;Codec&lt;/h2&gt;
-
-&lt;p&gt;绝大多数公司写入HDFS上的数据都会经过压缩，常见的如snappy，lzo，gzip等等，&lt;/p&gt;
-
-&lt;p&gt;为了灵活方便，程序里通过配置来选择压缩工具，类似SPI的一种机制。&lt;/p&gt;
-
-&lt;p&gt;其中值得注意的是lzo和lzop需要单独配置一下。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
-List&amp;lt;Class&amp;lt;? extends CompressionCodec&amp;gt;&amp;gt; codecs = CompressionCodecFactory.getCodecClasses(conf);
-codecs.add(LzoCodec.class);
-codecs.add(LzopCodec.class);
-
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;h2 id=&quot;sync&quot;&gt;sync&lt;/h2&gt;
-
-&lt;p&gt;HDFS上一般一个block大小是128M左右，所以我们在写文件的过程中一定会sync一下，&lt;/p&gt;
-
-&lt;p&gt;HDFS的FileSystem API中关于sync有好多种，我们参照Flume选择了hflush，性能还是非常不错的。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-1&quot;&gt;分区&lt;/h2&gt;
-
-&lt;p&gt;之前介绍过Flume的路径渲染极大影响了它的吞吐能力，在我们的程序中也极力避免复杂的路径渲染，&lt;/p&gt;
-
-&lt;p&gt;比如单sink同时只能写一个文件等，但是分区路径的渲染还是避免不掉的，常见的分区有小时分区和天分区。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;public enum PartitionType {
-
-    DAY {
-        @Override
-        public PartitionRender newInstance() {
-            return new DayPartitionRender();
-        }
-    }, HOUR {
-        @Override
-        public PartitionRender newInstance() {
-            return new DayHourPartitionRender();
-        }
-    };
-
-    public abstract PartitionRender newInstance();
-
-    public abstract class PartitionRender {
-
-        public abstract void render(StringBuilder base);
-
-    }
-
-    public class DayPartitionRender extends PartitionRender {
-
-        private SimpleDateFormat simpleDateFormat = new SimpleDateFormat(&quot;/'dt'=yyyy-MM-dd/HH-mm-&quot;);
-
-        @Override
-        public void render(StringBuilder base) {
-            base.append(simpleDateFormat.format(new Date()));
-        }
-    }
-
-    public class DayHourPartitionRender extends PartitionRender {
-
-        private SimpleDateFormat simpleDateFormat = new SimpleDateFormat(&quot;/'dt'=yyyy-MM-dd/'ht'=HH/HH-mm-&quot;);
-
-        @Override
-        public void render(StringBuilder base) {
-            base.append(simpleDateFormat.format(new Date()));
-        }
-    }
-
-}
-
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;通过一个简单的枚举解决。&lt;/p&gt;
-
-</description>
-        <pubDate>Sun, 25 Feb 2018 13:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2018-02-25-hdfswriter</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2018-02-25-hdfswriter</guid>
-        
-        
-        <category>hdfs</category>
-        
-        <category>log</category>
-        
-        <category>flume</category>
         
       </item>
     

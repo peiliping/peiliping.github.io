@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>初始flink5 « Pei LiPing's Blog</title>
+  <meta name="description" content="先简单介绍一下我们Flink的一个优化，关于asyncfunction的优化">
+
+  <link rel="stylesheet" href="/blog/css/main.css">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2018-12-05-flink5">
+  <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
+</head>
+
+
+  <body>
+
+    <header class="header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Pei LiPing's Blog</a>
+    <nav class="site-nav">
+      
+        
+      
+        
+        <a class="page-link" href="/blog/about/">About</a>
+        
+      
+        
+        <a class="page-link" href="/blog/category/">Category</a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </nav>
+  </div>
+</header>
+
+    <div class="page-content">
+      <div class="wrapper">
+        <div class="col-main">
+          <div class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">初始flink5</h1>
+    <p class="post-meta">Dec 5, 2018</p>
+  </header>
+
+  <article class="post-content">
+    <p>先简单介绍一下我们Flink的一个优化，关于asyncfunction的优化</p>
+
+<h2 id="asyncfunction">AsyncFunction</h2>
+
+<p>阿里为flink社区提供了async的patch，为解决流计算中的IO性能提升带来了新思路，</p>
+
+<p>但我个人觉得这个问题并没有真正解决，Asyncfunction更像是一个饮鸩止渴的方案。</p>
+
+<p>随着异步线程的增加，很快会将外部服务打满，性能极具下降。</p>
+
+<p>我们的优化思路是这样的，在与外部系统交互时，尽量使用小批量，而不是单条数据处理。</p>
+
+<p>将async和batch结合起来，提升asyncfunction的效率。</p>
+
+<p>具体的实现：</p>
+
+<p>引入一个ringbuffer作为缓冲，asyncfunction在asyncinvoke时，将数据写入buffer中，</p>
+
+<p>配置N个消费线程，消费ringbuffer里的数据，进行batch的积攒，并配置ringbuffer的timeout，</p>
+
+<p>一次来实现N条最大M秒的批量数据积攒，在消费线程内，对积攒的批量数据进行处理，</p>
+
+<p>返回结果的拆分，最后调用ResultFuture，将数据交还给asyncfunction。</p>
+
+<h2 id="batchasyncfunction">通用BatchAsyncFunction的实现</h2>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>
+  @Override
+    public void asyncInvoke(IN input, ResultFuture&lt;OUT&gt; resultFuture) throws Exception {
+        long seq = this.ringBuffer.next();
+        Event event = this.ringBuffer.get(seq);
+        event.data = input;
+        event.resultFuture = resultFuture;
+        this.ringBuffer.publish(seq);
+    }
+
+
+</code></pre>
+</div>
+
+<h2 id="section">通用批量消费线程的抽象</h2>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>
+public abstract class Processor&lt;D, T, P&gt; implements WorkHandler&lt;Event&lt;D, T&gt;&gt;, TimeoutHandler, LifecycleAware {
+
+    protected AsyncConfig asyncConfig;
+
+    private boolean initedBatch;
+
+    private List&lt;Triple&lt;D, ResultFuture&lt;T&gt;, P&gt;&gt; batch;
+
+    private long lastBatchTime;
+
+    public Processor(AsyncConfig asyncConfig) {
+        this.asyncConfig = asyncConfig;
+        this.batch = Lists.newArrayList();
+    }
+
+    @Override
+    public void onStart() {
+        cleanAfterBatch();
+    }
+
+    @Override
+    public void onEvent(Event&lt;D, T&gt; event) throws Exception {
+        if (!this.initedBatch) {
+            initBatch(false);
+            this.initedBatch = true;
+        }
+
+        P param = buildBatchParams(event.data);
+        this.batch.add(Triple.of(event.data, event.resultFuture, param));
+
+        if ((this.batch.size() &gt;= this.asyncConfig.getRingbufferMaxBatchSize()) || (System.currentTimeMillis() - this
+                .lastBatchTime &gt;= this.asyncConfig.getRingbufferLingerMs())) {
+            execBatch(0);
+            cleanAfterBatch();
+        }
+    }
+
+    @Override
+    public void onTimeout(long l) throws Exception {
+        if (this.initedBatch) {
+            execBatch(0);
+            cleanAfterBatch();
+        }
+    }
+
+    @Override
+    public void onShutdown() {
+        if (this.initedBatch) {
+            execBatch(0);
+            cleanAfterBatch();
+        }
+    }
+
+    protected abstract void initBatch(boolean retry);
+
+    protected abstract P buildBatchParams(D data);
+
+    protected void cleanAfterBatch() {
+        this.initedBatch = false;
+        this.batch.clear();
+        this.lastBatchTime = System.currentTimeMillis();
+    }
+
+    protected void execBatch(int times) {
+        Validate.isTrue(this.asyncConfig.getAsyncMaxRetry() &gt; times, "execbatch retry-times : " + times);
+        try {
+            if (times &gt; 0) {
+                initBatch(true);
+            }
+            commitAndGetResultsAndCloseBatch();
+            this.batch.forEach(triple -&gt; pushData(triple.getLeft(), triple.getMiddle(), triple.getRight()));
+        } catch (Exception e) {
+            try {
+                Thread.sleep(this.asyncConfig.getAsyncRetryIntervalMs());
+            } catch (InterruptedException e1) {
+                throw new RuntimeException("Failed to exec batch", e1);
+            }
+            execBatch(times + 1);
+        }
+    }
+
+    protected abstract void commitAndGetResultsAndCloseBatch() throws Exception;
+
+    protected abstract void pushData(D data, ResultFuture&lt;T&gt; resultFuture, P param);
+
+}
+
+</code></pre>
+</div>
+
+  </article>
+  
+  
+
+
+
+
+</div>
+
+        </div>
+        <div class="col-second">
+          <div class="col-box col-box-author">
+  <img class="avatar" src="//www.gravatar.com/avatar/your_email_md5?d=mm&s=135" alt="Pei LiPing">
+  <div class="col-box-title name">Pei LiPing</div>
+  <p>The Cabin Of Pei LiPing.</p>
+  <p class="contact">
+    
+    
+    
+    <a href="mailto:peilipingplp@gmail.com">Email</a>
+    
+  </p>
+</div>
+
+<div class="col-box">
+  <div class="col-box-title">Newest Posts</div>
+  <ul class="post-list">
+    
+      <li><a class="post-link" href="/blog/archivers/2018-12-05-flink5">初始flink5</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2018-11-22-flink4">初识flink4</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2018-10-15-flink3">初识flink3</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2018-09-13-flink2">初识flink2</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2018-08-19-flink">初识flink</a></li>
+    
+  </ul>
+</div>
+
+<div class="col-box post-toc hide">
+  <div class="col-box-title">TOC</div>
+</div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+<div class="wrapper">
+&copy; 2016 Pei LiPing
+</div>
+</footer>
+
+<script src="//upcdn.b0.upaiyun.com/libs/jquery/jquery-1.9.0.min.js"></script>
+<script src="/blog/js/easybook.js"></script>
+
+  </body>
+
+</html>
