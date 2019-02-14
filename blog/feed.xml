@@ -6,9 +6,82 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Sat, 29 Dec 2018 14:09:50 +0800</pubDate>
-    <lastBuildDate>Sat, 29 Dec 2018 14:09:50 +0800</lastBuildDate>
+    <pubDate>Thu, 14 Feb 2019 14:30:07 +0800</pubDate>
+    <lastBuildDate>Thu, 14 Feb 2019 14:30:07 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>优化流式任务</title>
+        <description>&lt;p&gt;去年花了大半年的时间在Fregata项目上，目前的部署规模在12000个docker的水平。今年上半年打算&lt;/p&gt;
+
+&lt;p&gt;对Fregata项目进行一次框架上的升级，目标是提升性能，为上下游生态系统减负。&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;拓扑&lt;/h2&gt;
+
+&lt;h3 id=&quot;section-1&quot;&gt;旧拓扑&lt;/h3&gt;
+
+&lt;p&gt;之前的拓扑是树形拓扑，意味下游节点的并行度不能低于上游的，至少保持一致。&lt;/p&gt;
+
+&lt;p&gt;1个Source，3个Parser，3个Sink，Parser和Sink一一对应，数据不会交叉。&lt;/p&gt;
+
+&lt;p&gt;1个Source，3个Parser，6个Sink，每个Parser后面对应2个Sink。&lt;/p&gt;
+
+&lt;h3 id=&quot;section-2&quot;&gt;新拓扑&lt;/h3&gt;
+
+&lt;p&gt;新拓扑中的Parser可以将数据分发给任何一个Sink。&lt;/p&gt;
+
+&lt;p&gt;1个Source，2个Parser，5个Sink 每个Parser后面都对应5个Sink。&lt;/p&gt;
+
+&lt;p&gt;通过控制数据的离散规则可以达到旧拓扑的效果，也就是说，旧拓扑是新拓扑的一种特例。&lt;/p&gt;
+
+&lt;h3 id=&quot;section-3&quot;&gt;好处&lt;/h3&gt;
+
+&lt;p&gt;通过更加合理的配比，达到最小资源和最大性能，举例说明：&lt;/p&gt;
+
+&lt;p&gt;老：1×Source +　5×Parser + 5×Sink = 11×Component&lt;/p&gt;
+
+&lt;p&gt;新：1×Source +　3×Parser + 6×Sink = 10×Component&lt;/p&gt;
+
+&lt;p&gt;在我们的测试中，新拓扑方案比老的快20%，因为整个Stream的瓶颈在Sink，Parser只需要3个就可以。&lt;/p&gt;
+
+&lt;p&gt;在减少component的情况下，性能依然得到的提升，减少component，意味着线程数的减少，&lt;/p&gt;
+
+&lt;p&gt;buffer区个数会减少，内存预分配的占用也会减少。&lt;/p&gt;
+
+&lt;h2 id=&quot;buffer&quot;&gt;Buffer&lt;/h2&gt;
+
+&lt;p&gt;在这次调优过程中，我们测试了buffer的大小，前后比例对性能的影响。&lt;/p&gt;
+
+&lt;p&gt;buffer超过1024后，对性能的提升帮助不大，前提是sink端的性能相对稳定。&lt;/p&gt;
+
+&lt;p&gt;source到parser间的buffer设置的更大一下，更有利于性能的稳定。&lt;/p&gt;
+
+&lt;h2 id=&quot;kafkasink&quot;&gt;KafkaSink&lt;/h2&gt;
+
+&lt;p&gt;老版里我们在Sink上抽象了一层BatchSink，这次重构我们将Batch的逻辑全部交给Kafka的&lt;/p&gt;
+
+&lt;p&gt;Client去处理，利用它的linger和batchsize等操作。性能得到20%-30%的提升。&lt;/p&gt;
+
+&lt;p&gt;我们对Kafka的Producer也进行了大量的测试，如果我们最大限度的让Producer积攒数据，&lt;/p&gt;
+
+&lt;p&gt;会让数据的体积更小，网络和磁盘的开销都会有2-3倍的节约，在消费解压时也会更快。&lt;/p&gt;
+
+&lt;h2 id=&quot;spintime&quot;&gt;SpinTime&lt;/h2&gt;
+
+&lt;p&gt;在老版里，我们就使用SpinTime来进行系统性能的预警，在新版里我们主要使用Spintime来进行&lt;/p&gt;
+
+&lt;p&gt;自动伸缩容的评判，目前还在测试中。&lt;/p&gt;
+</description>
+        <pubDate>Wed, 05 Dec 2018 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2019-01-20-stream</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2019-01-20-stream</guid>
+        
+        
+        <category>stream</category>
+        
+        <category>fregata</category>
+        
+      </item>
     
       <item>
         <title>初识flink5</title>
@@ -793,134 +866,6 @@ if (this.adjustment != null &amp;amp;&amp;amp; sq == 0) {
         <category>hdfs</category>
         
         <category>kafka</category>
-        
-      </item>
-    
-      <item>
-        <title>MysqlBinlog中的事务</title>
-        <description>&lt;p&gt;binlog抽取的项目测试了一段时间，一直都很顺利，最近扩大了测试的规模，发现了一些细节问题。&lt;/p&gt;
-
-&lt;h2 id=&quot;transactiontableid&quot;&gt;Transaction中的TableId&lt;/h2&gt;
-
-&lt;p&gt;在binlog中有一个TableId字段，主要是用来关联TableMap和之后的RowEvent的。如果你在搜索引擎&lt;/p&gt;
-
-&lt;p&gt;中搜索关于TableId的信息，会找到很多于此有关的Bug和故障，比如超过Int的最大值。这些细节就&lt;/p&gt;
-
-&lt;p&gt;不再这里赘述了，总之在一个binlog局部片段中TableMap和RowEvent需要TableId进行关联。&lt;/p&gt;
-
-&lt;p&gt;最初我们的代码是这样处理的，当遇到TableMapEvent就把它赋值给一个成员变量tablemap，&lt;/p&gt;
-
-&lt;p&gt;遇到XIDEvent就让tablemap=null。这样处理其实是假定单一事务内只有一个tablemap，&lt;/p&gt;
-
-&lt;p&gt;但这是不正确的。在一个事务里有可能碰到多个tablemap：&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
-tablemap(id=7000)
-
-tablemap(id=7002)
-
-rowdata(id=7000)
-
-rowdata(id=7002)
-
-xid
-
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;这样就会导致第二条rowdata匹配了错误的tablemap，也就无法对数据进行有效的解析了。&lt;/p&gt;
-
-&lt;h2 id=&quot;section&quot;&gt;解决办法&lt;/h2&gt;
-
-&lt;p&gt;为了解决这个问题我们翻看了canal和其他几个binlog处理的开源项目代码，大体解决方案为两类。&lt;/p&gt;
-
-&lt;p&gt;1、用一个Hashmap把TableId和Tablemap缓存下来，当事务结束后，将mapclear掉。&lt;/p&gt;
-
-&lt;p&gt;2、用一个全局的map将TableId和TableMapCache下来。&lt;/p&gt;
-
-&lt;p&gt;方案二显然是有问题的，因为TableId并非有限范围，随着时间的累计会导致OOM。&lt;/p&gt;
-
-&lt;p&gt;方案一是一个有效方案但是效率并不是特别高。&lt;/p&gt;
-
-&lt;p&gt;在方案一的基础上我们做了一些改进：&lt;/p&gt;
-
-&lt;p&gt;1、保留我们的tablemap成员对象，用来cache一个事务中的第一个tablemap，这个其实非常必要，&lt;/p&gt;
-
-&lt;p&gt;这个tablemap的binlog位置会成为后面事务中其他数据的offset，可以作为有效的回退位点。&lt;/p&gt;
-
-&lt;p&gt;2、再增加一个hashmap成员变量cache，当tablemap!=null并且当前event的type为tablemap时，&lt;/p&gt;
-
-&lt;p&gt;判断TableId是不是相等的，如果不相等，将tablemap缓存到cache中，key为tableid。&lt;/p&gt;
-
-&lt;p&gt;3、当event类型为row时，判断tableid与tablemap的tableid是不是相等，如果相等则用tablemap。&lt;/p&gt;
-
-&lt;p&gt;如果不相等，就从cache中查找一个tablemap。&lt;/p&gt;
-
-&lt;p&gt;4、当event类型为xid时，tablemap=null，cache.clear()&lt;/p&gt;
-
-&lt;p&gt;这样在绝大多数情况下，不会启动hashmap，几乎不会产生额外的开销。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
- 	EventType eventType = event.getHeader().getEventType();
-        long dataTableId;
-        switch (eventType) {
-            case PRE_GA_WRITE_ROWS:
-            case WRITE_ROWS:
-            case EXT_WRITE_ROWS:
-                dataTableId = ((WriteRowsEventData) event.getData()).getTableId();
-                break;
-            case PRE_GA_UPDATE_ROWS:
-            case UPDATE_ROWS:
-            case EXT_UPDATE_ROWS:
-                dataTableId = ((UpdateRowsEventData) event.getData()).getTableId();
-                break;
-            case PRE_GA_DELETE_ROWS:
-            case DELETE_ROWS:
-            case EXT_DELETE_ROWS:
-                dataTableId = ((DeleteRowsEventData) event.getData()).getTableId();
-                break;
-            case TABLE_MAP:
-                dataTableId = ((TableMapEventData) event.getData()).getTableId();
-                if (this.tableMapEvent == null) {
-                    this.tableMapEvent = event;
-                } else if (dataTableId != ((TableMapEventData) this.tableMapEvent.getData()).getTableId()) {
-                    this.cacheTableMapEvent4Transaction.put(dataTableId, event);
-                }
-                this.binlogFileName = this.mysqlClient.getBinlogFilename();
-                this.binlogPosition = ((EventHeaderV4) event.getHeader()).getPosition();
-                getCounter().notRowSum.incrementAndGet();
-                return;
-            case XID:
-                this.tableMapEvent = null;
-                this.cacheTableMapEvent4Transaction.clear();
-                getCounter().notRowSum.incrementAndGet();
-                return;
-            default:
-                getCounter().notRowSum.incrementAndGet();
-                return;
-        }
-
-        if (((TableMapEventData) this.tableMapEvent.getData()).getTableId() == dataTableId) {
-            container.setPre(Validate.notNull(this.tableMapEvent));
-        } else {
-            Event e = this.cacheTableMapEvent4Transaction.get(dataTableId);
-            container.setPre(Validate.notNull(e));
-        }
-
-        container.setCur(event);
-
-
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-</description>
-        <pubDate>Thu, 22 Mar 2018 13:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2018-03-22-binlogtransaction</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2018-03-22-binlogtransaction</guid>
-        
-        
-        <category>mysqlbinlog</category>
-        
-        <category>transaction</category>
         
       </item>
     

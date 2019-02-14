@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>优化流式任务 « Pei LiPing's Blog</title>
+  <meta name="description" content="去年花了大半年的时间在Fregata项目上，目前的部署规模在12000个docker的水平。今年上半年打算">
+
+  <link rel="stylesheet" href="/blog/css/main.css">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2019-01-20-stream">
+  <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
+</head>
+
+
+  <body>
+
+    <header class="header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Pei LiPing's Blog</a>
+    <nav class="site-nav">
+      
+        
+      
+        
+        <a class="page-link" href="/blog/about/">About</a>
+        
+      
+        
+        <a class="page-link" href="/blog/category/">Category</a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </nav>
+  </div>
+</header>
+
+    <div class="page-content">
+      <div class="wrapper">
+        <div class="col-main">
+          <div class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">优化流式任务</h1>
+    <p class="post-meta">Dec 5, 2018</p>
+  </header>
+
+  <article class="post-content">
+    <p>去年花了大半年的时间在Fregata项目上，目前的部署规模在12000个docker的水平。今年上半年打算</p>
+
+<p>对Fregata项目进行一次框架上的升级，目标是提升性能，为上下游生态系统减负。</p>
+
+<h2 id="section">拓扑</h2>
+
+<h3 id="section-1">旧拓扑</h3>
+
+<p>之前的拓扑是树形拓扑，意味下游节点的并行度不能低于上游的，至少保持一致。</p>
+
+<p>1个Source，3个Parser，3个Sink，Parser和Sink一一对应，数据不会交叉。</p>
+
+<p>1个Source，3个Parser，6个Sink，每个Parser后面对应2个Sink。</p>
+
+<h3 id="section-2">新拓扑</h3>
+
+<p>新拓扑中的Parser可以将数据分发给任何一个Sink。</p>
+
+<p>1个Source，2个Parser，5个Sink 每个Parser后面都对应5个Sink。</p>
+
+<p>通过控制数据的离散规则可以达到旧拓扑的效果，也就是说，旧拓扑是新拓扑的一种特例。</p>
+
+<h3 id="section-3">好处</h3>
+
+<p>通过更加合理的配比，达到最小资源和最大性能，举例说明：</p>
+
+<p>老：1×Source +　5×Parser + 5×Sink = 11×Component</p>
+
+<p>新：1×Source +　3×Parser + 6×Sink = 10×Component</p>
+
+<p>在我们的测试中，新拓扑方案比老的快20%，因为整个Stream的瓶颈在Sink，Parser只需要3个就可以。</p>
+
+<p>在减少component的情况下，性能依然得到的提升，减少component，意味着线程数的减少，</p>
+
+<p>buffer区个数会减少，内存预分配的占用也会减少。</p>
+
+<h2 id="buffer">Buffer</h2>
+
+<p>在这次调优过程中，我们测试了buffer的大小，前后比例对性能的影响。</p>
+
+<p>buffer超过1024后，对性能的提升帮助不大，前提是sink端的性能相对稳定。</p>
+
+<p>source到parser间的buffer设置的更大一下，更有利于性能的稳定。</p>
+
+<h2 id="kafkasink">KafkaSink</h2>
+
+<p>老版里我们在Sink上抽象了一层BatchSink，这次重构我们将Batch的逻辑全部交给Kafka的</p>
+
+<p>Client去处理，利用它的linger和batchsize等操作。性能得到20%-30%的提升。</p>
+
+<p>我们对Kafka的Producer也进行了大量的测试，如果我们最大限度的让Producer积攒数据，</p>
+
+<p>会让数据的体积更小，网络和磁盘的开销都会有2-3倍的节约，在消费解压时也会更快。</p>
+
+<h2 id="spintime">SpinTime</h2>
+
+<p>在老版里，我们就使用SpinTime来进行系统性能的预警，在新版里我们主要使用Spintime来进行</p>
+
+<p>自动伸缩容的评判，目前还在测试中。</p>
+
+  </article>
+  
+  
+
+
+
+
+</div>
+
+        </div>
+        <div class="col-second">
+          <div class="col-box col-box-author">
+  <img class="avatar" src="//www.gravatar.com/avatar/your_email_md5?d=mm&s=135" alt="Pei LiPing">
+  <div class="col-box-title name">Pei LiPing</div>
+  <p>The Cabin Of Pei LiPing.</p>
+  <p class="contact">
+    
+    
+    
+    <a href="mailto:peilipingplp@gmail.com">Email</a>
+    
+  </p>
+</div>
+
+<div class="col-box">
+  <div class="col-box-title">Newest Posts</div>
+  <ul class="post-list">
+    
+      <li><a class="post-link" href="/blog/archivers/2019-01-20-stream">优化流式任务</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2018-12-05-flink5">初识flink5</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2018-11-22-flink4">初识flink4</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2018-10-15-flink3">初识flink3</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2018-09-13-flink2">初识flink2</a></li>
+    
+  </ul>
+</div>
+
+<div class="col-box post-toc hide">
+  <div class="col-box-title">TOC</div>
+</div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+<div class="wrapper">
+&copy; 2016 Pei LiPing
+</div>
+</footer>
+
+<script src="//upcdn.b0.upaiyun.com/libs/jquery/jquery-1.9.0.min.js"></script>
+<script src="/blog/js/easybook.js"></script>
+
+  </body>
+
+</html>
