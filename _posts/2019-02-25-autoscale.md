@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "伸自动缩"
+title:  "自动伸缩"
 date:   "2019-02-25 10:00:00"
 categories: "scale auto fregata"
 permalink: /archivers/2019-02-25-scale

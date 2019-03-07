@@ -6,12 +6,12 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Thu, 07 Mar 2019 11:14:44 +0800</pubDate>
-    <lastBuildDate>Thu, 07 Mar 2019 11:14:44 +0800</lastBuildDate>
+    <pubDate>Thu, 07 Mar 2019 11:15:52 +0800</pubDate>
+    <lastBuildDate>Thu, 07 Mar 2019 11:15:52 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
     
       <item>
-        <title>伸自动缩</title>
+        <title>自动伸缩</title>
         <description>&lt;p&gt;这次讲一下Fregata重构中的一个重要内容-自动伸缩，主要是解决两个方向的问题：&lt;/p&gt;
 
 &lt;p&gt;1、突发流量需要人工介入，不及时也太耗费人力&lt;/p&gt;
