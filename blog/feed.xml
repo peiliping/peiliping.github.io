@@ -6,9 +6,60 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Tue, 19 Mar 2019 14:04:23 +0800</pubDate>
-    <lastBuildDate>Tue, 19 Mar 2019 14:04:23 +0800</lastBuildDate>
+    <pubDate>Wed, 27 Mar 2019 14:35:37 +0800</pubDate>
+    <lastBuildDate>Wed, 27 Mar 2019 14:35:37 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>总结</title>
+        <description>&lt;p&gt;Q1马上就要结束了，最近一直在忙一些规划和总结性的东西。&lt;/p&gt;
+
+&lt;p&gt;这次就随便聊聊，没有什么主题。&lt;/p&gt;
+
+&lt;h2 id=&quot;flink&quot;&gt;Flink&lt;/h2&gt;
+
+&lt;h3 id=&quot;section&quot;&gt;1.5升级到1.7&lt;/h3&gt;
+
+&lt;p&gt;因为业务上的需求，最近在准备将我们的Flink版本从1.5升级到1.7，&lt;/p&gt;
+
+&lt;p&gt;开发还算顺利，我们定制的各种特性也都迁移到1.7的版本上。&lt;/p&gt;
+
+&lt;p&gt;不过Flink社区的开发进度，总体上感觉比去年要慢了许多。&lt;/p&gt;
+
+&lt;h3 id=&quot;sql&quot;&gt;SQL化&lt;/h3&gt;
+
+&lt;p&gt;看了不少公司在实时计算平台建设的文章，提到了很多实时任务SQL化的计划，&lt;/p&gt;
+
+&lt;p&gt;从我的感受来说，并没有觉得SQL化的迫切，也许是业务特点不一样吧。&lt;/p&gt;
+
+&lt;p&gt;目前平台上跑的几百个任务来看，用户的编写质量确实很差，&lt;/p&gt;
+
+&lt;p&gt;开发一个性能优异的Flink任务，需要的知识储备其实挺高的，&lt;/p&gt;
+
+&lt;p&gt;绝大多数业务方只能照葫芦画瓢，并没有时间去深入理解和研究。&lt;/p&gt;
+
+&lt;p&gt;由平台方来编写一些标准化的工具，减少粗制滥造的重复开发是很有必要的。&lt;/p&gt;
+
+&lt;p&gt;但工具化、配置化，不一定要是SQL化，当然公司有足够的投入另当别论。&lt;/p&gt;
+
+&lt;h3 id=&quot;section-1&quot;&gt;有状态&lt;/h3&gt;
+
+&lt;p&gt;对有状态任务的支持，是Flink相比其他实时计算框架的巨大优势。&lt;/p&gt;
+
+&lt;p&gt;目前，平台上的任务对State的诉求非常低，这并不是一个健康的状况。&lt;/p&gt;
+
+&lt;p&gt;今年Q2开始，我们会加大力度在对State的支持方面，也做一些周边的开发，&lt;/p&gt;
+
+&lt;p&gt;降低state的开发难度，提升性能和效率。&lt;/p&gt;
+</description>
+        <pubDate>Fri, 22 Mar 2019 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2019-03-22-summary</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2019-03-22-summary</guid>
+        
+        
+        <category>summary</category>
+        
+      </item>
     
       <item>
         <title>自动伸缩</title>
@@ -837,73 +888,6 @@ if (this.adjustment != null &amp;amp;&amp;amp; sq == 0) {
         
         
         <category>618</category>
-        
-      </item>
-    
-      <item>
-        <title>聊聊对channel的认识</title>
-        <description>&lt;p&gt;今天聊一聊channel的话题，最近几年从事的工作内容都跟消息流和数据通道有关系，&lt;/p&gt;
-
-&lt;p&gt;结合最近项目的调优，说说我对channel的认识。&lt;/p&gt;
-
-&lt;h2 id=&quot;ringbuffer&quot;&gt;ringbuffer&lt;/h2&gt;
-
-&lt;p&gt;说到channel，就不能不提disrupter的ringbuffer，最近几年非常热门的开源项目。&lt;/p&gt;
-
-&lt;p&gt;ringbuffer强调对象的高度复用，减少GC的次数，有无数据的timeout的回调，方便实现batch逻辑，&lt;/p&gt;
-
-&lt;p&gt;多种策略的选择，应对多种业务时效场景。&lt;/p&gt;
-
-&lt;h2 id=&quot;selector&quot;&gt;selector&lt;/h2&gt;
-
-&lt;p&gt;无论是实时流计算，还是消息通道，都会有一个类似selector的组件，基于某些字段对消息进行分类，&lt;/p&gt;
-
-&lt;p&gt;将event投递到不同的channel中，主要是为了解决一定程度的顺序问题，&lt;/p&gt;
-
-&lt;p&gt;比如将相同主键的消息顺序输出。flume中的selector就是针对header中的某个key进行mapping，&lt;/p&gt;
-
-&lt;p&gt;实现了灵活强大的分流功能。当然使用key也尽量不要出现热点，要不然整体的消费能力就会提早到达瓶颈。&lt;/p&gt;
-
-&lt;h2 id=&quot;broadcast&quot;&gt;broadcast&lt;/h2&gt;
-
-&lt;p&gt;broadcast功能在channel中也是非常实用的，比如checkpoint相关的event向下游传递，如果下游有&lt;/p&gt;
-
-&lt;p&gt;多个channel，那么就需要一个broadcast功能。在业务中broadcast的应用也非常广，比如上游计算&lt;/p&gt;
-
-&lt;p&gt;导致了某种meta信息的变更，就可以通过broadcast的功能通知下游，这种方式比借助外部存储要高效的多，&lt;/p&gt;
-
-&lt;p&gt;而且天然不用解决多version的问题。&lt;/p&gt;
-
-&lt;h2 id=&quot;balance&quot;&gt;balance&lt;/h2&gt;
-
-&lt;p&gt;如果你碰到了一拆N的channel场景，并且对数据的顺序不那么敏感时，肯定希望能最大限度的发挥下游&lt;/p&gt;
-
-&lt;p&gt;channel的能力，很多人都在selector上选择roundrobin，或者是基于timestamp取模的方法，如果下游&lt;/p&gt;
-
-&lt;p&gt;的消费能力非常强，这种做法是没有问题的。但如果你在下游sink是重IO类型的，这种做法就不会达到&lt;/p&gt;
-
-&lt;p&gt;你想要的效果了。你会发现流经常会因为某一条下游的blocking，导致整条链路卡主，你使用了多条通道&lt;/p&gt;
-
-&lt;p&gt;，但性能并没有成线性增长。这个问题在我的分发kafka消息至hdfs时就碰到了，一旦HDFS的响应速度下降&lt;/p&gt;
-
-&lt;p&gt;整个job的吞吐量大大降低，增加channel并没有解决这个问题，只能增加jvm实例来解决，非常耗资源。&lt;/p&gt;
-
-&lt;p&gt;这时，你需要的是类似负载均衡方面的WLC算法的解决方案。首先，你需要让下游的channel暴露出自己&lt;/p&gt;
-
-&lt;p&gt;的余量。然后根据余量的情况选择最为空闲的节点，这样你增加的channel才会有意义。当然如果你有&lt;/p&gt;
-
-&lt;p&gt;大量的broadcast消息，也会极大的影响你的性能。&lt;/p&gt;
-</description>
-        <pubDate>Thu, 10 May 2018 18:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2018-05-10-channel</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2018-05-10-channel</guid>
-        
-        
-        <category>channel</category>
-        
-        <category>hdfs</category>
-        
-        <category>kafka</category>
         
       </item>
     

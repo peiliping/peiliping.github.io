@@ -6,12 +6,11 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>Pei LiPing's Blog</title>
-  <meta name="description" content="Augur
-">
+  <title>总结 « Pei LiPing's Blog</title>
+  <meta name="description" content="Q1马上就要结束了，最近一直在忙一些规划和总结性的东西。">
 
   <link rel="stylesheet" href="/blog/css/main.css">
-  <link rel="canonical" href="http://peiliping.github.io/blog/page7/">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2019-03-22-summary">
   <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
 </head>
 
@@ -60,77 +59,60 @@
     <div class="page-content">
       <div class="wrapper">
         <div class="col-main">
-          <div class="home">
-  <a class="rss-link" href="/blog/feed.xml">RSS Feed</a>
-  <h1 class="page-heading">Articles</h1>
+          <div class="post">
 
-  <ul class="post-list">
-    
-      <li>
-        <h2>
-          <a class="post-link" href="/blog/archivers/2017-02-25-perfdata">Jvm的PerfData</a>
-        </h2>
-        
-        <div class="post-meta">Feb 25, 2017</div>
+  <header class="post-header">
+    <h1 class="post-title">总结</h1>
+    <p class="post-meta">Mar 22, 2019</p>
+  </header>
 
-        <div class="post-excerpt">
-          <p>Java系统的监控经常是通过JMX的，最近几年也比较流行使用Dropwizard和SpringMetrics的集成。</p>
+  <article class="post-content">
+    <p>Q1马上就要结束了，最近一直在忙一些规划和总结性的东西。</p>
 
+<p>这次就随便聊聊，没有什么主题。</p>
 
-          <p>
-            <a class="post-link" href="/blog/archivers/2017-02-25-perfdata">Read More &raquo;</a>
-          </p>
-        </div>
-      </li>
-    
-      <li>
-        <h2>
-          <a class="post-link" href="/blog/archivers/2017-01-16-nginx">Nginx配置</a>
-        </h2>
-        
-        <div class="post-meta">Jan 16, 2017</div>
+<h2 id="flink">Flink</h2>
 
-        <div class="post-excerpt">
-          <p>今年进行了一次Nginx的大面积升级，把Nginx的安装配置方法记录一下。</p>
+<h3 id="section">1.5升级到1.7</h3>
 
+<p>因为业务上的需求，最近在准备将我们的Flink版本从1.5升级到1.7，</p>
 
-          <p>
-            <a class="post-link" href="/blog/archivers/2017-01-16-nginx">Read More &raquo;</a>
-          </p>
-        </div>
-      </li>
-    
-      <li>
-        <h2>
-          <a class="post-link" href="/blog/archivers/2016-12-15-logwatch">日志采集工具Logwatch</a>
-        </h2>
-        
-        <div class="post-meta">Dec 15, 2016</div>
+<p>开发还算顺利，我们定制的各种特性也都迁移到1.7的版本上。</p>
 
-        <div class="post-excerpt">
-          <ul>
-  <li>2016年11月到12月中旬，开发了<a href="https://github.com/peiliping/logwatch">Logwatch</a>的第一个版本。</li>
-</ul>
+<p>不过Flink社区的开发进度，总体上感觉比去年要慢了许多。</p>
 
+<h3 id="sql">SQL化</h3>
 
-          <p>
-            <a class="post-link" href="/blog/archivers/2016-12-15-logwatch">Read More &raquo;</a>
-          </p>
-        </div>
-      </li>
-    
-  </ul>
+<p>看了不少公司在实时计算平台建设的文章，提到了很多实时任务SQL化的计划，</p>
+
+<p>从我的感受来说，并没有觉得SQL化的迫切，也许是业务特点不一样吧。</p>
+
+<p>目前平台上跑的几百个任务来看，用户的编写质量确实很差，</p>
+
+<p>开发一个性能优异的Flink任务，需要的知识储备其实挺高的，</p>
+
+<p>绝大多数业务方只能照葫芦画瓢，并没有时间去深入理解和研究。</p>
+
+<p>由平台方来编写一些标准化的工具，减少粗制滥造的重复开发是很有必要的。</p>
+
+<p>但工具化、配置化，不一定要是SQL化，当然公司有足够的投入另当别论。</p>
+
+<h3 id="section-1">有状态</h3>
+
+<p>对有状态任务的支持，是Flink相比其他实时计算框架的巨大优势。</p>
+
+<p>目前，平台上的任务对State的诉求非常低，这并不是一个健康的状况。</p>
+
+<p>今年Q2开始，我们会加大力度在对State的支持方面，也做一些周边的开发，</p>
+
+<p>降低state的开发难度，提升性能和效率。</p>
+
+  </article>
   
-  <!-- Pagination links -->
-<div class="pagination">
   
-    <a href="/page6" class="previous">PREV</a>
-  
-  <span class="page_number ">7 of 7</span>
-  
-    <span class="next ">NEXT</span>
-  
-</div>
+
+
+
 
 </div>
 
