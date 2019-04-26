@@ -6,11 +6,11 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>Java Flight Recorder « Pei LiPing's Blog</title>
-  <meta name="description" content="Profiling是最常见的，用来定位代码性能问题的方法。">
+  <title>avro优化 « Pei LiPing's Blog</title>
+  <meta name="description" content="最近在进行fregata2.0重构时，再次优化avro的反序列化过程。">
 
   <link rel="stylesheet" href="/blog/css/main.css">
-  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2017-03-31-jfr">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2019-04-26-avro2">
   <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
 </head>
 
@@ -62,48 +62,75 @@
           <div class="post">
 
   <header class="post-header">
-    <h1 class="post-title">Java Flight Recorder</h1>
-    <p class="post-meta">Mar 31, 2017</p>
+    <h1 class="post-title">avro优化</h1>
+    <p class="post-meta">Apr 26, 2019</p>
   </header>
 
   <article class="post-content">
-    <p>Profiling是最常见的，用来定位代码性能问题的方法。</p>
+    <p>最近在进行fregata2.0重构时，再次优化avro的反序列化过程。</p>
 
-<p>在开发环境中，我们用Visualvm、JProfiler、Yourkit等。这些工具功能强大，支持图形化界面操作，可以让我们很快定位代码问题。</p>
+<h3 id="section">背景</h3>
 
-<p>但是他们对应用性能的影响也非常大，所以不适合在生产环境下使用。还有这些软件要attach到jvm进程上，生产环境一般网络隔离，很难做到。</p>
+<p>fregata-quasi任务是典型的cpu和内存都高度消耗的场景，主要是数据的</p>
 
-<p>在生产环境我们最常用的profiling工具就是java/bin下的jstack，多做几次jstack，也相当于profiling了。有很多工具就是对多次的jstack结果进行合并，来分析问题的。</p>
+<p>序列化和反序列化。通过JFR多次观测，其中一个热点是avro中的字符串类型</p>
 
-<p>jstack方便易用，但并不是特别适合来做profiling，操作频率低，会导致safepoint指标急剧增长等等。</p>
+<p>数据的处理（实际数据中字符串类型出现的比较多，201712的blog也提到过）。</p>
 
-<p>于是我们尝试使用Jvm原生提供的JFR - Java Flight Recorder 来解决问题。</p>
+<h3 id="section-1">问题源码</h3>
 
-<h3 id="section">使用方法</h3>
+<p>对相关代码进行分析后，把目光落在这个区域。</p>
 
-<ol>
-  <li>
-    <p>jcmd pid VM.unlock_commercial_features</p>
-  </li>
-  <li>
-    <p>jcmd pid JFR.start duration=60s filename=/home/peiliping/dev/logs/test.jfr settings=[default,profile]</p>
-  </li>
-  <li>
-    <p>jcmd pid JFR.check 检查当前运行状况</p>
-  </li>
-  <li>
-    <p>jcmd pid JFR.stop name=test.jfr 或者 jcmd pid JFR.stop recording=3 name和recording的值参见check的结果</p>
-  </li>
-  <li>
-    <p>将生成的jfr文件传回到自己的电脑中</p>
-  </li>
-  <li>
-    <p>shell下执行jmc，启动图形化客户端，导入jfr文件，就可以看到cpu、gc、线程、io、代码热点等监控信息了</p>
-  </li>
-  <li>
-    <p>如果需要定制化jfr抓取的指标，可以修改setting的xml文件，/…./JDK/jdk1.8.0_51/jre/lib/jfr/</p>
-  </li>
-</ol>
+<div class="highlighter-rouge"><pre class="highlight"><code>if (length &lt; 0)
+    throw new AvroRuntimeException("Malformed data. Length is negative: "+ length);
+int remaining = limit - pos;
+if (length &lt;= remaining) {
+    System.arraycopy(buf, pos, bytes, start, length);
+    pos += length;
+} else {
+    // read the rest of the buffer
+    System.arraycopy(buf, pos, bytes, start, remaining);
+    start += remaining;
+    length -= remaining;
+    pos = limit;
+    // finish from the byte source
+    source.readRaw(bytes, start, length);
+}
+</code></pre>
+</div>
+
+<p>在字符串处理中，Avro引入了一个UTF8对象（本质就是一个byte数组），</p>
+
+<p>在经过这段代码后，再将UTF8对象转为String，经过string的decode。</p>
+
+<h3 id="section-2">优化</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>int start = 0;
+int length = readInt();
+if (length &lt; 0) {
+    throw new AvroRuntimeException("Malformed data length : " + length);
+}
+int remaining = limit - pos;
+if (length &lt;= remaining) {
+    result = new String(buf, pos, length);
+    pos += length;
+} else {
+    //read the rest of the buffer
+    result = new String(buf, pos, remaining);
+    start += remaining;
+    length -= remaining;
+    pos = limit;
+    //finish from the byte source
+    source.readRaw(null, start, length);
+}
+</code></pre>
+</div>
+
+<p>这里主要是省掉了中间的UTF8对象，减少了一次System.arraycopy</p>
+
+<h3 id="section-3">结论</h3>
+
+<p>经过测试，这个优化可以提升10%左右的反序列化速度。</p>
 
   </article>
   
