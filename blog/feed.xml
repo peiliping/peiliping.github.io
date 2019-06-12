@@ -6,9 +6,115 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Fri, 26 Apr 2019 17:50:14 +0800</pubDate>
-    <lastBuildDate>Fri, 26 Apr 2019 17:50:14 +0800</lastBuildDate>
+    <pubDate>Wed, 12 Jun 2019 11:33:17 +0800</pubDate>
+    <lastBuildDate>Wed, 12 Jun 2019 11:33:17 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>初识flink6</title>
+        <description>&lt;p&gt;基于社区版1.5的定制化开发工作已经接近尾声了，最后一个大的Feature是背压指标的量化。&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;背压&lt;/h2&gt;
+
+&lt;p&gt;流计算框架上都提供了背压相关的机制，但监控量化的形式各有不同。&lt;/p&gt;
+
+&lt;p&gt;Flink-UI上提供了一个背压探测的功能，基本原理就是Profiling。&lt;/p&gt;
+
+&lt;p&gt;在实际应用中，我们发现了很多问题，比如：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;只能观测当前，无法回溯历史；&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;一次只能观测一个taskchain，没有全局概念；&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;量化概念模糊，不利于告警预警；&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;开销高，无法长期运行；&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;综上，我们决定开发自己的背压监控功能，并为用户提供预警告警的功能。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-1&quot;&gt;量化&lt;/h2&gt;
+
+&lt;p&gt;我们定义背压的指标和之前fregata做伸缩容的指标是一个含义，内部称之为自旋时间，&lt;/p&gt;
+
+&lt;p&gt;简单来说就是数据处理线程等待eventbuffer的时间。&lt;/p&gt;
+
+&lt;p&gt;在flink中，主要修改如下几个类：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
+RecordWriter.requestNewBufferBuilder
+
+LocalBufferPool.requestBufferBuilderBlocking
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;在LocalBufferPool的requestBuffer时，会进入一段while循环&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
+while (availableMemorySegments.isEmpty()) 
+
+    ...
+    availableMemorySegments.wait(2000);
+    ...
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;这块代码主要是我们修改的区域。&lt;/p&gt;
+
+&lt;p&gt;总的来说，我们统计了wait的时间和进入while循环的次数，作为背压的指标。&lt;/p&gt;
+
+&lt;p&gt;进入while循环次数多，我们认为stream是时断时续的，效率不高，类似堵车，&lt;/p&gt;
+
+&lt;p&gt;这类问题大多需要调节networkbuffer大小，并行度等可以有效解决。&lt;/p&gt;
+
+&lt;p&gt;wait的累加时间长（比如1min里有58s在wait），任务下游严重阻塞，&lt;/p&gt;
+
+&lt;p&gt;这类问题最大的可能是下游IO超时阻塞。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-2&quot;&gt;维度&lt;/h2&gt;
+
+&lt;p&gt;我们的监控数据最后是进入Promethues的，有了指标和值，还需要一些维度信息。&lt;/p&gt;
+
+&lt;p&gt;Flink的Metric主要是task级和Operator级，所以我们只要参照flink的&lt;/p&gt;
+
+&lt;p&gt;metric定义方式，就获得了subtask的一系列标签(taskId,index,attemptId等)。&lt;/p&gt;
+
+&lt;p&gt;在此基础上，我们又将数据的target也作为了一个维度，就是RecordWriter中的&lt;/p&gt;
+
+&lt;p&gt;targetChannelId。如果一个task的下游有多个target，我们可以区分出到底是&lt;/p&gt;
+
+&lt;p&gt;哪一个导致背压的。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-3&quot;&gt;开销&lt;/h2&gt;
+
+&lt;p&gt;我们增加的这些统计指标，在程序没法发生背压时是没有任何开销的，一旦发生背压，&lt;/p&gt;
+
+&lt;p&gt;就意味着程序的吞吐极具下降，那么相关逻辑的执行次数也非常少，costtime的计算&lt;/p&gt;
+
+&lt;p&gt;和累加计数器的操作开销也非常低，几乎可以忽略不计。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-4&quot;&gt;效果&lt;/h2&gt;
+
+&lt;p&gt;监控数据打通后，我们在Promethues上进行了一下统计，发现了20多个任务存在背压，&lt;/p&gt;
+
+&lt;p&gt;我们也对比了Flink-WebUI上的探测结果，结论都是准确的，证明方案是可行有效的。&lt;/p&gt;
+</description>
+        <pubDate>Sat, 18 May 2019 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2019-05-18-flink6</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2019-05-18-flink6</guid>
+        
+        
+        <category>flink</category>
+        
+      </item>
     
       <item>
         <title>avro优化</title>
@@ -814,77 +920,6 @@ if (this.adjustment != null &amp;amp;&amp;amp; sq == 0) {
         
         
         <category>flink</category>
-        
-      </item>
-    
-      <item>
-        <title>估算Job的余量</title>
-        <description>&lt;p&gt;在运维日志分发任务的时候，经常碰到一些突发性的数据量增大，导致分发资源不足，最后数据延迟了。&lt;/p&gt;
-
-&lt;p&gt;之前，只能依赖监控Kafka的消息积压情况，如果积压非常多，就增加任务的副本数或者增大任务的&lt;/p&gt;
-
-&lt;p&gt;资源规格（分配更多的cpu和内存）。增加多少副本或者资源只能凭经验去判断，无法量化，每个任务的&lt;/p&gt;
-
-&lt;p&gt;数据单条大小是不一样的，连接的HDFS集群也是不一样的，所处的网络环境也会有差异，这些变量都&lt;/p&gt;
-
-&lt;p&gt;导致了无法用一个固定的指标衡量或者预警。&lt;/p&gt;
-
-&lt;h2 id=&quot;section&quot;&gt;自旋时间&lt;/h2&gt;
-
-&lt;p&gt;经过一段时间的思考和测试我们选择了一个叫做自旋时间的指标来做衡量。&lt;/p&gt;
-
-&lt;p&gt;我们的任务中使用了ringbuffer作为生产消费模型中的缓冲队列，在高资源规格的任务中，会有多个&lt;/p&gt;
-
-&lt;p&gt;并行的ringbuffer。之前我的blog提到过，我们在选择哪一条channel时有一个复合策略，就是roundrobin&lt;/p&gt;
-
-&lt;p&gt;+余量最大。当source下游的所有ringbuffer都处于full状态时，source就一直处于wait状态（自旋），&lt;/p&gt;
-
-&lt;p&gt;这个自旋的时间被我们统计了下来，通过nanotime的delta来统计。如果每分钟里自旋的累加时间超过5s，&lt;/p&gt;
-
-&lt;p&gt;我们就会认为该任务的消费能力低于生产能力，需要扩大资源规格，具体含义就是写HDFS的性能低于拉&lt;/p&gt;
-
-&lt;p&gt;kafka的性能。在我们的测试中，3个channel同时写HDFS，能超过单线程拉kafka的速度。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-1&quot;&gt;告警的策略&lt;/h2&gt;
-
-&lt;p&gt;有一些kafka的数据是定期上报的，所以会存在短期数据量很大的情况，如果我们设置的报警策略非常敏感&lt;/p&gt;
-
-&lt;p&gt;的话，会导致频繁告警，所以经过一段时间的微调，我们最终选定15分钟内有10次超过5s的自旋，就任务&lt;/p&gt;
-
-&lt;p&gt;该任务需要增加资源规格了。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-2&quot;&gt;副本与资源规格&lt;/h2&gt;
-
-&lt;p&gt;需要注意的是增加副本和增加资源规格其实都能达到降低任务繁忙度的目的，但是增加资源规格从整体&lt;/p&gt;
-
-&lt;p&gt;上来说是更为经济的选择，增加副本还依赖于kafka的partition数量。&lt;/p&gt;
-
-&lt;p&gt;在运维这批任务的时候，我们会有一个基本的原则：&lt;/p&gt;
-
-&lt;p&gt;1、副本数不超过kafka分区数的二分之一，保证至少还有一倍的临时扩容余量。&lt;/p&gt;
-
-&lt;p&gt;2、如果是单副本任务，优先增加副本。&lt;/p&gt;
-
-&lt;p&gt;3、副本数超过5个的话，尽量扩资源规格。&lt;/p&gt;
-
-&lt;p&gt;4、如果单个任务平均每秒处理的数据超过50m，则选择增加副本数量。&lt;/p&gt;
-
-&lt;p&gt;另外，这个自旋时间并不能替代数据延迟的告警，只是用来衡量单任务是否达到性能瓶颈。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-3&quot;&gt;未来&lt;/h2&gt;
-
-&lt;p&gt;这些扩容的规则还在慢慢积累，不断的在增加Metric的丰富度，希望未来可以通过对metric的实时处理，&lt;/p&gt;
-
-&lt;p&gt;得到运营决策，将系统的运营工作自动化起来。&lt;/p&gt;
-</description>
-        <pubDate>Sun, 01 Jul 2018 10:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2018-07-01-spin</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2018-07-01-spin</guid>
-        
-        
-        <category>scale</category>
-        
-        <category>spin</category>
         
       </item>
     
