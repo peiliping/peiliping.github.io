@@ -6,9 +6,79 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Wed, 12 Jun 2019 11:33:17 +0800</pubDate>
-    <lastBuildDate>Wed, 12 Jun 2019 11:33:17 +0800</lastBuildDate>
+    <pubDate>Mon, 24 Jun 2019 12:57:22 +0800</pubDate>
+    <lastBuildDate>Mon, 24 Jun 2019 12:57:22 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>初识flink7</title>
+        <description>&lt;p&gt;flink基于1.5的定制化开发工作就告一段落了，业务团队对flink的诉求已经超越1.5了，&lt;/p&gt;
+
+&lt;p&gt;主要集中在table、sql、state上，还有2phase的filesink等。&lt;/p&gt;
+
+&lt;h2 id=&quot;or-18&quot;&gt;1.7 or 1.8&lt;/h2&gt;
+
+&lt;p&gt;一个大的社区版本一般要维护1年左右。1.5的社区版我们从18年6月维护到现在，&lt;/p&gt;
+
+&lt;p&gt;但从去年年底开始社区就对1.5停更了，我们只能自己从其他的版本中merge一些需要的bugfix。&lt;/p&gt;
+
+&lt;p&gt;我们决定下一个大版本是1.8，主要基于一下几点：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;社区1.9的巨大投入会严重影响其他分支的更新速度，1.7已经进入暮年。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;1.8的一些小特性我们看来还是非常实用的，值得蹚雷。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;刚刚准备release-1.8.1，未来还能从社区得到3-4个小版本。&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;1.9的更新过于巨大，真正稳定下来需要比较长的时间，1.8在未来一年多应该是首选。&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;合并&lt;/h2&gt;
+
+&lt;p&gt;1.8.1的一些issue被社区移到1.8.2去完成，所以很快就进入了RC阶段。&lt;/p&gt;
+
+&lt;p&gt;我们在1.8分支上，进行了merge工作，主要是把我们在1.5上的定制工作迁移到1.8。&lt;/p&gt;
+
+&lt;p&gt;合并的工作开展速度还是挺快的，预计2周左右就可以完成，顺手可以做一些小的重构。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-1&quot;&gt;未来&lt;/h2&gt;
+
+&lt;p&gt;在1.8的基础工作完成后，我们就要投入到Sql方向了。&lt;/p&gt;
+
+&lt;p&gt;Sql的方向需要一些铺垫，比如State的管理功能增强，数据Table化等。&lt;/p&gt;
+
+&lt;h3 id=&quot;state&quot;&gt;State增强&lt;/h3&gt;
+
+&lt;p&gt;flink的state是核心组件，无论是故障恢复还是恰好一次，都至关重要。&lt;/p&gt;
+
+&lt;p&gt;但是State的管理功能并不完善，比如如何让savepoint周期性的触发，&lt;/p&gt;
+
+&lt;p&gt;如何合理利用checkpoint来恢复等。&lt;/p&gt;
+
+&lt;h3 id=&quot;table&quot;&gt;数据Table化&lt;/h3&gt;
+
+&lt;p&gt;Flink的数据来源其实是比较集中的，大部分来自Kafka或者MQ。&lt;/p&gt;
+
+&lt;p&gt;再经过一些反序列化工作，应该可以映射为Pojo或者说Table。&lt;/p&gt;
+
+&lt;p&gt;这部分工作在其他公司里也是差不多的，做一些定制化的开发，并不难。&lt;/p&gt;
+
+&lt;p&gt;但是一些数据质量高的公司做这一步就非常快，比如格式比较统一等。&lt;/p&gt;
+</description>
+        <pubDate>Thu, 13 Jun 2019 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2019-06-13-flink7</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2019-06-13-flink7</guid>
+        
+        
+        <category>flink</category>
+        
+      </item>
     
       <item>
         <title>初识flink6</title>
@@ -841,82 +911,6 @@ if (this.adjustment != null &amp;amp;&amp;amp; sq == 0) {
         <pubDate>Thu, 13 Sep 2018 10:00:00 +0800</pubDate>
         <link>http://peiliping.github.io/blog/archivers/2018-09-13-flink2</link>
         <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2018-09-13-flink2</guid>
-        
-        
-        <category>flink</category>
-        
-      </item>
-    
-      <item>
-        <title>初识flink</title>
-        <description>&lt;p&gt;2016年的时候，开始关注flink，觉得是一个非常不错的流计算项目，当时也做了一些简单的demo，&lt;/p&gt;
-
-&lt;p&gt;了解其简单的应用，之后的两年里flink社区发展迅猛，包括阿里的强力支撑blink，在稳定性和性能&lt;/p&gt;
-
-&lt;p&gt;方面都有很大的提升，8月份我们开始筹划上线flink on k8s服务，做了一些基础性的调研工作。&lt;/p&gt;
-
-&lt;h2 id=&quot;flink-on-k8s&quot;&gt;flink on k8s&lt;/h2&gt;
-
-&lt;p&gt;我们在github上搜索了不少关于flink on k8s的资料，基本上都不太靠谱，所以基础镜像方面我们&lt;/p&gt;
-
-&lt;p&gt;是自己制作的，这个过程非常耗时，但事后来看非常的必要，我们对flink有了更为深入的了解。&lt;/p&gt;
-
-&lt;p&gt;jobmanager和taskmanager我们是分为2个deployment，跟唯品会的方案不太相同（statefulset）。&lt;/p&gt;
-
-&lt;p&gt;我们将flink的shell脚本、yaml配置等内容进行了通读，对其参数做了详细的标注，最后将这些&lt;/p&gt;
-
-&lt;p&gt;参数进行合并，整理出大概20多个有效配置项和默认值，之后我们又将这些参数进行分类，大致分为&lt;/p&gt;
-
-&lt;p&gt;两类：容器级参数和业务参数。&lt;/p&gt;
-
-&lt;p&gt;举个例子：容器内存大小就属于容器级别参数，集群名称也属于容器级参数（相当于deploymentname）。&lt;/p&gt;
-
-&lt;p&gt;每个taskmanager有多少个slot，就属于业务参数。jvm的各种堆大小属于容器内存大小的衍生参数，&lt;/p&gt;
-
-&lt;p&gt;有一个统一的计算公式得到，并不进行传递。&lt;/p&gt;
-
-&lt;p&gt;容器级别的参数由docker的env进行传递，业务参数通过http接口获得。&lt;/p&gt;
-
-&lt;p&gt;所以我们的docker启动时，首先获取env中的参数，然后通过脚本调http接口获得一个json，再结合&lt;/p&gt;
-
-&lt;p&gt;本地的default.property文件中的默认值，进行合并，最后渲染配置文件和shell脚本，这里用了一个&lt;/p&gt;
-
-&lt;p&gt;python的模板引擎，类似javaweb中的velocity，freemaker等。&lt;/p&gt;
-
-&lt;h2 id=&quot;section&quot;&gt;联通&lt;/h2&gt;
-
-&lt;p&gt;flinkjobmanager的HA是通过zk来实现的，taskmanager和jobmanager之间的服务发现也要基于zk，&lt;/p&gt;
-
-&lt;p&gt;所以在docker模式下是可以很容易组成集群的。比较麻烦的一个问题是jobmanager的webui port，&lt;/p&gt;
-
-&lt;p&gt;由于我们的k8s上是使用物理机IP的，所以port是非常宝贵的资源，如果我们的port只能使用固定的端口，&lt;/p&gt;
-
-&lt;p&gt;意味着一台物理机只能启动一个jobmanager，所以在启动docker时，我们要指定要container的port，&lt;/p&gt;
-
-&lt;p&gt;这样k8s就能根据port来调度，不会发生冲突。为了解决port资源的问题，我们向k8s申请了专用port范围，&lt;/p&gt;
-
-&lt;p&gt;我们的集群随机从范围里选择一个port来启动任务。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-1&quot;&gt;内存使用比率&lt;/h2&gt;
-
-&lt;p&gt;内存比例相关的参数是我们调试最多的一个环节，flink启动脚本中关于内存的计算非常复杂，&lt;/p&gt;
-
-&lt;p&gt;下面列举一些核心的点：&lt;/p&gt;
-
-&lt;p&gt;networkbuffer的大小&lt;/p&gt;
-
-&lt;p&gt;是否使用堆外内存来支持flink框架的计算逻辑&lt;/p&gt;
-
-&lt;p&gt;堆外与堆内的分配比例&lt;/p&gt;
-
-&lt;p&gt;jvm各个分代的大小&lt;/p&gt;
-
-&lt;p&gt;垃圾回收器的选择&lt;/p&gt;
-
-</description>
-        <pubDate>Sun, 19 Aug 2018 10:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2018-08-19-flink</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2018-08-19-flink</guid>
         
         
         <category>flink</category>

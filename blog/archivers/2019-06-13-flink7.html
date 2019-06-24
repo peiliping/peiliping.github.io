@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>初识flink7 « Pei LiPing's Blog</title>
+  <meta name="description" content="flink基于1.5的定制化开发工作就告一段落了，业务团队对flink的诉求已经超越1.5了，">
+
+  <link rel="stylesheet" href="/blog/css/main.css">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2019-06-13-flink7">
+  <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
+</head>
+
+
+  <body>
+
+    <header class="header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Pei LiPing's Blog</a>
+    <nav class="site-nav">
+      
+        
+      
+        
+        <a class="page-link" href="/blog/about/">About</a>
+        
+      
+        
+        <a class="page-link" href="/blog/category/">Category</a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </nav>
+  </div>
+</header>
+
+    <div class="page-content">
+      <div class="wrapper">
+        <div class="col-main">
+          <div class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">初识flink7</h1>
+    <p class="post-meta">Jun 13, 2019</p>
+  </header>
+
+  <article class="post-content">
+    <p>flink基于1.5的定制化开发工作就告一段落了，业务团队对flink的诉求已经超越1.5了，</p>
+
+<p>主要集中在table、sql、state上，还有2phase的filesink等。</p>
+
+<h2 id="or-18">1.7 or 1.8</h2>
+
+<p>一个大的社区版本一般要维护1年左右。1.5的社区版我们从18年6月维护到现在，</p>
+
+<p>但从去年年底开始社区就对1.5停更了，我们只能自己从其他的版本中merge一些需要的bugfix。</p>
+
+<p>我们决定下一个大版本是1.8，主要基于一下几点：</p>
+
+<ul>
+  <li>
+    <p>社区1.9的巨大投入会严重影响其他分支的更新速度，1.7已经进入暮年。</p>
+  </li>
+  <li>
+    <p>1.8的一些小特性我们看来还是非常实用的，值得蹚雷。</p>
+  </li>
+  <li>
+    <p>刚刚准备release-1.8.1，未来还能从社区得到3-4个小版本。</p>
+  </li>
+  <li>
+    <p>1.9的更新过于巨大，真正稳定下来需要比较长的时间，1.8在未来一年多应该是首选。</p>
+  </li>
+</ul>
+
+<h2 id="section">合并</h2>
+
+<p>1.8.1的一些issue被社区移到1.8.2去完成，所以很快就进入了RC阶段。</p>
+
+<p>我们在1.8分支上，进行了merge工作，主要是把我们在1.5上的定制工作迁移到1.8。</p>
+
+<p>合并的工作开展速度还是挺快的，预计2周左右就可以完成，顺手可以做一些小的重构。</p>
+
+<h2 id="section-1">未来</h2>
+
+<p>在1.8的基础工作完成后，我们就要投入到Sql方向了。</p>
+
+<p>Sql的方向需要一些铺垫，比如State的管理功能增强，数据Table化等。</p>
+
+<h3 id="state">State增强</h3>
+
+<p>flink的state是核心组件，无论是故障恢复还是恰好一次，都至关重要。</p>
+
+<p>但是State的管理功能并不完善，比如如何让savepoint周期性的触发，</p>
+
+<p>如何合理利用checkpoint来恢复等。</p>
+
+<h3 id="table">数据Table化</h3>
+
+<p>Flink的数据来源其实是比较集中的，大部分来自Kafka或者MQ。</p>
+
+<p>再经过一些反序列化工作，应该可以映射为Pojo或者说Table。</p>
+
+<p>这部分工作在其他公司里也是差不多的，做一些定制化的开发，并不难。</p>
+
+<p>但是一些数据质量高的公司做这一步就非常快，比如格式比较统一等。</p>
+
+  </article>
+  
+  
+
+
+
+
+</div>
+
+        </div>
+        <div class="col-second">
+          <div class="col-box col-box-author">
+  <img class="avatar" src="//www.gravatar.com/avatar/your_email_md5?d=mm&s=135" alt="Pei LiPing">
+  <div class="col-box-title name">Pei LiPing</div>
+  <p>The Cabin Of Pei LiPing.</p>
+  <p class="contact">
+    
+    
+    
+    <a href="mailto:peilipingplp@gmail.com">Email</a>
+    
+  </p>
+</div>
+
+<div class="col-box">
+  <div class="col-box-title">Newest Posts</div>
+  <ul class="post-list">
+    
+      <li><a class="post-link" href="/blog/archivers/2019-06-13-flink7">初识flink7</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2019-05-18-flink6">初识flink6</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2019-04-26-avro2">avro优化</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2019-03-22-summary">总结</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2019-02-25-scale">自动伸缩</a></li>
+    
+  </ul>
+</div>
+
+<div class="col-box post-toc hide">
+  <div class="col-box-title">TOC</div>
+</div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+<div class="wrapper">
+&copy; 2016 Pei LiPing
+</div>
+</footer>
+
+<script src="//upcdn.b0.upaiyun.com/libs/jquery/jquery-1.9.0.min.js"></script>
+<script src="/blog/js/easybook.js"></script>
+
+  </body>
+
+</html>
