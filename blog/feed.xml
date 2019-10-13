@@ -6,9 +6,106 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Thu, 19 Sep 2019 16:53:15 +0800</pubDate>
-    <lastBuildDate>Thu, 19 Sep 2019 16:53:15 +0800</lastBuildDate>
+    <pubDate>Sun, 13 Oct 2019 15:08:09 +0800</pubDate>
+    <lastBuildDate>Sun, 13 Oct 2019 15:08:09 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>FlinkJob双十一前备战注意事项</title>
+        <description>&lt;h3 id=&quot;section&quot;&gt;1、确定双十一期间的数据特征&lt;/h3&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;	1.1、一般为数据条数倍增
+	1.2、也有一些业务是单条数据体积增大
+		1.2.1、考虑在消息中间件的messagesize的限制
+		1.2.2、对序列化、反序列化的性能影响
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h3 id=&quot;section-1&quot;&gt;2、准备压测数据&lt;/h3&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;	2.1、根据业务逻辑随机生成数据
+	2.2、通过kafka等消息中间件将多天的数据一次性消费完
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h3 id=&quot;section-2&quot;&gt;3、数据源检查&lt;/h3&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;	3.1、kafka的流控阈值是否合理
+	3.2、kafka的pt数是否够用
+		3.2.1、临时扩容kafka的pt只对新数据有帮助，历史数据积压无法快速消除
+		3.2.2、确定数据在源头没有严重的数据倾斜问题，防止大量数据集中于某一个特定的pt上
+		3.2.3、kafkasource的parallelism应为pt数的1/2或1/4，预留临时扩大parallelism的空间
+	3.3、增加高效的数据质量校验，检查job逻辑，适当的增加try-catch，注意catch发生时对性能的影响
+	3.4、配置好监控
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h3 id=&quot;section-3&quot;&gt;4、时间窗口逻辑&lt;/h3&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;	4.1、如果job存在时间窗口逻辑，要考虑模拟数据的正确性，简单的通过2.2进行性能测试大多无效
+	4.2、不单单指flink的window操作，一些job逻辑中也可能包含时间窗口概念（比如：积攒10s的数据再批量输出，统计单位时间的uv等）
+	4.3、乱序数据的问题也可能更为严重，合理指定latency或者watermarket逻辑
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h3 id=&quot;jobio&quot;&gt;5、检查job的外部io依赖&lt;/h3&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;	5.1、一般job都依赖redis、hbase等存储，在数据处理过程中对数据进行加工
+		5.1.1、外部依赖的资源是否够用（存储、性能等）
+		5.1.2、配置监控，有容灾方案
+	5.2、适当使用asyncIO来提升性能
+		5.2.1、不建议将有外部IO依赖的Operator的parallelism设置的非常大，一般都可以通过asyncIO来解决，更利于chaining-strate	gy的优化
+		5.2.2、不要一味的提升asyncIO的thread数，适当做batch效果更佳，可参照sdk中的async-batch模型
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h3 id=&quot;sink&quot;&gt;6、关于Sink输出&lt;/h3&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;	6.1、kafkasink的parallelism不要与pt数绑死，防止pt扩容无效，也不要过大的parallelism
+	6.2、如果序列化逻辑过于耗时，建议单独写在一个Operator里
+	6.3、尽量不要单条数据sink输出，会对外部造成很大的压力
+	6.4、batchsink时注意flush与checkpoint之间的关系
+	6.5、batchsink时谨慎处理batchsize和lingertime
+	6.6、在sink中实现重试逻辑，尽量不要将exception交给flink，效率太低，代价太大
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h3 id=&quot;checkpoint&quot;&gt;7、Checkpoint设置&lt;/h3&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;	7.1、合理设置checkpoint的频率，不要过于频繁
+	7.2、慎重使用exactly-once，能不用尽量不用
+	7.3、检查任务对于State的依赖程度，配合Savepoint启停任务
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h3 id=&quot;section-4&quot;&gt;8、日志&lt;/h3&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;	8.1、净化日志打印内容
+	8.2、避免system.out.println或者e.printstacktrace()等
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h3 id=&quot;section-5&quot;&gt;9、内存使用情况&lt;/h3&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;	9.1、关注ygc、fgc的频率和耗时
+	9.2、堆外空间的使用情况
+	9.3、networkbuffer的分配比例
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h3 id=&quot;section-6&quot;&gt;10、背压&lt;/h3&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;	10.1、在性能测试时可以使用原生背压探测方式分析背压情况
+	10.2、我们定制的背压监控是更为准确的量化指标，无需开启就可实现全天候的监控，不但可以定位，还能分析趋势
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h3 id=&quot;jobgraph&quot;&gt;11、jobgraph&lt;/h3&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;	11.1、核心Operator设置uid或uidhash
+	11.2、使用预览拓扑功能提交job
+	11.3、谨慎控制chaining-strategy，尤其是cpu开销高的Operator尽量分散
+	11.4、尽量离散同类slot，控制slot在taskmanager的分配策略
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+</description>
+        <pubDate>Tue, 08 Oct 2019 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2019-10-08-flink8-operation</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2019-10-08-flink8-operation</guid>
+        
+        
+        <category>flink</category>
+        
+      </item>
     
       <item>
         <title>人生第一次手术-ACL</title>
@@ -779,113 +876,6 @@ if (this.adjustment != null &amp;amp;&amp;amp; sq == 0) {
         <pubDate>Thu, 22 Nov 2018 10:00:00 +0800</pubDate>
         <link>http://peiliping.github.io/blog/archivers/2018-11-22-flink4</link>
         <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2018-11-22-flink4</guid>
-        
-        
-        <category>flink</category>
-        
-      </item>
-    
-      <item>
-        <title>初识flink3</title>
-        <description>&lt;p&gt;Flink的更新非常快，1.5的小版本一直都有更新，十一国庆前，我们将自己的定制版分支merge了&lt;/p&gt;
-
-&lt;p&gt;官方的1.5.4，修复了taskmanager堆内外的内存比例，flink-stream使用堆外的量并不是很大，&lt;/p&gt;
-
-&lt;p&gt;我们配置了7:3。&lt;/p&gt;
-
-&lt;h2 id=&quot;asyncio&quot;&gt;AsyncIO&lt;/h2&gt;
-
-&lt;p&gt;阿里给Flink社区提交了很多patch，印象比较深的是AsyncIO，在流式计算中IO导致性能瓶颈，&lt;/p&gt;
-
-&lt;p&gt;是最常见的一个现象，异步化的改造能提升不少性能。Async的Operator实现并不是很复杂，&lt;/p&gt;
-
-&lt;p&gt;简单来说就是创建一个buffer，将Stream数据填充进来并行处理，返回结果时控制一下数据的&lt;/p&gt;
-
-&lt;p&gt;顺序，跟我们最常见的单机多线程的数据处理本质上是一样的。&lt;/p&gt;
-
-&lt;p&gt;但是异步化会带来一个非常严重的后果，那就是IO的接收方会承受巨大的压力，通过调节buffer&lt;/p&gt;
-
-&lt;p&gt;的大小和并行度，我们轻松的获得了几千几万的并行能力，但是这个IO服务（无论是RPC还是DB）&lt;/p&gt;
-
-&lt;p&gt;接收了如性能压测般的流量，最终的结果就是IO服务拥塞，无法提供正常服务了。&lt;/p&gt;
-
-&lt;p&gt;AsyncIO的思路是没有问题的，但是各种Java世界中的各种Client的API风格并非为了Stream而生，&lt;/p&gt;
-
-&lt;p&gt;理想的API风格是kafka Producer的样子，流转批 + 异步回调。&lt;/p&gt;
-
-&lt;h2 id=&quot;stream-batch&quot;&gt;Stream-&amp;gt;Batch&lt;/h2&gt;
-
-&lt;p&gt;为了能让AsyncIO发挥作用，我们需要收敛IO的次数，将多次IO合并为一次Batch，基于Batch再做&lt;/p&gt;
-
-&lt;p&gt;AsyncIO的操作，这样可以在减小并行度的情况下，能保证较高的吞吐量，减少协议部分的开销，&lt;/p&gt;
-
-&lt;p&gt;如果你用过redis的pipeline，差不多一样的道理。&lt;/p&gt;
-
-&lt;p&gt;当然Stream-&amp;gt;Batch并不是那么简单的事情，需要考虑的细节非常多，比如对checkpoint的处理，&lt;/p&gt;
-
-&lt;p&gt;watermarket如何触发等，防止破坏了FLink本身的一致性。&lt;/p&gt;
-
-&lt;p&gt;我们的思路是将AsyncIO和Stream转Batch结合在一起实现，提供一层类似KafkaProducer风格的&lt;/p&gt;
-
-&lt;p&gt;API，将Stream-&amp;gt;Batch转为标准的定义，最后结合AsyncIO的特征来实现，AsyncIO对watermarket&lt;/p&gt;
-
-&lt;p&gt;和checkpoint是有特殊处理的，这部分逻辑要尽量保持复用。&lt;/p&gt;
-
-&lt;h2 id=&quot;batch-sink&quot;&gt;Batch Sink&lt;/h2&gt;
-
-&lt;p&gt;所有任务Sink都是需要Batch特性的，如果是kafkaSink那真的非常简单，天然支持。我读了一下&lt;/p&gt;
-
-&lt;p&gt;业务方的代码，他们在Sink这个环节的实现都非常简陋，大多数都无法保证不丢数据，比如基于&lt;/p&gt;
-
-&lt;p&gt;一个简单的flatmap来实现。&lt;/p&gt;
-
-&lt;p&gt;于是我们开发了BatchSink抽象，提供时间、大小、条数的控制条件，还有checkpoint触发flush。&lt;/p&gt;
-
-&lt;p&gt;值得一提的是flush中的retry实现，批量操作失败如何重试呢？&lt;/p&gt;
-
-&lt;p&gt;这是一个非常好的问题，一年多前我在开发meepo时就有这样的困惑，当时主要是读写mysql，&lt;/p&gt;
-
-&lt;p&gt;我将mysql client的源码读了大半，实现了非常低开销的基于preparestatement的retry。&lt;/p&gt;
-
-&lt;p&gt;但这种方式并不一定适用于所有的client，于是我们在batchsink中嵌入了一个小的ringbuffer，&lt;/p&gt;
-
-&lt;p&gt;用来缓存这个批次的数据，在flush成功后清空ringbuffer。retry时复用handlerElement方法，&lt;/p&gt;
-
-&lt;p&gt;将这一批次的数据进行replay，当然也支持noreplay的retry方法。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt; protected void sendBatch(int times, boolean bySnapshot) {
-        Validate.isTrue(this.batchConfig.getMaxRetriesNum() &amp;gt; times, &quot;sendbatch retry-times : &quot; + times);
-        try {
-            if (times &amp;gt; 0) {
-                initBatch(true);
-                if (this.batchConfig.isNeedReplayWhenRetry()) {
-                    int l = this.buffer.curSize();
-                    for (int i = 0; i &amp;lt; l; i++) {
-                        Optional&amp;lt;IN&amp;gt; record = this.buffer.get();
-                        Validate.notNull(record);
-                        IN e = Optional.empty() == record ? null : record.get();
-                        handleRecord(e);
-                        this.buffer.add(e);
-                    }
-                }
-            }
-            flushAndClose(bySnapshot);
-        } catch (Exception e) {
-            LOG.error(&quot;FlushAndCloseError : &quot;, e);
-            try {
-                Thread.sleep(this.batchConfig.getBatchDelayPeriodMs());
-            } catch (InterruptedException e1) {
-                throw new RuntimeException(&quot;Failed to send batchRecords&quot;, e1);
-            }
-            sendBatch(times + 1, bySnapshot);
-        }
-    }
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-</description>
-        <pubDate>Mon, 15 Oct 2018 10:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2018-10-15-flink3</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2018-10-15-flink3</guid>
         
         
         <category>flink</category>
