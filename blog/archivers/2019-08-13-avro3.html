@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Avro优化 « Pei LiPing's Blog</title>
+  <meta name="description" content="之前写过两篇blog，是关于项目使用avro过程中碰到的问题。">
+
+  <link rel="stylesheet" href="/blog/css/main.css">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2019-08-13-avro3">
+  <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
+</head>
+
+
+  <body>
+
+    <header class="header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Pei LiPing's Blog</a>
+    <nav class="site-nav">
+      
+        
+      
+        
+        <a class="page-link" href="/blog/about/">About</a>
+        
+      
+        
+        <a class="page-link" href="/blog/category/">Category</a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </nav>
+  </div>
+</header>
+
+    <div class="page-content">
+      <div class="wrapper">
+        <div class="col-main">
+          <div class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">Avro优化</h1>
+    <p class="post-meta">Aug 13, 2019</p>
+  </header>
+
+  <article class="post-content">
+    <p>之前写过两篇blog，是关于项目使用avro过程中碰到的问题。</p>
+
+<p>最近看了一下最新版本的avro1.9.x，很多之前的问题都已经得到了优化。</p>
+
+<p>比如schema已经不需要考虑sync的性能问题了。</p>
+
+<h2 id="section">现有问题</h2>
+
+<p>大数据项目中Avro基本上是事实标准了，但是管理schema是一个非常痛苦的事情。</p>
+
+<p>之前公司同事制定的kafka消息标准格式是一个avro类中包含一些常见固定字段和一个大的Map，</p>
+
+<p>schema格式的差异都体现在map的key当中，value也规定是String类型。</p>
+
+<p>这种方案基本上跟使用json没有区别，数据体积比较大，序列化反序列化的效率也不高。</p>
+
+<p>代码中也充斥了大量的tostring和valueof，非常影响性能，也容易报错。</p>
+
+<h2 id="section-1">解决保留数据类型的问题</h2>
+
+<p>avro中的标准数据类型大概有7种，string、bytes、int、long、float、double、boolean。</p>
+
+<p>每种类型都可能出现，但是每种类型数据出现的次数是不确定的,这个问题可以通过array来解决。</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>    private java.util.List&lt;java.lang.String&gt; strings;
+    private java.util.List&lt;java.nio.ByteBuffer&gt; bytes;
+    private java.util.List&lt;java.lang.Integer&gt; ints;
+    private java.util.List&lt;java.lang.Long&gt; longs;
+    private java.util.List&lt;java.lang.Float&gt; floats;
+    private java.util.List&lt;java.lang.Double&gt; doubles;
+    private java.util.List&lt;java.lang.Boolean&gt; booleans;
+</code></pre>
+</div>
+
+<h2 id="section-2">元数据管理</h2>
+
+<p>因为数据写入了Array，所以字段名称就需要和index进行绑定，需要做简单的Meta管理功能。</p>
+
+<p>其中每个column都有下面这样一个MetaEntity：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>    private String columnName;
+    private Schema.Type type;
+    private int indexOfall;
+    private int indexOftype;
+</code></pre>
+</div>
+
+<h2 id="section-3">固定字段</h2>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>    private long nid;
+    private java.lang.String sid;
+    private exchange.Opt opt;
+    private long timestamp;
+    private java.util.Map&lt;java.lang.String,java.lang.String&gt; tags;
+    private long metaId;
+</code></pre>
+</div>
+
+<blockquote>
+  <ol>
+    <li>nid和sid是用来标识当前这条数据的唯一Id</li>
+    <li>opt是指这条数据的操作类型：insert、update或delete</li>
+    <li>timestamp用来存放一个时间戳，一般值数据生成时间</li>
+    <li>tags用来存放一些tag，比如数据的业务分类等</li>
+    <li>metaId用来关联Meta</li>
+  </ol>
+</blockquote>
+
+<p>之前我写过一篇blog介绍过如何局部解析avro，为了方便实现filter功能，将tags放在</p>
+
+<p>相对靠前的位置，方便快速的局部解析，进行数据过滤或者路由。</p>
+
+<h2 id="update">update类型数据</h2>
+
+<p>如果是update类型的操作，就存在更新前的数据和更新后的数据，参考binlog中的event设计，</p>
+
+<p>我们也用一个bitset来记录哪些字段被更新了，在avro中用long来表示。</p>
+
+<p>为了存放前后两个数据，我们将各种类型的数组进行了扩容（×2），通过数组下标来控制读写。</p>
+
+<h2 id="section-4">包装</h2>
+
+<p>最后我们将针对data的操作包装在一个datacontainer里，屏蔽复杂度。</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>public class DataContainer {
+    private Meta meta;
+    private Data data;
+    private BitSet updatesBitSet;
+    private int positionRatio = 1; //如果是update的话 ratio为2
+</code></pre>
+</div>
+<p>数据写入的实现</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>        int pos = metaEntity.getIndexOftype() * this.positionRatio;
+        switch (metaEntity.getType()) {
+            case STRING:
+                this.data.getStrings().set(pos, (String) val);
+                if (change) {
+                    this.data.getStrings().set(pos + 1, (String) oldVal);
+                    this.updatesBitSet.set(metaEntity.getIndexOfall());
+                }
+                break;
+            case BYTES:
+                this.data.getBytes().set(pos, (ByteBuffer) val);
+                if (change) {
+                    this.data.getBytes().set(pos + 1, (ByteBuffer) oldVal);
+                    this.updatesBitSet.set(metaEntity.getIndexOfall());
+                }
+                break;
+</code></pre>
+</div>
+
+<h2 id="section-5">结论</h2>
+
+<p>通过简单的测试，序列化后的数据体积减少了接近一半，序列化也加速了50%左右。</p>
+
+  </article>
+  
+  
+
+
+
+
+</div>
+
+        </div>
+        <div class="col-second">
+          <div class="col-box col-box-author">
+  <img class="avatar" src="//www.gravatar.com/avatar/your_email_md5?d=mm&s=135" alt="Pei LiPing">
+  <div class="col-box-title name">Pei LiPing</div>
+  <p>The Cabin Of Pei LiPing.</p>
+  <p class="contact">
+    
+    
+    
+    <a href="mailto:peilipingplp@gmail.com">Email</a>
+    
+  </p>
+</div>
+
+<div class="col-box">
+  <div class="col-box-title">Newest Posts</div>
+  <ul class="post-list">
+    
+      <li><a class="post-link" href="/blog/archivers/2019-10-08-flink8-operation">FlinkJob双十一前备战注意事项</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2019-09-19-avro4">Avro优化</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2019-08-13-avro3">Avro优化</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2019-07-20-acl-operation">人生第一次手术-ACL</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2019-06-13-flink7">初识flink7</a></li>
+    
+  </ul>
+</div>
+
+<div class="col-box post-toc hide">
+  <div class="col-box-title">TOC</div>
+</div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+<div class="wrapper">
+&copy; 2016 Pei LiPing
+</div>
+</footer>
+
+<script src="//upcdn.b0.upaiyun.com/libs/jquery/jquery-1.9.0.min.js"></script>
+<script src="/blog/js/easybook.js"></script>
+
+  </body>
+
+</html>

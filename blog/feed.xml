@@ -6,8 +6,8 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Sun, 13 Oct 2019 15:08:09 +0800</pubDate>
-    <lastBuildDate>Sun, 13 Oct 2019 15:08:09 +0800</lastBuildDate>
+    <pubDate>Tue, 12 Nov 2019 20:13:21 +0800</pubDate>
+    <lastBuildDate>Tue, 12 Nov 2019 20:13:21 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
     
       <item>
@@ -104,6 +104,217 @@
         
         
         <category>flink</category>
+        
+      </item>
+    
+      <item>
+        <title>Avro优化</title>
+        <description>&lt;p&gt;上一篇blog写了一个通用的avro数据schema，接下来写点于此相关的插曲。&lt;/p&gt;
+
+&lt;h2 id=&quot;array&quot;&gt;Array&lt;/h2&gt;
+
+&lt;p&gt;在上文中提到的的Data存在7个数据类型的Array，avro中定义的Array就是List。&lt;/p&gt;
+
+&lt;p&gt;因为我们的meta是确定的，所以存储数据的数组length就是固定的，并不需要resize。&lt;/p&gt;
+
+&lt;p&gt;假如在写入数据时，并不按照schema的顺序来写的话，就会导致操作Arraylist报错。&lt;/p&gt;
+
+&lt;p&gt;所以需要实现一个List来包装数组的特性，我们就叫它FixedList吧。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;    private Object[] elementData;
+
+    public FixedList(int capacity) {
+        this.elementData = new Object[capacity];
+    }
+
+    @Override
+    public int size() {
+        return elementData.length;
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return false;
+    }
+
+   @Override
+    public E get(int index) {
+        return elementData(index);
+    }
+
+    @Override
+    public E set(int index, E element) {
+        E e = elementData(index);
+        elementData[index] = element;
+        return e;
+    }
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;scheme-to-java&quot;&gt;scheme to java&lt;/h2&gt;
+
+&lt;p&gt;定义schema的json后，通过avro-tool来compile得到java文件。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;java -jar avro-tools-1.9.1.jar compile -string Data.schema .
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;第一次使用avro的enum类型，发现还单独生成了一个enum的java文件，不要忽略了。&lt;/p&gt;
+
+&lt;p&gt;avro中string默认为charsequence，可以加-string参数改为java.lang.String。&lt;/p&gt;
+
+&lt;h2 id=&quot;encoder&quot;&gt;encoder&lt;/h2&gt;
+
+&lt;p&gt;在序列化avro时，需要BinaryEncoder实例，默认为BufferBinaryEncoder。&lt;/p&gt;
+
+&lt;p&gt;如果数据的字段比较多，数据体积比较大的话，需要适当提高Buffer的size，来提高性能，&lt;/p&gt;
+
+&lt;p&gt;不然会导致多次arraycopy。avro还提供了一个BlockingBinaryEncoder，&lt;/p&gt;
+
+&lt;p&gt;针对超大的Array和Map有优化，一般来说是用不到的。&lt;/p&gt;
+
+&lt;p&gt;一般来说在encode时，还需要一个ByteArrayOutputStream，也需要适当考虑一下初始size。&lt;/p&gt;
+
+&lt;p&gt;avro的decoder也一样，可以设置buffersize的。&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;最后&lt;/h2&gt;
+
+&lt;p&gt;大致读了一下avro的源码，涉及到arraycopy的比较多，之后做性能测试的时候再看如何优化。&lt;/p&gt;
+</description>
+        <pubDate>Thu, 19 Sep 2019 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2019-09-19-avro4</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2019-09-19-avro4</guid>
+        
+        
+        <category>avro</category>
+        
+      </item>
+    
+      <item>
+        <title>Avro优化</title>
+        <description>&lt;p&gt;之前写过两篇blog，是关于项目使用avro过程中碰到的问题。&lt;/p&gt;
+
+&lt;p&gt;最近看了一下最新版本的avro1.9.x，很多之前的问题都已经得到了优化。&lt;/p&gt;
+
+&lt;p&gt;比如schema已经不需要考虑sync的性能问题了。&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;现有问题&lt;/h2&gt;
+
+&lt;p&gt;大数据项目中Avro基本上是事实标准了，但是管理schema是一个非常痛苦的事情。&lt;/p&gt;
+
+&lt;p&gt;之前公司同事制定的kafka消息标准格式是一个avro类中包含一些常见固定字段和一个大的Map，&lt;/p&gt;
+
+&lt;p&gt;schema格式的差异都体现在map的key当中，value也规定是String类型。&lt;/p&gt;
+
+&lt;p&gt;这种方案基本上跟使用json没有区别，数据体积比较大，序列化反序列化的效率也不高。&lt;/p&gt;
+
+&lt;p&gt;代码中也充斥了大量的tostring和valueof，非常影响性能，也容易报错。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-1&quot;&gt;解决保留数据类型的问题&lt;/h2&gt;
+
+&lt;p&gt;avro中的标准数据类型大概有7种，string、bytes、int、long、float、double、boolean。&lt;/p&gt;
+
+&lt;p&gt;每种类型都可能出现，但是每种类型数据出现的次数是不确定的,这个问题可以通过array来解决。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;    private java.util.List&amp;lt;java.lang.String&amp;gt; strings;
+    private java.util.List&amp;lt;java.nio.ByteBuffer&amp;gt; bytes;
+    private java.util.List&amp;lt;java.lang.Integer&amp;gt; ints;
+    private java.util.List&amp;lt;java.lang.Long&amp;gt; longs;
+    private java.util.List&amp;lt;java.lang.Float&amp;gt; floats;
+    private java.util.List&amp;lt;java.lang.Double&amp;gt; doubles;
+    private java.util.List&amp;lt;java.lang.Boolean&amp;gt; booleans;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;section-2&quot;&gt;元数据管理&lt;/h2&gt;
+
+&lt;p&gt;因为数据写入了Array，所以字段名称就需要和index进行绑定，需要做简单的Meta管理功能。&lt;/p&gt;
+
+&lt;p&gt;其中每个column都有下面这样一个MetaEntity：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;    private String columnName;
+    private Schema.Type type;
+    private int indexOfall;
+    private int indexOftype;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;section-3&quot;&gt;固定字段&lt;/h2&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;    private long nid;
+    private java.lang.String sid;
+    private exchange.Opt opt;
+    private long timestamp;
+    private java.util.Map&amp;lt;java.lang.String,java.lang.String&amp;gt; tags;
+    private long metaId;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;blockquote&gt;
+  &lt;ol&gt;
+    &lt;li&gt;nid和sid是用来标识当前这条数据的唯一Id&lt;/li&gt;
+    &lt;li&gt;opt是指这条数据的操作类型：insert、update或delete&lt;/li&gt;
+    &lt;li&gt;timestamp用来存放一个时间戳，一般值数据生成时间&lt;/li&gt;
+    &lt;li&gt;tags用来存放一些tag，比如数据的业务分类等&lt;/li&gt;
+    &lt;li&gt;metaId用来关联Meta&lt;/li&gt;
+  &lt;/ol&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;之前我写过一篇blog介绍过如何局部解析avro，为了方便实现filter功能，将tags放在&lt;/p&gt;
+
+&lt;p&gt;相对靠前的位置，方便快速的局部解析，进行数据过滤或者路由。&lt;/p&gt;
+
+&lt;h2 id=&quot;update&quot;&gt;update类型数据&lt;/h2&gt;
+
+&lt;p&gt;如果是update类型的操作，就存在更新前的数据和更新后的数据，参考binlog中的event设计，&lt;/p&gt;
+
+&lt;p&gt;我们也用一个bitset来记录哪些字段被更新了，在avro中用long来表示。&lt;/p&gt;
+
+&lt;p&gt;为了存放前后两个数据，我们将各种类型的数组进行了扩容（×2），通过数组下标来控制读写。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-4&quot;&gt;包装&lt;/h2&gt;
+
+&lt;p&gt;最后我们将针对data的操作包装在一个datacontainer里，屏蔽复杂度。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;public class DataContainer {
+    private Meta meta;
+    private Data data;
+    private BitSet updatesBitSet;
+    private int positionRatio = 1; //如果是update的话 ratio为2
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;数据写入的实现&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;        int pos = metaEntity.getIndexOftype() * this.positionRatio;
+        switch (metaEntity.getType()) {
+            case STRING:
+                this.data.getStrings().set(pos, (String) val);
+                if (change) {
+                    this.data.getStrings().set(pos + 1, (String) oldVal);
+                    this.updatesBitSet.set(metaEntity.getIndexOfall());
+                }
+                break;
+            case BYTES:
+                this.data.getBytes().set(pos, (ByteBuffer) val);
+                if (change) {
+                    this.data.getBytes().set(pos + 1, (ByteBuffer) oldVal);
+                    this.updatesBitSet.set(metaEntity.getIndexOfall());
+                }
+                break;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;section-5&quot;&gt;结论&lt;/h2&gt;
+
+&lt;p&gt;通过简单的测试，序列化后的数据体积减少了接近一半，序列化也加速了50%左右。&lt;/p&gt;
+</description>
+        <pubDate>Tue, 13 Aug 2019 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2019-08-13-avro3</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2019-08-13-avro3</guid>
+        
+        
+        <category>avro</category>
         
       </item>
     
@@ -620,265 +831,6 @@ if (length &amp;lt;= remaining) {
         <category>stream</category>
         
         <category>fregata</category>
-        
-      </item>
-    
-      <item>
-        <title>初识flink5</title>
-        <description>&lt;p&gt;先简单介绍一下我们Flink的一个优化，关于asyncfunction的优化&lt;/p&gt;
-
-&lt;h2 id=&quot;asyncfunction&quot;&gt;AsyncFunction&lt;/h2&gt;
-
-&lt;p&gt;阿里为flink社区提供了async的patch，为解决流计算中的IO性能提升带来了新思路，&lt;/p&gt;
-
-&lt;p&gt;但我个人觉得这个问题并没有真正解决，Asyncfunction更像是一个饮鸩止渴的方案。&lt;/p&gt;
-
-&lt;p&gt;随着异步线程的增加，很快会将外部服务打满，性能极具下降。&lt;/p&gt;
-
-&lt;p&gt;我们的优化思路是这样的，在与外部系统交互时，尽量使用小批量，而不是单条数据处理。&lt;/p&gt;
-
-&lt;p&gt;将async和batch结合起来，提升asyncfunction的效率。&lt;/p&gt;
-
-&lt;p&gt;具体的实现：&lt;/p&gt;
-
-&lt;p&gt;引入一个ringbuffer作为缓冲，asyncfunction在asyncinvoke时，将数据写入buffer中，&lt;/p&gt;
-
-&lt;p&gt;配置N个消费线程，消费ringbuffer里的数据，进行batch的积攒，并配置ringbuffer的timeout，&lt;/p&gt;
-
-&lt;p&gt;一次来实现N条最大M秒的批量数据积攒，在消费线程内，对积攒的批量数据进行处理，&lt;/p&gt;
-
-&lt;p&gt;返回结果的拆分，最后调用ResultFuture，将数据交还给asyncfunction。&lt;/p&gt;
-
-&lt;h2 id=&quot;batchasyncfunction&quot;&gt;通用BatchAsyncFunction的实现&lt;/h2&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
-  @Override
-    public void asyncInvoke(IN input, ResultFuture&amp;lt;OUT&amp;gt; resultFuture) throws Exception {
-        long seq = this.ringBuffer.next();
-        Event event = this.ringBuffer.get(seq);
-        event.data = input;
-        event.resultFuture = resultFuture;
-        this.ringBuffer.publish(seq);
-    }
-
-
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;h2 id=&quot;section&quot;&gt;通用批量消费线程的抽象&lt;/h2&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
-public abstract class Processor&amp;lt;D, T, P&amp;gt; implements WorkHandler&amp;lt;Event&amp;lt;D, T&amp;gt;&amp;gt;, TimeoutHandler, LifecycleAware {
-
-    protected AsyncConfig asyncConfig;
-
-    private boolean initedBatch;
-
-    private List&amp;lt;Triple&amp;lt;D, ResultFuture&amp;lt;T&amp;gt;, P&amp;gt;&amp;gt; batch;
-
-    private long lastBatchTime;
-
-    public Processor(AsyncConfig asyncConfig) {
-        this.asyncConfig = asyncConfig;
-        this.batch = Lists.newArrayList();
-    }
-
-    @Override
-    public void onStart() {
-        cleanAfterBatch();
-    }
-
-    @Override
-    public void onEvent(Event&amp;lt;D, T&amp;gt; event) throws Exception {
-        if (!this.initedBatch) {
-            initBatch(false);
-            this.initedBatch = true;
-        }
-
-        P param = buildBatchParams(event.data);
-        this.batch.add(Triple.of(event.data, event.resultFuture, param));
-
-        if ((this.batch.size() &amp;gt;= this.asyncConfig.getRingbufferMaxBatchSize()) || (System.currentTimeMillis() - this
-                .lastBatchTime &amp;gt;= this.asyncConfig.getRingbufferLingerMs())) {
-            execBatch(0);
-            cleanAfterBatch();
-        }
-    }
-
-    @Override
-    public void onTimeout(long l) throws Exception {
-        if (this.initedBatch) {
-            execBatch(0);
-            cleanAfterBatch();
-        }
-    }
-
-    @Override
-    public void onShutdown() {
-        if (this.initedBatch) {
-            execBatch(0);
-            cleanAfterBatch();
-        }
-    }
-
-    protected abstract void initBatch(boolean retry);
-
-    protected abstract P buildBatchParams(D data);
-
-    protected void cleanAfterBatch() {
-        this.initedBatch = false;
-        this.batch.clear();
-        this.lastBatchTime = System.currentTimeMillis();
-    }
-
-    protected void execBatch(int times) {
-        Validate.isTrue(this.asyncConfig.getAsyncMaxRetry() &amp;gt; times, &quot;execbatch retry-times : &quot; + times);
-        try {
-            if (times &amp;gt; 0) {
-                initBatch(true);
-            }
-            commitAndGetResultsAndCloseBatch();
-            this.batch.forEach(triple -&amp;gt; pushData(triple.getLeft(), triple.getMiddle(), triple.getRight()));
-        } catch (Exception e) {
-            try {
-                Thread.sleep(this.asyncConfig.getAsyncRetryIntervalMs());
-            } catch (InterruptedException e1) {
-                throw new RuntimeException(&quot;Failed to exec batch&quot;, e1);
-            }
-            execBatch(times + 1);
-        }
-    }
-
-    protected abstract void commitAndGetResultsAndCloseBatch() throws Exception;
-
-    protected abstract void pushData(D data, ResultFuture&amp;lt;T&amp;gt; resultFuture, P param);
-
-}
-
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-</description>
-        <pubDate>Wed, 05 Dec 2018 10:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2018-12-05-flink5</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2018-12-05-flink5</guid>
-        
-        
-        <category>clone</category>
-        
-        <category>invoke</category>
-        
-        <category>beancopy</category>
-        
-      </item>
-    
-      <item>
-        <title>初识flink4</title>
-        <description>&lt;p&gt;我们最近merge了flink1.5.5的官方更新，并对batchsink进行深入开发。&lt;/p&gt;
-
-&lt;h2 id=&quot;monkey&quot;&gt;Monkey&lt;/h2&gt;
-
-&lt;p&gt;上次介绍我们的batchsink具备常规的功能，能够支持按照lingertime、数据大小、数据条数&lt;/p&gt;
-
-&lt;p&gt;进行batch的拆分。这个月我们在其中嵌入了一个叫monkey的字段，动态调节batch大小。&lt;/p&gt;
-
-&lt;p&gt;具体使用方法如下：&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  public boolean checkFull() {
-        return WP.get() - RP.get() == this.size - this.monkey;
-    }
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;通过引入一个变量，实现了ringbuffer大小的动态调节。&lt;/p&gt;
-
-&lt;h2 id=&quot;section&quot;&gt;动态调节的时机&lt;/h2&gt;
-
-&lt;p&gt;我们将ringbuffer的每一圈的开始作为汇报监控指标和调节monkey值的时机。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;int sq = mod(cur);
-if (this.adjustment != null &amp;amp;&amp;amp; sq == 0) {
-  this.monkey = this.adjustment.onFirstEvent(ele, RING[mod(cur + 1)], (cur / this.size), this.monkey,
-  this.size);
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;汇报时将当前写入数据的slot和即将被写入数据的slot当成参数传递个adjustment，&lt;/p&gt;
-
-&lt;p&gt;还提供了圈数、oldmonkey值和圈大小等信息，返回值是新的monkey值。&lt;/p&gt;
-
-&lt;h2 id=&quot;adjustment&quot;&gt;Adjustment&lt;/h2&gt;
-
-&lt;p&gt;那么monkey的动态可以做什么呢？我们想实现对batchsize的自动化测试。&lt;/p&gt;
-
-&lt;p&gt;每当我们给一个开源的软件填写batchsize参数配置时，大多是拍脑袋出来的，&lt;/p&gt;
-
-&lt;p&gt;也可能做了一些简单的性能测试，这个过程比较枯燥，就是反复修改值，反复运行。&lt;/p&gt;
-
-&lt;p&gt;通过monkey的动态，我们可以将每一个batch大小进行几十次测试，然后按照&lt;/p&gt;
-
-&lt;p&gt;一个步长变更batch大小，继续进行测试，将原来手工的方式变成自动化的。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;    public long onFirstEvent(Element&amp;lt;T&amp;gt; first, Element&amp;lt;T&amp;gt; second, long cycles, long oldMonkey, long maxSize) {
-        if (cycles &amp;gt; 0) {
-            log.warn(&quot;Cycle {} , Monkey {} , Cost {} ms , Volume {} , Record {} .&quot;, cycles, oldMonkey, first.getTimestampW() -
-                    second.getTimestampW(), first.getAccVolume() - second.getAccVolume(), maxSize);
-
-            this.metrics.add(new double[]{oldMonkey, (first.getTimestampW() - second.getTimestampW()), ((double) maxSize *
-                    1000) / (first.getTimestampW() - second.getTimestampW())});
-
-            if (cycles % this.intervalCycle == 0) {
-                formulaFitting();
-
-                if (maxSize - oldMonkey &amp;lt;= this.monkeyStepSize) {
-                    this.result.forEach(doubles -&amp;gt; log.warn(&quot;evaluate : &quot; + Arrays.toString(doubles)));
-                    this.result.clear();
-                    return this.roundTrip ? 0 : oldMonkey;
-                } else {
-                    return oldMonkey + this.monkeyStepSize;
-                }
-            }
-        }
-        return oldMonkey;
-    }
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;简单的几行代码，我们就基本实现了这个需求。每运行N圈后，将monkey增加一个monkeystepsize。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-1&quot;&gt;评价&lt;/h2&gt;
-
-&lt;p&gt;经过一系列的测试后，我们如何评估最佳的batchsize呢？&lt;/p&gt;
-
-&lt;p&gt;在运行时，我们已经将一些指标记录到了metrics里，包括monkey大小，跑一圈的cost，还有每秒吞吐条数。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;   double totalRate = 0;
-        for (int i = 0; i &amp;lt; this.metrics.size(); i++) {
-            totalRate += this.metrics.get(i)[2];
-        }
-        double avgRate = totalRate / this.metrics.size();
-        double acc = 0;
-        for (int i = 0; i &amp;lt; this.metrics.size(); i++) {
-            acc += Math.pow(this.metrics.get(i)[2] - avgRate, 2);
-        }
-        this.result.add(new double[]{this.metrics.get(0)[0], totalRate / this.metrics.size(), acc / (this.metrics.size() - 1)});
-        this.metrics.clear();
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-&lt;p&gt;然后我们对metrics进行一些简单的数据分析，计算均值还有方差，来评价最优解。&lt;/p&gt;
-
-&lt;p&gt;在我们的测试中，平均速度差距不大，但是方差有明显的变化趋势，随着batch大小的增长，&lt;/p&gt;
-
-&lt;p&gt;方差越来越大，通过观察jvm的内存变化推测为，由于batchcache的数据量增大，数据更&lt;/p&gt;
-
-&lt;p&gt;容易进入到old区，导致fgc的频率提高，ygc的时间变长，导致速度的波动较大。&lt;/p&gt;
-</description>
-        <pubDate>Thu, 22 Nov 2018 10:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2018-11-22-flink4</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2018-11-22-flink4</guid>
-        
-        
-        <category>flink</category>
         
       </item>
     
