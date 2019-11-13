@@ -142,6 +142,157 @@
 
 <p>大致读了一下avro的源码，涉及到arraycopy的比较多，之后做性能测试的时候再看如何优化。</p>
 
+<h2 id="dataavsc">data.avsc</h2>
+
+<div class="highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"namespace"</span><span class="p">:</span><span class="s2">"exchange"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"type"</span><span class="p">:</span><span class="s2">"record"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"Data"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"fields"</span><span class="p">:[</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"nid"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"type"</span><span class="p">:</span><span class="s2">"long"</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"sid"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"type"</span><span class="p">:[</span><span class="w">
+                </span><span class="s2">"null"</span><span class="p">,</span><span class="w">
+                </span><span class="s2">"string"</span><span class="w">
+            </span><span class="p">]</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"opt"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"type"</span><span class="p">:{</span><span class="w">
+                </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"Opt"</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"type"</span><span class="p">:</span><span class="s2">"enum"</span><span class="p">,</span><span class="w">
+                </span><span class="nt">"symbols"</span><span class="p">:[</span><span class="w">
+                    </span><span class="s2">"INSERT"</span><span class="p">,</span><span class="w">
+                    </span><span class="s2">"UPDATE"</span><span class="p">,</span><span class="w">
+                    </span><span class="s2">"DELETE"</span><span class="w">
+                </span><span class="p">]</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"timestamp"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"type"</span><span class="p">:</span><span class="s2">"long"</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"tags"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"type"</span><span class="p">:[</span><span class="w">
+                </span><span class="p">{</span><span class="w">
+                    </span><span class="nt">"type"</span><span class="p">:</span><span class="s2">"map"</span><span class="p">,</span><span class="w">
+                    </span><span class="nt">"values"</span><span class="p">:[</span><span class="w">
+                        </span><span class="s2">"null"</span><span class="p">,</span><span class="w">
+                        </span><span class="s2">"string"</span><span class="w">
+                    </span><span class="p">]</span><span class="w">
+                </span><span class="p">},</span><span class="w">
+                </span><span class="s2">"null"</span><span class="w">
+            </span><span class="p">]</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"metaId"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"type"</span><span class="p">:</span><span class="s2">"long"</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"strings"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"type"</span><span class="p">:[</span><span class="w">
+                </span><span class="p">{</span><span class="w">
+                    </span><span class="nt">"type"</span><span class="p">:</span><span class="s2">"array"</span><span class="p">,</span><span class="w">
+                    </span><span class="nt">"items"</span><span class="p">:[</span><span class="w">
+                        </span><span class="s2">"null"</span><span class="p">,</span><span class="w">
+                        </span><span class="s2">"string"</span><span class="w">
+                    </span><span class="p">]</span><span class="w">
+                </span><span class="p">},</span><span class="w">
+                </span><span class="s2">"null"</span><span class="w">
+            </span><span class="p">]</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"bytes"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"type"</span><span class="p">:[</span><span class="w">
+                </span><span class="p">{</span><span class="w">
+                    </span><span class="nt">"type"</span><span class="p">:</span><span class="s2">"array"</span><span class="p">,</span><span class="w">
+                    </span><span class="nt">"items"</span><span class="p">:[</span><span class="w">
+                        </span><span class="s2">"null"</span><span class="p">,</span><span class="w">
+                        </span><span class="s2">"bytes"</span><span class="w">
+                    </span><span class="p">]</span><span class="w">
+                </span><span class="p">},</span><span class="w">
+                </span><span class="s2">"null"</span><span class="w">
+            </span><span class="p">]</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"ints"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"type"</span><span class="p">:[</span><span class="w">
+                </span><span class="p">{</span><span class="w">
+                    </span><span class="nt">"type"</span><span class="p">:</span><span class="s2">"array"</span><span class="p">,</span><span class="w">
+                    </span><span class="nt">"items"</span><span class="p">:[</span><span class="w">
+                        </span><span class="s2">"null"</span><span class="p">,</span><span class="w">
+                        </span><span class="s2">"int"</span><span class="w">
+                    </span><span class="p">]</span><span class="w">
+                </span><span class="p">},</span><span class="w">
+                </span><span class="s2">"null"</span><span class="w">
+            </span><span class="p">]</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"longs"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"type"</span><span class="p">:[</span><span class="w">
+                </span><span class="p">{</span><span class="w">
+                    </span><span class="nt">"type"</span><span class="p">:</span><span class="s2">"array"</span><span class="p">,</span><span class="w">
+                    </span><span class="nt">"items"</span><span class="p">:[</span><span class="w">
+                        </span><span class="s2">"null"</span><span class="p">,</span><span class="w">
+                        </span><span class="s2">"long"</span><span class="w">
+                    </span><span class="p">]</span><span class="w">
+                </span><span class="p">},</span><span class="w">
+                </span><span class="s2">"null"</span><span class="w">
+            </span><span class="p">]</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"floats"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"type"</span><span class="p">:[</span><span class="w">
+                </span><span class="p">{</span><span class="w">
+                    </span><span class="nt">"type"</span><span class="p">:</span><span class="s2">"array"</span><span class="p">,</span><span class="w">
+                    </span><span class="nt">"items"</span><span class="p">:[</span><span class="w">
+                        </span><span class="s2">"null"</span><span class="p">,</span><span class="w">
+                        </span><span class="s2">"float"</span><span class="w">
+                    </span><span class="p">]</span><span class="w">
+                </span><span class="p">},</span><span class="w">
+                </span><span class="s2">"null"</span><span class="w">
+            </span><span class="p">]</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"doubles"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"type"</span><span class="p">:[</span><span class="w">
+                </span><span class="p">{</span><span class="w">
+                    </span><span class="nt">"type"</span><span class="p">:</span><span class="s2">"array"</span><span class="p">,</span><span class="w">
+                    </span><span class="nt">"items"</span><span class="p">:[</span><span class="w">
+                        </span><span class="s2">"null"</span><span class="p">,</span><span class="w">
+                        </span><span class="s2">"double"</span><span class="w">
+                    </span><span class="p">]</span><span class="w">
+                </span><span class="p">},</span><span class="w">
+                </span><span class="s2">"null"</span><span class="w">
+            </span><span class="p">]</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"booleans"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"type"</span><span class="p">:[</span><span class="w">
+                </span><span class="p">{</span><span class="w">
+                    </span><span class="nt">"type"</span><span class="p">:</span><span class="s2">"array"</span><span class="p">,</span><span class="w">
+                    </span><span class="nt">"items"</span><span class="p">:[</span><span class="w">
+                        </span><span class="s2">"null"</span><span class="p">,</span><span class="w">
+                        </span><span class="s2">"boolean"</span><span class="w">
+                    </span><span class="p">]</span><span class="w">
+                </span><span class="p">},</span><span class="w">
+                </span><span class="s2">"null"</span><span class="w">
+            </span><span class="p">]</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="s2">"updatesLong"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"type"</span><span class="p">:</span><span class="s2">"long"</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+    </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+</div>
+
   </article>
   
   
