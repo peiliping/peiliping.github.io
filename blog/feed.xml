@@ -6,9 +6,64 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Tue, 03 Dec 2019 10:47:04 +0800</pubDate>
-    <lastBuildDate>Tue, 03 Dec 2019 10:47:04 +0800</lastBuildDate>
+    <pubDate>Mon, 17 Feb 2020 22:18:22 +0800</pubDate>
+    <lastBuildDate>Mon, 17 Feb 2020 22:18:22 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>netty</title>
+        <description>&lt;p&gt;新年第一篇，写点有关netty和websocket推送相关的。&lt;/p&gt;
+
+&lt;p&gt;这些年用到netty的项目挺多的，但也一直没有仔细研究一下，最近在做websocket的测试，&lt;/p&gt;
+
+&lt;p&gt;所以就用netty分别写了client端和server端，只是一个简单的应用。&lt;/p&gt;
+
+&lt;h2 id=&quot;hydra&quot;&gt;hydra&lt;/h2&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://github.com/peiliping/hydra&quot;&gt;Hydra&lt;/a&gt; 项目在这里，代码细节我就不介绍了，大家在网上都可以搜到。&lt;/p&gt;
+
+&lt;h2 id=&quot;websocket&quot;&gt;关于websocket的压缩&lt;/h2&gt;
+
+&lt;p&gt;我在性能测试过程中，曾经开启过WebSocketServerCompressionHandler，发生了缓慢内存泄露。&lt;/p&gt;
+
+&lt;p&gt;经排查，Jvm堆内、外都没有问题，但free -m显示的内存剩余一直在降低，直到被OS-Kill掉。&lt;/p&gt;
+
+&lt;p&gt;在netty的git-issue上搜索找到了相关信息（见ISSUE-9803）。&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;推送&lt;/h2&gt;
+
+&lt;p&gt;说到推送，肯定会提到socket.io这个项目，这几年非常火，值得研究一下。&lt;/p&gt;
+
+&lt;p&gt;推送里有一个非常常见的问题，就是同一个账号的多端推送。&lt;/p&gt;
+
+&lt;p&gt;举例：你在手机和网页都登录了，当你的账号有新的订单成交时，都应获得通知消息的推送。&lt;/p&gt;
+
+&lt;p&gt;所以在推送服务器的内存中，就要维护一个Map，Key为Uid，Value是多端的Channels集合。&lt;/p&gt;
+
+&lt;p&gt;在编写这段逻辑时，我希望尽量少的使用lock，但是uid所在的entry，需要保持原子性。&lt;/p&gt;
+
+&lt;p&gt;如果手机端退出登录和网页端登录，在同一时刻发生，维护这个channels在map中的原子性就非常困难。&lt;/p&gt;
+
+&lt;p&gt;解决方案有两种：&lt;/p&gt;
+
+&lt;p&gt;1、当channels集合为空时，并不把它从map中remove掉，会导致Map中有一些垃圾信息。&lt;/p&gt;
+
+&lt;p&gt;2、使用ConcurrentSkipListMap来替代Map&amp;lt;String,Set&lt;string&gt;&amp;gt;的嵌套结构。&lt;/string&gt;&lt;/p&gt;
+
+&lt;p&gt;最后我选择了方案2，在Hydra项目中的Server模块ChannelManager中。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-1&quot;&gt;结束&lt;/h2&gt;
+
+&lt;p&gt;疫情还在继续，大家保重。&lt;/p&gt;
+</description>
+        <pubDate>Mon, 06 Jan 2020 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2020-01-06-netty</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2020-01-06-netty</guid>
+        
+        
+        <category>netty</category>
+        
+      </item>
     
       <item>
         <title>一点点总结</title>
@@ -994,57 +1049,6 @@ if (length &amp;lt;= remaining) {
         
         
         <category>avro</category>
-        
-      </item>
-    
-      <item>
-        <title>总结</title>
-        <description>&lt;p&gt;Q1马上就要结束了，最近一直在忙一些规划和总结性的东西。&lt;/p&gt;
-
-&lt;p&gt;这次就随便聊聊，没有什么主题。&lt;/p&gt;
-
-&lt;h2 id=&quot;flink&quot;&gt;Flink&lt;/h2&gt;
-
-&lt;h3 id=&quot;section&quot;&gt;1.5升级到1.7&lt;/h3&gt;
-
-&lt;p&gt;因为业务上的需求，最近在准备将我们的Flink版本从1.5升级到1.7，&lt;/p&gt;
-
-&lt;p&gt;开发还算顺利，我们定制的各种特性也都迁移到1.7的版本上。&lt;/p&gt;
-
-&lt;p&gt;不过Flink社区的开发进度，总体上感觉比去年要慢了许多。&lt;/p&gt;
-
-&lt;h3 id=&quot;sql&quot;&gt;SQL化&lt;/h3&gt;
-
-&lt;p&gt;看了不少公司在实时计算平台建设的文章，提到了很多实时任务SQL化的计划，&lt;/p&gt;
-
-&lt;p&gt;从我的感受来说，并没有觉得SQL化的迫切，也许是业务特点不一样吧。&lt;/p&gt;
-
-&lt;p&gt;目前平台上跑的几百个任务来看，用户的编写质量确实很差，&lt;/p&gt;
-
-&lt;p&gt;开发一个性能优异的Flink任务，需要的知识储备其实挺高的，&lt;/p&gt;
-
-&lt;p&gt;绝大多数业务方只能照葫芦画瓢，并没有时间去深入理解和研究。&lt;/p&gt;
-
-&lt;p&gt;由平台方来编写一些标准化的工具，减少粗制滥造的重复开发是很有必要的。&lt;/p&gt;
-
-&lt;p&gt;但工具化、配置化，不一定要是SQL化，当然公司有足够的投入另当别论。&lt;/p&gt;
-
-&lt;h3 id=&quot;section-1&quot;&gt;有状态&lt;/h3&gt;
-
-&lt;p&gt;对有状态任务的支持，是Flink相比其他实时计算框架的巨大优势。&lt;/p&gt;
-
-&lt;p&gt;目前，平台上的任务对State的诉求非常低，这并不是一个健康的状况。&lt;/p&gt;
-
-&lt;p&gt;今年Q2开始，我们会加大力度在对State的支持方面，也做一些周边的开发，&lt;/p&gt;
-
-&lt;p&gt;降低state的开发难度，提升性能和效率。&lt;/p&gt;
-</description>
-        <pubDate>Fri, 22 Mar 2019 10:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2019-03-22-summary</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2019-03-22-summary</guid>
-        
-        
-        <category>summary</category>
         
       </item>
     

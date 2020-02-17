@@ -6,11 +6,11 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>关于Avro的使用 « Pei LiPing's Blog</title>
-  <meta name="description" content="14年开始尝试Flume的时候了解到Avro相关的东西，但一直都没有很深入的使用。">
+  <title>netty « Pei LiPing's Blog</title>
+  <meta name="description" content="新年第一篇，写点有关netty和websocket推送相关的。">
 
   <link rel="stylesheet" href="/blog/css/main.css">
-  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2017-12-25-avro">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2020-01-06-netty">
   <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
 </head>
 
@@ -66,48 +66,54 @@
           <div class="post">
 
   <header class="post-header">
-    <h1 class="post-title">关于Avro的使用</h1>
-    <p class="post-meta">Nov 29, 2017</p>
+    <h1 class="post-title">netty</h1>
+    <p class="post-meta">Jan 6, 2020</p>
   </header>
 
   <article class="post-content">
-    <p>14年开始尝试Flume的时候了解到Avro相关的东西，但一直都没有很深入的使用。</p>
+    <p>新年第一篇，写点有关netty和websocket推送相关的。</p>
 
-<p>最近在做Binlog采集时，写入Kafka的数据格式要求是Avro，在使用中了解碰到了一些小问题</p>
+<p>这些年用到netty的项目挺多的，但也一直没有仔细研究一下，最近在做websocket的测试，</p>
 
-<p>在这里分享一下。</p>
+<p>所以就用netty分别写了client端和server端，只是一个简单的应用。</p>
 
-<h2 id="section">复用</h2>
+<h2 id="hydra">hydra</h2>
 
-<p>序列化和反序列化时需要BinaryEncoder和BinaryDecoder，这个对象是可以反复使用的。</p>
+<p><a href="https://github.com/peiliping/hydra">Hydra</a> 项目在这里，代码细节我就不介绍了，大家在网上都可以搜到。</p>
 
-<p>反序列化接口是支持对象复用的，但是经过测试复用对象性能反而下降了。</p>
+<h2 id="websocket">关于websocket的压缩</h2>
 
-<h2 id="section-1">并发</h2>
+<p>我在性能测试过程中，曾经开启过WebSocketServerCompressionHandler，发生了缓慢内存泄露。</p>
 
-<p>序列化和反序列化都需要一个Json格式的Schema信息，或者叫Avsc。</p>
+<p>经排查，Jvm堆内、外都没有问题，但free -m显示的内存剩余一直在降低，直到被OS-Kill掉。</p>
 
-<p>最开始多线程反序列化Avro数据时，是使用同一个Schema对象的，但是随着线程的增加，</p>
+<p>在netty的git-issue上搜索找到了相关信息（见ISSUE-9803）。</p>
 
-<p>并发的效率提升并不明显，通过对线程状态的搜索，发现Schema对象上有Sync修饰，</p>
+<h2 id="section">推送</h2>
 
-<p>详见JsonProperties类。解决办法也很简单，每个线程使用一个独立的Schema对象就可以了。</p>
+<p>说到推送，肯定会提到socket.io这个项目，这几年非常火，值得研究一下。</p>
 
-<h2 id="avrostring">Avro中的String</h2>
+<p>推送里有一个非常常见的问题，就是同一个账号的多端推送。</p>
 
-<p>Avro中的String可以是Java的String类型，还可以是使实现了CharSequence的UTF8。</p>
+<p>举例：你在手机和网页都登录了，当你的账号有新的订单成交时，都应获得通知消息的推送。</p>
 
-<p>当然UTF8的Charsequence直接tostring就会转为Java的String了，但是Map的key就非常难处理。</p>
+<p>所以在推送服务器的内存中，就要维护一个Map，Key为Uid，Value是多端的Channels集合。</p>
 
-<p>假如你的数据对象中有一个Map的field，并且Map的Key是String，通过get(“abc”)来获取</p>
+<p>在编写这段逻辑时，我希望尽量少的使用lock，但是uid所在的entry，需要保持原子性。</p>
 
-<p>value是不可行的，因为”abc”和UTF8(“abc”)的hashcode完全不同。只能遍历老的map，然后</p>
+<p>如果手机端退出登录和网页端登录，在同一时刻发生，维护这个channels在map中的原子性就非常困难。</p>
 
-<p>key.tostring()，再放入一个新的map中去，非常浪费性能。</p>
+<p>解决方案有两种：</p>
 
-<p>Avro是可以声明schema的string是java的string的来解决，还可以复写SpecificDatumReader</p>
+<p>1、当channels集合为空时，并不把它从map中remove掉，会导致Map中有一些垃圾信息。</p>
 
-<p>这个类，特殊处理一下readMapKey方法，当是UTF8时调用一下tostring方法，转成java的string。</p>
+<p>2、使用ConcurrentSkipListMap来替代Map&lt;String,Set<string>&gt;的嵌套结构。</string></p>
+
+<p>最后我选择了方案2，在Hydra项目中的Server模块ChannelManager中。</p>
+
+<h2 id="section-1">结束</h2>
+
+<p>疫情还在继续，大家保重。</p>
 
   </article>
   
