@@ -6,9 +6,76 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Sat, 18 Apr 2020 20:03:04 +0800</pubDate>
-    <lastBuildDate>Sat, 18 Apr 2020 20:03:04 +0800</lastBuildDate>
+    <pubDate>Mon, 04 May 2020 23:24:55 +0800</pubDate>
+    <lastBuildDate>Mon, 04 May 2020 23:24:55 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>DB2DB</title>
+        <description>&lt;p&gt;几年前写过一个叫meepo的小项目，用来解决一些临时导表的需求。&lt;/p&gt;
+
+&lt;p&gt;很意外居然还有网友在git上提issue，看来需求还是很广泛的。&lt;/p&gt;
+
+&lt;p&gt;meepo整体设计有很多问题，而且bug也比较多，不建议使用。&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;改版重构&lt;/h2&gt;
+
+&lt;p&gt;最近又碰到了类似的需求，从mysql的一种表抽取部分字段写到另外一张表。&lt;/p&gt;
+
+&lt;p&gt;因为是定时数据处理，而且需要全量数据的导出，所以基于JDBC是最简单的方案。&lt;/p&gt;
+
+&lt;p&gt;在数据摄取和分发部分，沿用了fevernova框架，这也比meepo更佳成熟稳定。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-1&quot;&gt;流批一体&lt;/h2&gt;
+
+&lt;p&gt;这两年有一个特别火的概念叫流批一体，flink社区也在努力统一数据底层模型。&lt;/p&gt;
+
+&lt;p&gt;fevernova是一个类似flink的流式数据处理框架，之前也没试过做批处理。&lt;/p&gt;
+
+&lt;p&gt;这次为了实现批处理的需求，为source增加了jobfinished的指令。&lt;/p&gt;
+
+&lt;p&gt;当source完成预定处理，会等待一个checkpoint的周期，就结束任务了。&lt;/p&gt;
+
+&lt;h2 id=&quot;rdb&quot;&gt;RDB&lt;/h2&gt;
+
+&lt;p&gt;这次还需要支持postgre，虽然JDBC是通用的，但是Datasource和Sql拼装，&lt;/p&gt;
+
+&lt;p&gt;都有很大的差别，需要重新设计扩展。&lt;/p&gt;
+
+&lt;p&gt;举几个例子，table的scheme在mysql和postgre是不同的，在解决upsert场景的时候，&lt;/p&gt;
+
+&lt;p&gt;mysql可以用replace，pg则要写on conflict子句。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-2&quot;&gt;性能&lt;/h2&gt;
+
+&lt;p&gt;这次性能优化并没有meepo那么激进，尽量做通用的优化，减少对依赖的侵入性修改。&lt;/p&gt;
+
+&lt;p&gt;Postgre有一个unlogged类型的table，可以极大的提高写入速度，&lt;/p&gt;
+
+&lt;p&gt;大家可以根据自己的需求酌情使用。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-3&quot;&gt;规范&lt;/h2&gt;
+
+&lt;p&gt;使用JDBC做增量数据导出，有一些需要注意的地方，比如：&lt;/p&gt;
+
+&lt;p&gt;1、不能使用delete&lt;/p&gt;
+
+&lt;p&gt;2、insert和update操作要更新updatetime字段&lt;/p&gt;
+
+&lt;p&gt;3、需要对updatetime做索引&lt;/p&gt;
+
+&lt;p&gt;4、有long型的自增主键，方便遍历&lt;/p&gt;
+</description>
+        <pubDate>Tue, 28 Apr 2020 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2020-04-28-DB2DB</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2020-04-28-DB2DB</guid>
+        
+        
+        <category>jdbc</category>
+        
+        <category>database</category>
+        
+      </item>
     
       <item>
         <title>hydra</title>
@@ -905,76 +972,6 @@ u.toLong();
         
         
         <category>手术</category>
-        
-      </item>
-    
-      <item>
-        <title>初识flink7</title>
-        <description>&lt;p&gt;flink基于1.5的定制化开发工作就告一段落了，业务团队对flink的诉求已经超越1.5了，&lt;/p&gt;
-
-&lt;p&gt;主要集中在table、sql、state上，还有2phase的filesink等。&lt;/p&gt;
-
-&lt;h2 id=&quot;or-18&quot;&gt;1.7 or 1.8&lt;/h2&gt;
-
-&lt;p&gt;一个大的社区版本一般要维护1年左右。1.5的社区版我们从18年6月维护到现在，&lt;/p&gt;
-
-&lt;p&gt;但从去年年底开始社区就对1.5停更了，我们只能自己从其他的版本中merge一些需要的bugfix。&lt;/p&gt;
-
-&lt;p&gt;我们决定下一个大版本是1.8，主要基于一下几点：&lt;/p&gt;
-
-&lt;ul&gt;
-  &lt;li&gt;
-    &lt;p&gt;社区1.9的巨大投入会严重影响其他分支的更新速度，1.7已经进入暮年。&lt;/p&gt;
-  &lt;/li&gt;
-  &lt;li&gt;
-    &lt;p&gt;1.8的一些小特性我们看来还是非常实用的，值得蹚雷。&lt;/p&gt;
-  &lt;/li&gt;
-  &lt;li&gt;
-    &lt;p&gt;刚刚准备release-1.8.1，未来还能从社区得到3-4个小版本。&lt;/p&gt;
-  &lt;/li&gt;
-  &lt;li&gt;
-    &lt;p&gt;1.9的更新过于巨大，真正稳定下来需要比较长的时间，1.8在未来一年多应该是首选。&lt;/p&gt;
-  &lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;h2 id=&quot;section&quot;&gt;合并&lt;/h2&gt;
-
-&lt;p&gt;1.8.1的一些issue被社区移到1.8.2去完成，所以很快就进入了RC阶段。&lt;/p&gt;
-
-&lt;p&gt;我们在1.8分支上，进行了merge工作，主要是把我们在1.5上的定制工作迁移到1.8。&lt;/p&gt;
-
-&lt;p&gt;合并的工作开展速度还是挺快的，预计2周左右就可以完成，顺手可以做一些小的重构。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-1&quot;&gt;未来&lt;/h2&gt;
-
-&lt;p&gt;在1.8的基础工作完成后，我们就要投入到Sql方向了。&lt;/p&gt;
-
-&lt;p&gt;Sql的方向需要一些铺垫，比如State的管理功能增强，数据Table化等。&lt;/p&gt;
-
-&lt;h3 id=&quot;state&quot;&gt;State增强&lt;/h3&gt;
-
-&lt;p&gt;flink的state是核心组件，无论是故障恢复还是恰好一次，都至关重要。&lt;/p&gt;
-
-&lt;p&gt;但是State的管理功能并不完善，比如如何让savepoint周期性的触发，&lt;/p&gt;
-
-&lt;p&gt;如何合理利用checkpoint来恢复等。&lt;/p&gt;
-
-&lt;h3 id=&quot;table&quot;&gt;数据Table化&lt;/h3&gt;
-
-&lt;p&gt;Flink的数据来源其实是比较集中的，大部分来自Kafka或者MQ。&lt;/p&gt;
-
-&lt;p&gt;再经过一些反序列化工作，应该可以映射为Pojo或者说Table。&lt;/p&gt;
-
-&lt;p&gt;这部分工作在其他公司里也是差不多的，做一些定制化的开发，并不难。&lt;/p&gt;
-
-&lt;p&gt;但是一些数据质量高的公司做这一步就非常快，比如格式比较统一等。&lt;/p&gt;
-</description>
-        <pubDate>Thu, 13 Jun 2019 10:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2019-06-13-flink7</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2019-06-13-flink7</guid>
-        
-        
-        <category>flink</category>
         
       </item>
     

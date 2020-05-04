@@ -6,12 +6,11 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>Page Not Found « Pei LiPing's Blog</title>
-  <meta name="description" content="Augur
-">
+  <title>DB2DB « Pei LiPing's Blog</title>
+  <meta name="description" content="几年前写过一个叫meepo的小项目，用来解决一些临时导表的需求。">
 
   <link rel="stylesheet" href="/blog/css/main.css">
-  <link rel="canonical" href="http://peiliping.github.io/blog/404.html">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2020-04-28-DB2DB">
   <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
 </head>
 
@@ -69,15 +68,70 @@
           <div class="post">
 
   <header class="post-header">
-    <h1 class="post-title">Page Not Found</h1>
+    <h1 class="post-title">DB2DB</h1>
+    <p class="post-meta">Apr 28, 2020</p>
   </header>
 
   <article class="post-content">
-    <p>Seems disappeared :(</p>
+    <p>几年前写过一个叫meepo的小项目，用来解决一些临时导表的需求。</p>
+
+<p>很意外居然还有网友在git上提issue，看来需求还是很广泛的。</p>
+
+<p>meepo整体设计有很多问题，而且bug也比较多，不建议使用。</p>
+
+<h2 id="section">改版重构</h2>
+
+<p>最近又碰到了类似的需求，从mysql的一种表抽取部分字段写到另外一张表。</p>
+
+<p>因为是定时数据处理，而且需要全量数据的导出，所以基于JDBC是最简单的方案。</p>
+
+<p>在数据摄取和分发部分，沿用了fevernova框架，这也比meepo更佳成熟稳定。</p>
+
+<h2 id="section-1">流批一体</h2>
+
+<p>这两年有一个特别火的概念叫流批一体，flink社区也在努力统一数据底层模型。</p>
+
+<p>fevernova是一个类似flink的流式数据处理框架，之前也没试过做批处理。</p>
+
+<p>这次为了实现批处理的需求，为source增加了jobfinished的指令。</p>
+
+<p>当source完成预定处理，会等待一个checkpoint的周期，就结束任务了。</p>
+
+<h2 id="rdb">RDB</h2>
+
+<p>这次还需要支持postgre，虽然JDBC是通用的，但是Datasource和Sql拼装，</p>
+
+<p>都有很大的差别，需要重新设计扩展。</p>
+
+<p>举几个例子，table的scheme在mysql和postgre是不同的，在解决upsert场景的时候，</p>
+
+<p>mysql可以用replace，pg则要写on conflict子句。</p>
+
+<h2 id="section-2">性能</h2>
+
+<p>这次性能优化并没有meepo那么激进，尽量做通用的优化，减少对依赖的侵入性修改。</p>
+
+<p>Postgre有一个unlogged类型的table，可以极大的提高写入速度，</p>
+
+<p>大家可以根据自己的需求酌情使用。</p>
+
+<h2 id="section-3">规范</h2>
+
+<p>使用JDBC做增量数据导出，有一些需要注意的地方，比如：</p>
+
+<p>1、不能使用delete</p>
+
+<p>2、insert和update操作要更新updatetime字段</p>
+
+<p>3、需要对updatetime做索引</p>
+
+<p>4、有long型的自增主键，方便遍历</p>
 
   </article>
-
   
+  
+
+
 
 
 </div>
