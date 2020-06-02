@@ -6,11 +6,11 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>hydra « Pei LiPing's Blog</title>
-  <meta name="description" content="之前写过一篇关于netty的blog，经过几次梳理，hydra项目的代码基本稳定了。">
+  <title>state « Pei LiPing's Blog</title>
+  <meta name="description" content="这次来介绍一下fevernova的state功能，与flink的state功能很类似，">
 
   <link rel="stylesheet" href="/blog/css/main.css">
-  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2020-03-18-hydra">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2020-05-11-state">
   <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
 </head>
 
@@ -68,44 +68,52 @@
           <div class="post">
 
   <header class="post-header">
-    <h1 class="post-title">hydra</h1>
-    <p class="post-meta">Mar 18, 2020</p>
+    <h1 class="post-title">state</h1>
+    <p class="post-meta">May 11, 2020</p>
   </header>
 
   <article class="post-content">
-    <p>之前写过一篇关于netty的blog，经过几次梳理，hydra项目的代码基本稳定了。</p>
+    <p>这次来介绍一下fevernova的state功能，与flink的state功能很类似，</p>
 
-<p>hydra项目分为client和server两部分。</p>
+<p>flink的state是保证恰好一次计算的核心点，当然至少一次也需要state。</p>
 
-<h2 id="client">client</h2>
+<h2 id="fevernovastate">fevernova的state用途</h2>
 
-<p>client用于weboscket的功能和性能测试，短时间可以轻松建立50000个连接。</p>
+<p>之前fevernova都是作为数据传输框架，对state的依赖并不高。</p>
 
-<p>可以通过参数指定subscribe的字符串，也可以定期发送指令维持heartbeat。</p>
+<p>需要state用来存储kafka的offset，或者binlog的filename和position。</p>
 
-<p>如果server返回的数据是gzip压缩的binary数据，也是支持解压缩的。</p>
+<p>在实现kafka To HDFS模块的时候，也会将关闭的文件列表和commit保存在state里，</p>
 
-<p>我尝试用client订阅了huobi的行情数据，配置启动参数就可以完成。其他同类网站也是没有问题的。</p>
+<p>减少重复文件的产生，实现恰好一次。类似于flink的rollingfilesink。</p>
 
-<p>当然不要用它来对别人的网站进行压力测试，会被封IP的。</p>
+<h2 id="state">state保存的位置</h2>
 
-<h2 id="server">server</h2>
+<p>因为只保存少量的meta信息，所以state就简单的保存在文件系统里。</p>
 
-<p>server主要是一个推送服务的基础框架。</p>
+<p>如果需要提高可用性，就通过类似Nas的方式进行目录挂载。这类方案都是非常成熟的。</p>
 
-<p>推送的消息来源是从redis的topic中拉去的，采用redission的client。</p>
+<h2 id="section">计算状态</h2>
 
-<p>从消息中提取部分字段信息，构建nameSpace，通过ChannelManager进行推送。</p>
+<p>在无意中，发现了一个开源项目<a href="https://github.com/OpenHFT">OpenHFT</a>。</p>
 
-<p>推送的消息格式，目前只支持text，未来需要考虑支持binary的压缩格式。</p>
+<p>其中的项目质量还是比较高的，利用其中的序列化、持久化的库进行state的保存非常方便。</p>
 
-<p>除了以nameSpace为基础的推送外，还实现了基于Uid的推送模式，之前的blog已经介绍过原理了。</p>
+<p>让内存中保存状态的对象实现WriteBytesMarshallable和ReadBytesMarshallable接口，</p>
 
-<h2 id="section">总结</h2>
+<p>根据需求自定义序列化和反序列化的方法，就可以完成state的读写操作。</p>
 
-<p>websocket推送可以应用的领域非常广，弹幕、聊天室、股票行情软件等等。</p>
+<p>简单测试了一下性能还是非常好的。fevernova中的exchange模块中有具体的使用。</p>
 
-<p>基于hydra的基础，后面要尝试一下netty的优化实践。</p>
+<h2 id="section-1">去重</h2>
+
+<p>单纯依靠Chandy-Lamport算法实现的流计算框架并不能在实际需求中完全实现恰好一次计算。</p>
+
+<p>比如写入kafka的数据有重复，通常就在计算逻辑中去重，这也意味着更多的cpu和内存开销。</p>
+
+<p>fevernova在exchange模块中实现了一个基于Roaringbitmap的滑窗过滤器，通过统一的去重。</p>
+
+<p>压缩的位图信息也会随着state进行保存，重启时可以完美衔接。</p>
 
   </article>
   
