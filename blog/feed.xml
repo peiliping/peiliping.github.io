@@ -6,9 +6,64 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Tue, 02 Jun 2020 13:05:06 +0800</pubDate>
-    <lastBuildDate>Tue, 02 Jun 2020 13:05:06 +0800</lastBuildDate>
+    <pubDate>Fri, 03 Jul 2020 11:09:57 +0800</pubDate>
+    <lastBuildDate>Fri, 03 Jul 2020 11:09:57 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>websocket</title>
+        <description>&lt;p&gt;最近一个多月在和websocket打交道，这次来总结一下最近一阶段的工作吧。&lt;/p&gt;
+
+&lt;h2 id=&quot;hydra&quot;&gt;hydra&lt;/h2&gt;
+
+&lt;p&gt;三月份写了一篇关于netty的blog，介绍了我写的一个小项目叫&lt;a href=&quot;https://github.com/peiliping/hydra&quot;&gt;hydra&lt;/a&gt;。&lt;/p&gt;
+
+&lt;p&gt;经过这几个月的完善，已经可以作为一个websocket的压测工具了。&lt;/p&gt;
+
+&lt;p&gt;这两次压测实践中，单实例可以施压5W个并发连接数，满足大多数测试需求。&lt;/p&gt;
+
+&lt;p&gt;通过参数可以配置心跳消息、订阅指令等，满足业务测试的需求。&lt;/p&gt;
+
+&lt;h2 id=&quot;watchdog&quot;&gt;watchdog&lt;/h2&gt;
+
+&lt;p&gt;使用netty作为websocket的client，如果解决重连重试的问题呢？&lt;/p&gt;
+
+&lt;p&gt;在实际业务中，要考虑网络不稳定导致的websocket中断问题。websocket中断后，&lt;/p&gt;
+
+&lt;p&gt;要重新建立连接，还要将业务的订阅指令重新发送一遍。&lt;/p&gt;
+
+&lt;p&gt;在netty的中断分为两种情况，一个是创建连接就直接失败了，一种是在运行中突然中断。&lt;/p&gt;
+
+&lt;p&gt;这两种情况分别有回调的接口可以捕获，而后触发延迟重连。可以参考&lt;a href=&quot;https://github.com/peiliping/watchdog&quot;&gt;watchdog&lt;/a&gt;的实现。&lt;/p&gt;
+
+&lt;h2 id=&quot;bark&quot;&gt;Bark&lt;/h2&gt;
+
+&lt;p&gt;最近无意间发现了一个iOS的App叫Bark，可以自定义手机通知提醒的消息。&lt;/p&gt;
+
+&lt;p&gt;举个例子，你写了一个爬虫监控实时获取某只股票的价格，当他发生剧烈波动的时候，&lt;/p&gt;
+
+&lt;p&gt;给自己的手机发送一条提醒，来提醒自己关注股票。那么如何给手机发送免费的消息呢？&lt;/p&gt;
+
+&lt;p&gt;Bark就可以满足这个需求，安装Bark的App后，你会获得一个Url（包含一个uuid）。&lt;/p&gt;
+
+&lt;p&gt;执行这个Url，你的手机就会收到来自Bark的通知消息了，消息的内容来自Url参数。&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;提醒助手&lt;/h2&gt;
+
+&lt;p&gt;将watchdog和Bark结合在一起，实现了一个小功能。&lt;/p&gt;
+
+&lt;p&gt;订阅Huobi的BTC行情信息，经过计算，将满足剧烈波动条件的消息通过Bark发送到手机上。&lt;/p&gt;
+</description>
+        <pubDate>Mon, 29 Jun 2020 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2020-06-29-websocket</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2020-06-29-websocket</guid>
+        
+        
+        <category>websocket</category>
+        
+        <category>netty</category>
+        
+      </item>
     
       <item>
         <title>state</title>
@@ -850,133 +905,6 @@ u.toLong();
         <pubDate>Thu, 19 Sep 2019 10:00:00 +0800</pubDate>
         <link>http://peiliping.github.io/blog/archivers/2019-09-19-avro4</link>
         <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2019-09-19-avro4</guid>
-        
-        
-        <category>avro</category>
-        
-      </item>
-    
-      <item>
-        <title>Avro优化</title>
-        <description>&lt;p&gt;之前写过两篇blog，是关于项目使用avro过程中碰到的问题。&lt;/p&gt;
-
-&lt;p&gt;最近看了一下最新版本的avro1.9.x，很多之前的问题都已经得到了优化。&lt;/p&gt;
-
-&lt;p&gt;比如schema已经不需要考虑sync的性能问题了。&lt;/p&gt;
-
-&lt;h2 id=&quot;section&quot;&gt;现有问题&lt;/h2&gt;
-
-&lt;p&gt;大数据项目中Avro基本上是事实标准了，但是管理schema是一个非常痛苦的事情。&lt;/p&gt;
-
-&lt;p&gt;之前公司同事制定的kafka消息标准格式是一个avro类中包含一些常见固定字段和一个大的Map，&lt;/p&gt;
-
-&lt;p&gt;schema格式的差异都体现在map的key当中，value也规定是String类型。&lt;/p&gt;
-
-&lt;p&gt;这种方案基本上跟使用json没有区别，数据体积比较大，序列化反序列化的效率也不高。&lt;/p&gt;
-
-&lt;p&gt;代码中也充斥了大量的tostring和valueof，非常影响性能，也容易报错。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-1&quot;&gt;解决保留数据类型的问题&lt;/h2&gt;
-
-&lt;p&gt;avro中的标准数据类型大概有7种，string、bytes、int、long、float、double、boolean。&lt;/p&gt;
-
-&lt;p&gt;每种类型都可能出现，但是每种类型数据出现的次数是不确定的,这个问题可以通过array来解决。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;    private java.util.List&amp;lt;java.lang.String&amp;gt; strings;
-    private java.util.List&amp;lt;java.nio.ByteBuffer&amp;gt; bytes;
-    private java.util.List&amp;lt;java.lang.Integer&amp;gt; ints;
-    private java.util.List&amp;lt;java.lang.Long&amp;gt; longs;
-    private java.util.List&amp;lt;java.lang.Float&amp;gt; floats;
-    private java.util.List&amp;lt;java.lang.Double&amp;gt; doubles;
-    private java.util.List&amp;lt;java.lang.Boolean&amp;gt; booleans;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;h2 id=&quot;section-2&quot;&gt;元数据管理&lt;/h2&gt;
-
-&lt;p&gt;因为数据写入了Array，所以字段名称就需要和index进行绑定，需要做简单的Meta管理功能。&lt;/p&gt;
-
-&lt;p&gt;其中每个column都有下面这样一个MetaEntity：&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;    private String columnName;
-    private Schema.Type type;
-    private int indexOfall;
-    private int indexOftype;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;h2 id=&quot;section-3&quot;&gt;固定字段&lt;/h2&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;    private long nid;
-    private java.lang.String sid;
-    private exchange.Opt opt;
-    private long timestamp;
-    private java.util.Map&amp;lt;java.lang.String,java.lang.String&amp;gt; tags;
-    private long metaId;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;blockquote&gt;
-  &lt;ol&gt;
-    &lt;li&gt;nid和sid是用来标识当前这条数据的唯一Id&lt;/li&gt;
-    &lt;li&gt;opt是指这条数据的操作类型：insert、update或delete&lt;/li&gt;
-    &lt;li&gt;timestamp用来存放一个时间戳，一般值数据生成时间&lt;/li&gt;
-    &lt;li&gt;tags用来存放一些tag，比如数据的业务分类等&lt;/li&gt;
-    &lt;li&gt;metaId用来关联Meta&lt;/li&gt;
-  &lt;/ol&gt;
-&lt;/blockquote&gt;
-
-&lt;p&gt;之前我写过一篇blog介绍过如何局部解析avro，为了方便实现filter功能，将tags放在&lt;/p&gt;
-
-&lt;p&gt;相对靠前的位置，方便快速的局部解析，进行数据过滤或者路由。&lt;/p&gt;
-
-&lt;h2 id=&quot;update&quot;&gt;update类型数据&lt;/h2&gt;
-
-&lt;p&gt;如果是update类型的操作，就存在更新前的数据和更新后的数据，参考binlog中的event设计，&lt;/p&gt;
-
-&lt;p&gt;我们也用一个bitset来记录哪些字段被更新了，在avro中用long来表示。&lt;/p&gt;
-
-&lt;p&gt;为了存放前后两个数据，我们将各种类型的数组进行了扩容（×2），通过数组下标来控制读写。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-4&quot;&gt;包装&lt;/h2&gt;
-
-&lt;p&gt;最后我们将针对data的操作包装在一个datacontainer里，屏蔽复杂度。&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;public class DataContainer {
-    private Meta meta;
-    private Data data;
-    private BitSet updatesBitSet;
-    private int positionRatio = 1; //如果是update的话 ratio为2
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-&lt;p&gt;数据写入的实现&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;        int pos = metaEntity.getIndexOftype() * this.positionRatio;
-        switch (metaEntity.getType()) {
-            case STRING:
-                this.data.getStrings().set(pos, (String) val);
-                if (change) {
-                    this.data.getStrings().set(pos + 1, (String) oldVal);
-                    this.updatesBitSet.set(metaEntity.getIndexOfall());
-                }
-                break;
-            case BYTES:
-                this.data.getBytes().set(pos, (ByteBuffer) val);
-                if (change) {
-                    this.data.getBytes().set(pos + 1, (ByteBuffer) oldVal);
-                    this.updatesBitSet.set(metaEntity.getIndexOfall());
-                }
-                break;
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;h2 id=&quot;section-5&quot;&gt;结论&lt;/h2&gt;
-
-&lt;p&gt;通过简单的测试，序列化后的数据体积减少了接近一半，序列化也加速了50%左右。&lt;/p&gt;
-</description>
-        <pubDate>Tue, 13 Aug 2019 10:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2019-08-13-avro3</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2019-08-13-avro3</guid>
         
         
         <category>avro</category>

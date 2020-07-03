@@ -6,11 +6,11 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>Java Flight Recorder « Pei LiPing's Blog</title>
-  <meta name="description" content="Profiling是最常见的，用来定位代码性能问题的方法。">
+  <title>websocket « Pei LiPing's Blog</title>
+  <meta name="description" content="最近一个多月在和websocket打交道，这次来总结一下最近一阶段的工作吧。">
 
   <link rel="stylesheet" href="/blog/css/main.css">
-  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2017-03-31-jfr">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2020-06-29-websocket">
   <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
 </head>
 
@@ -68,48 +68,52 @@
           <div class="post">
 
   <header class="post-header">
-    <h1 class="post-title">Java Flight Recorder</h1>
-    <p class="post-meta">Mar 31, 2017</p>
+    <h1 class="post-title">websocket</h1>
+    <p class="post-meta">Jun 29, 2020</p>
   </header>
 
   <article class="post-content">
-    <p>Profiling是最常见的，用来定位代码性能问题的方法。</p>
+    <p>最近一个多月在和websocket打交道，这次来总结一下最近一阶段的工作吧。</p>
 
-<p>在开发环境中，我们用Visualvm、JProfiler、Yourkit等。这些工具功能强大，支持图形化界面操作，可以让我们很快定位代码问题。</p>
+<h2 id="hydra">hydra</h2>
 
-<p>但是他们对应用性能的影响也非常大，所以不适合在生产环境下使用。还有这些软件要attach到jvm进程上，生产环境一般网络隔离，很难做到。</p>
+<p>三月份写了一篇关于netty的blog，介绍了我写的一个小项目叫<a href="https://github.com/peiliping/hydra">hydra</a>。</p>
 
-<p>在生产环境我们最常用的profiling工具就是java/bin下的jstack，多做几次jstack，也相当于profiling了。有很多工具就是对多次的jstack结果进行合并，来分析问题的。</p>
+<p>经过这几个月的完善，已经可以作为一个websocket的压测工具了。</p>
 
-<p>jstack方便易用，但并不是特别适合来做profiling，操作频率低，会导致safepoint指标急剧增长等等。</p>
+<p>这两次压测实践中，单实例可以施压5W个并发连接数，满足大多数测试需求。</p>
 
-<p>于是我们尝试使用Jvm原生提供的JFR - Java Flight Recorder 来解决问题。</p>
+<p>通过参数可以配置心跳消息、订阅指令等，满足业务测试的需求。</p>
 
-<h3 id="section">使用方法</h3>
+<h2 id="watchdog">watchdog</h2>
 
-<ol>
-  <li>
-    <p>jcmd pid VM.unlock_commercial_features</p>
-  </li>
-  <li>
-    <p>jcmd pid JFR.start duration=60s filename=/home/peiliping/dev/logs/test.jfr settings=[default,profile]</p>
-  </li>
-  <li>
-    <p>jcmd pid JFR.check 检查当前运行状况</p>
-  </li>
-  <li>
-    <p>jcmd pid JFR.stop name=test.jfr 或者 jcmd pid JFR.stop recording=3 name和recording的值参见check的结果</p>
-  </li>
-  <li>
-    <p>将生成的jfr文件传回到自己的电脑中</p>
-  </li>
-  <li>
-    <p>shell下执行jmc，启动图形化客户端，导入jfr文件，就可以看到cpu、gc、线程、io、代码热点等监控信息了</p>
-  </li>
-  <li>
-    <p>如果需要定制化jfr抓取的指标，可以修改setting的xml文件，/…./JDK/jdk1.8.0_51/jre/lib/jfr/</p>
-  </li>
-</ol>
+<p>使用netty作为websocket的client，如果解决重连重试的问题呢？</p>
+
+<p>在实际业务中，要考虑网络不稳定导致的websocket中断问题。websocket中断后，</p>
+
+<p>要重新建立连接，还要将业务的订阅指令重新发送一遍。</p>
+
+<p>在netty的中断分为两种情况，一个是创建连接就直接失败了，一种是在运行中突然中断。</p>
+
+<p>这两种情况分别有回调的接口可以捕获，而后触发延迟重连。可以参考<a href="https://github.com/peiliping/watchdog">watchdog</a>的实现。</p>
+
+<h2 id="bark">Bark</h2>
+
+<p>最近无意间发现了一个iOS的App叫Bark，可以自定义手机通知提醒的消息。</p>
+
+<p>举个例子，你写了一个爬虫监控实时获取某只股票的价格，当他发生剧烈波动的时候，</p>
+
+<p>给自己的手机发送一条提醒，来提醒自己关注股票。那么如何给手机发送免费的消息呢？</p>
+
+<p>Bark就可以满足这个需求，安装Bark的App后，你会获得一个Url（包含一个uuid）。</p>
+
+<p>执行这个Url，你的手机就会收到来自Bark的通知消息了，消息的内容来自Url参数。</p>
+
+<h2 id="section">提醒助手</h2>
+
+<p>将watchdog和Bark结合在一起，实现了一个小功能。</p>
+
+<p>订阅Huobi的BTC行情信息，经过计算，将满足剧烈波动条件的消息通过Bark发送到手机上。</p>
 
   </article>
   
