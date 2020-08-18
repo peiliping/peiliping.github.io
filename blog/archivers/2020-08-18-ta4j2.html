@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>ta4j2 « Pei LiPing's Blog</title>
+  <meta name="description" content="上期讲了我在造一个类似ta4j的轮子，这次讲讲造轮子过程中的一些体会。">
+
+  <link rel="stylesheet" href="/blog/css/main.css">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2020-08-18-ta4j2">
+  <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
+</head>
+
+
+  <body>
+
+    <header class="header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Pei LiPing's Blog</a>
+    <nav class="site-nav">
+      
+        
+      
+        
+        <a class="page-link" href="/blog/about/">About</a>
+        
+      
+        
+        <a class="page-link" href="/blog/category/">Category</a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </nav>
+  </div>
+</header>
+
+    <div class="page-content">
+      <div class="wrapper">
+        <div class="col-main">
+          <div class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">ta4j2</h1>
+    <p class="post-meta">Aug 18, 2020</p>
+  </header>
+
+  <article class="post-content">
+    <p>上期讲了我在造一个类似ta4j的轮子，这次讲讲造轮子过程中的一些体会。</p>
+
+<h2 id="section">关于回调的使用场景</h2>
+
+<p>在我的实现中，回调是贯穿始终的，我之前使用这种模式的次数不多，稍微总结一下。</p>
+
+<blockquote>
+  <ol>
+    <li>粗粒度的K线可以由细粒度的K线回调触发更新，非常方便回测实现。</li>
+  </ol>
+</blockquote>
+
+<blockquote>
+  <ol>
+    <li>指标可以由K线或者其他指标的回调触发更新，保证数据的实时更新。</li>
+  </ol>
+</blockquote>
+
+<blockquote>
+  <ol>
+    <li>当K线触发完所有指标的更新后，会触发Rule的回调，进行Rule的判断。</li>
+  </ol>
+</blockquote>
+
+<blockquote>
+  <ol>
+    <li>规则判断后如果为True，可触发规则结果的回调，比如发消息、更新趋势、信号等。</li>
+  </ol>
+</blockquote>
+
+<h2 id="section-1">多依赖指标的回调问题</h2>
+
+<p>某些指标的计算依赖多个其他指标的计算结果，于是更新这个指标的回调就有了路径问题，比如MACD。</p>
+
+<p>可以看看PairIndicatorSeries这个源码，构造时会进行指标的回调血缘分析。</p>
+
+<p>多依赖指标的回调，并不需要人为设定，根据分析结果可自动选择最佳的触发时机（最近的共同父节点）。</p>
+
+<h2 id="section-2">指标重用问题</h2>
+
+<p>如果两个指标都使用了某一条K线的MA(20)作为构成的一部分，那么这个MA(20)是可以共用的。</p>
+
+<p>这样可以极大的减少计算量和内存开销，最典型的就是取K线的Close，极为常用。</p>
+
+<p>指标在某一时刻无论重复计算多少次，其结果都是一样的。当然重复计算我们也想尽量避免，</p>
+
+<p>在回调中提供了一个sequence，可以辅助去重。</p>
+
+<p>指标的构造和相同功能节点的自动复用，目前这块设计是有问题的，还需要重构打磨。</p>
+
+<h2 id="section-3">规则重用问题</h2>
+
+<p>上面提到的指标是可以复用的，但规则绝对不可以，在Manager中有是否使用过的检查。</p>
+
+<p>Rule在某一时刻重复判断，其结果可能是不一样的，比如翻转规则、连续N次等。</p>
+
+<p>举几个复杂规则的例子，有同时判断2条指标的规则，比如快慢指标的上穿判断；</p>
+
+<p>还有由两个规则叠加起来组成的规则集，比如逻辑与运算。规则比指标要略微复杂一点。</p>
+
+<h2 id="section-4">订单与仓位</h2>
+
+<p>订单的止盈止损也是个复杂问题，比如简单的止盈止损、追踪止盈止损等。</p>
+
+<p>在波动幅度较大的标的物上，追踪止盈止损并不能起到很好的效果，需要谨慎使用。</p>
+
+<p>控制盈利率与仓位比重是相对合理的做法，这样才能相对安全的达到收益最大化。</p>
+
+<p>在回测中，经常有人会为了收益最大化而过度调节止盈止损，基本上都是过拟合效果。</p>
+
+<h2 id="section-5">最后</h2>
+
+<p>ta4j的话题就到此为止了，我个人认为简单的量化交易策略是不可能挣钱的，</p>
+
+<p>但是通过程序化的方式，做个辅助交易助手还是非常现实可行的。</p>
+
+  </article>
+  
+  
+
+
+
+
+</div>
+
+        </div>
+        <div class="col-second">
+          <div class="col-box col-box-author">
+  <img class="avatar" src="//www.gravatar.com/avatar/your_email_md5?d=mm&s=135" alt="Pei LiPing">
+  <div class="col-box-title name">Pei LiPing</div>
+  <p>The Cabin Of Pei LiPing.</p>
+  <p class="contact">
+    
+    
+    
+    <a href="mailto:peilipingplp@gmail.com">Email</a>
+    
+  </p>
+</div>
+
+<div class="col-box">
+  <div class="col-box-title">Newest Posts</div>
+  <ul class="post-list">
+    
+      <li><a class="post-link" href="/blog/archivers/2020-08-18-ta4j2">ta4j2</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2020-07-20-ta4j">ta4j</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2020-06-29-websocket">websocket</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2020-05-11-state">state</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2020-04-28-DB2DB">DB2DB</a></li>
+    
+  </ul>
+</div>
+
+<div class="col-box post-toc hide">
+  <div class="col-box-title">TOC</div>
+</div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+<div class="wrapper">
+&copy; 2016 Pei LiPing
+</div>
+</footer>
+
+<script src="//upcdn.b0.upaiyun.com/libs/jquery/jquery-1.9.0.min.js"></script>
+<script src="/blog/js/easybook.js"></script>
+
+  </body>
+
+</html>

@@ -6,9 +6,96 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Wed, 12 Aug 2020 00:17:13 +0800</pubDate>
-    <lastBuildDate>Wed, 12 Aug 2020 00:17:13 +0800</lastBuildDate>
+    <pubDate>Tue, 18 Aug 2020 23:36:01 +0800</pubDate>
+    <lastBuildDate>Tue, 18 Aug 2020 23:36:01 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>ta4j2</title>
+        <description>&lt;p&gt;上期讲了我在造一个类似ta4j的轮子，这次讲讲造轮子过程中的一些体会。&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;关于回调的使用场景&lt;/h2&gt;
+
+&lt;p&gt;在我的实现中，回调是贯穿始终的，我之前使用这种模式的次数不多，稍微总结一下。&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;ol&gt;
+    &lt;li&gt;粗粒度的K线可以由细粒度的K线回调触发更新，非常方便回测实现。&lt;/li&gt;
+  &lt;/ol&gt;
+&lt;/blockquote&gt;
+
+&lt;blockquote&gt;
+  &lt;ol&gt;
+    &lt;li&gt;指标可以由K线或者其他指标的回调触发更新，保证数据的实时更新。&lt;/li&gt;
+  &lt;/ol&gt;
+&lt;/blockquote&gt;
+
+&lt;blockquote&gt;
+  &lt;ol&gt;
+    &lt;li&gt;当K线触发完所有指标的更新后，会触发Rule的回调，进行Rule的判断。&lt;/li&gt;
+  &lt;/ol&gt;
+&lt;/blockquote&gt;
+
+&lt;blockquote&gt;
+  &lt;ol&gt;
+    &lt;li&gt;规则判断后如果为True，可触发规则结果的回调，比如发消息、更新趋势、信号等。&lt;/li&gt;
+  &lt;/ol&gt;
+&lt;/blockquote&gt;
+
+&lt;h2 id=&quot;section-1&quot;&gt;多依赖指标的回调问题&lt;/h2&gt;
+
+&lt;p&gt;某些指标的计算依赖多个其他指标的计算结果，于是更新这个指标的回调就有了路径问题，比如MACD。&lt;/p&gt;
+
+&lt;p&gt;可以看看PairIndicatorSeries这个源码，构造时会进行指标的回调血缘分析。&lt;/p&gt;
+
+&lt;p&gt;多依赖指标的回调，并不需要人为设定，根据分析结果可自动选择最佳的触发时机（最近的共同父节点）。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-2&quot;&gt;指标重用问题&lt;/h2&gt;
+
+&lt;p&gt;如果两个指标都使用了某一条K线的MA(20)作为构成的一部分，那么这个MA(20)是可以共用的。&lt;/p&gt;
+
+&lt;p&gt;这样可以极大的减少计算量和内存开销，最典型的就是取K线的Close，极为常用。&lt;/p&gt;
+
+&lt;p&gt;指标在某一时刻无论重复计算多少次，其结果都是一样的。当然重复计算我们也想尽量避免，&lt;/p&gt;
+
+&lt;p&gt;在回调中提供了一个sequence，可以辅助去重。&lt;/p&gt;
+
+&lt;p&gt;指标的构造和相同功能节点的自动复用，目前这块设计是有问题的，还需要重构打磨。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-3&quot;&gt;规则重用问题&lt;/h2&gt;
+
+&lt;p&gt;上面提到的指标是可以复用的，但规则绝对不可以，在Manager中有是否使用过的检查。&lt;/p&gt;
+
+&lt;p&gt;Rule在某一时刻重复判断，其结果可能是不一样的，比如翻转规则、连续N次等。&lt;/p&gt;
+
+&lt;p&gt;举几个复杂规则的例子，有同时判断2条指标的规则，比如快慢指标的上穿判断；&lt;/p&gt;
+
+&lt;p&gt;还有由两个规则叠加起来组成的规则集，比如逻辑与运算。规则比指标要略微复杂一点。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-4&quot;&gt;订单与仓位&lt;/h2&gt;
+
+&lt;p&gt;订单的止盈止损也是个复杂问题，比如简单的止盈止损、追踪止盈止损等。&lt;/p&gt;
+
+&lt;p&gt;在波动幅度较大的标的物上，追踪止盈止损并不能起到很好的效果，需要谨慎使用。&lt;/p&gt;
+
+&lt;p&gt;控制盈利率与仓位比重是相对合理的做法，这样才能相对安全的达到收益最大化。&lt;/p&gt;
+
+&lt;p&gt;在回测中，经常有人会为了收益最大化而过度调节止盈止损，基本上都是过拟合效果。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-5&quot;&gt;最后&lt;/h2&gt;
+
+&lt;p&gt;ta4j的话题就到此为止了，我个人认为简单的量化交易策略是不可能挣钱的，&lt;/p&gt;
+
+&lt;p&gt;但是通过程序化的方式，做个辅助交易助手还是非常现实可行的。&lt;/p&gt;
+</description>
+        <pubDate>Tue, 18 Aug 2020 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2020-08-18-ta4j2</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2020-08-18-ta4j2</guid>
+        
+        
+        <category>ta4j</category>
+        
+      </item>
     
       <item>
         <title>ta4j</title>
@@ -655,103 +742,6 @@ u.toLong();
         
         
         <category>datatype</category>
-        
-      </item>
-    
-      <item>
-        <title>FlinkJob双十一前备战注意事项</title>
-        <description>&lt;h3 id=&quot;section&quot;&gt;1、确定双十一期间的数据特征&lt;/h3&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;	1.1、一般为数据条数倍增
-	1.2、也有一些业务是单条数据体积增大
-		1.2.1、考虑在消息中间件的messagesize的限制
-		1.2.2、对序列化、反序列化的性能影响
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;h3 id=&quot;section-1&quot;&gt;2、准备压测数据&lt;/h3&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;	2.1、根据业务逻辑随机生成数据
-	2.2、通过kafka等消息中间件将多天的数据一次性消费完
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;h3 id=&quot;section-2&quot;&gt;3、数据源检查&lt;/h3&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;	3.1、kafka的流控阈值是否合理
-	3.2、kafka的pt数是否够用
-		3.2.1、临时扩容kafka的pt只对新数据有帮助，历史数据积压无法快速消除
-		3.2.2、确定数据在源头没有严重的数据倾斜问题，防止大量数据集中于某一个特定的pt上
-		3.2.3、kafkasource的parallelism应为pt数的1/2或1/4，预留临时扩大parallelism的空间
-	3.3、增加高效的数据质量校验，检查job逻辑，适当的增加try-catch，注意catch发生时对性能的影响
-	3.4、配置好监控
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;h3 id=&quot;section-3&quot;&gt;4、时间窗口逻辑&lt;/h3&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;	4.1、如果job存在时间窗口逻辑，要考虑模拟数据的正确性，简单的通过2.2进行性能测试大多无效
-	4.2、不单单指flink的window操作，一些job逻辑中也可能包含时间窗口概念（比如：积攒10s的数据再批量输出，统计单位时间的uv等）
-	4.3、乱序数据的问题也可能更为严重，合理指定latency或者watermarket逻辑
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;h3 id=&quot;jobio&quot;&gt;5、检查job的外部io依赖&lt;/h3&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;	5.1、一般job都依赖redis、hbase等存储，在数据处理过程中对数据进行加工
-		5.1.1、外部依赖的资源是否够用（存储、性能等）
-		5.1.2、配置监控，有容灾方案
-	5.2、适当使用asyncIO来提升性能
-		5.2.1、不建议将有外部IO依赖的Operator的parallelism设置的非常大，一般都可以通过asyncIO来解决，更利于chaining-strate	gy的优化
-		5.2.2、不要一味的提升asyncIO的thread数，适当做batch效果更佳，可参照sdk中的async-batch模型
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;h3 id=&quot;sink&quot;&gt;6、关于Sink输出&lt;/h3&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;	6.1、kafkasink的parallelism不要与pt数绑死，防止pt扩容无效，也不要过大的parallelism
-	6.2、如果序列化逻辑过于耗时，建议单独写在一个Operator里
-	6.3、尽量不要单条数据sink输出，会对外部造成很大的压力
-	6.4、batchsink时注意flush与checkpoint之间的关系
-	6.5、batchsink时谨慎处理batchsize和lingertime
-	6.6、在sink中实现重试逻辑，尽量不要将exception交给flink，效率太低，代价太大
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;h3 id=&quot;checkpoint&quot;&gt;7、Checkpoint设置&lt;/h3&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;	7.1、合理设置checkpoint的频率，不要过于频繁
-	7.2、慎重使用exactly-once，能不用尽量不用
-	7.3、检查任务对于State的依赖程度，配合Savepoint启停任务
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;h3 id=&quot;section-4&quot;&gt;8、日志&lt;/h3&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;	8.1、净化日志打印内容
-	8.2、避免system.out.println或者e.printstacktrace()等
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;h3 id=&quot;section-5&quot;&gt;9、内存使用情况&lt;/h3&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;	9.1、关注ygc、fgc的频率和耗时
-	9.2、堆外空间的使用情况
-	9.3、networkbuffer的分配比例
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;h3 id=&quot;section-6&quot;&gt;10、背压&lt;/h3&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;	10.1、在性能测试时可以使用原生背压探测方式分析背压情况
-	10.2、我们定制的背压监控是更为准确的量化指标，无需开启就可实现全天候的监控，不但可以定位，还能分析趋势
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;h3 id=&quot;jobgraph&quot;&gt;11、jobgraph&lt;/h3&gt;
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;	11.1、核心Operator设置uid或uidhash
-	11.2、使用预览拓扑功能提交job
-	11.3、谨慎控制chaining-strategy，尤其是cpu开销高的Operator尽量分散
-	11.4、尽量离散同类slot，控制slot在taskmanager的分配策略
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-</description>
-        <pubDate>Tue, 08 Oct 2019 10:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2019-10-08-flink8-operation</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2019-10-08-flink8-operation</guid>
-        
-        
-        <category>flink</category>
         
       </item>
     
