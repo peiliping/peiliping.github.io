@@ -6,9 +6,60 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Tue, 18 Aug 2020 23:36:01 +0800</pubDate>
-    <lastBuildDate>Tue, 18 Aug 2020 23:36:01 +0800</lastBuildDate>
+    <pubDate>Mon, 28 Sep 2020 18:47:46 +0800</pubDate>
+    <lastBuildDate>Mon, 28 Sep 2020 18:47:46 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>transaction</title>
+        <description>&lt;p&gt;最近工作中大量的使用了Spring、Mybatis、JDBC的事务，这里稍作一下总结。&lt;/p&gt;
+
+&lt;h2 id=&quot;springtransaction&quot;&gt;Spring的Transaction&lt;/h2&gt;
+
+&lt;p&gt;现在Spring的Annotation就可以完成基本的事务配置，比起以前复杂的xml，确实方便了很多。&lt;/p&gt;
+
+&lt;p&gt;网上能搜到很多介绍Spring-Transaction的，主要是讲事务的隔离级别和传播性，这里就不多说了。&lt;/p&gt;
+
+&lt;p&gt;提醒大家去看看Spring-Transaction失效的N个原因，避免事务没有完整性的执行。&lt;/p&gt;
+
+&lt;p&gt;我们犯的错是同class的非事务方法去调用事务方法，导致事务不起作用。&lt;/p&gt;
+
+&lt;h2 id=&quot;jdbc&quot;&gt;JDBC事务&lt;/h2&gt;
+
+&lt;p&gt;mysql有个参数是flush_tx_commit需要关注一下，可能会影响你的事务性能。&lt;/p&gt;
+
+&lt;p&gt;事务中的操作肯定是串行的，所以还是尽量想办法让事务精简，能在事务外执行的尽量不要放进来。&lt;/p&gt;
+
+&lt;p&gt;比如序列化、反序列化等耗时的操作，尽量提前准备好，再开启事务。单个事务的执行时间越短，&lt;/p&gt;
+
+&lt;p&gt;多事务并发的性能才会更理想。在一些情况下，开启事务和逐个提交比起来会快一些，&lt;/p&gt;
+
+&lt;p&gt;但不要为了追求这种性能而过分的扩大事务范围。锁的范围变大，大概率会与一些业务上的并发发生冲突，&lt;/p&gt;
+
+&lt;p&gt;不利于整体性能的提升。&lt;/p&gt;
+
+&lt;h2 id=&quot;mybatis&quot;&gt;Mybatis&lt;/h2&gt;
+
+&lt;p&gt;这次项目中用的是mybatis-plus，在压测的时候关注了一下，性能确实很一般。&lt;/p&gt;
+
+&lt;p&gt;但是因为项目本身的业务复杂性，直接使用jdbc确实很不方便。第一个性能问题就是分表plugin，&lt;/p&gt;
+
+&lt;p&gt;做表名替换的开销比较大，从sql的参数中提取表名也可能比较慢。第二个性能问题就是通过mybatis&lt;/p&gt;
+
+&lt;p&gt;处理数据，会导致比较频繁的ygc。&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;最后&lt;/h2&gt;
+
+&lt;p&gt;之前并没有太多关于事务类型业务的开发经验，这次优化能提升两三倍还是很满意的。&lt;/p&gt;
+</description>
+        <pubDate>Sun, 27 Sep 2020 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2020-09-27-transaction</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2020-09-27-transaction</guid>
+        
+        
+        <category>transaction</category>
+        
+      </item>
     
       <item>
         <title>ta4j2</title>
@@ -572,176 +623,6 @@
         <link>http://peiliping.github.io/blog/archivers/2019-12-01-summary</link>
         <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2019-12-01-summary</guid>
         
-        
-      </item>
-    
-      <item>
-        <title>数据类型转换</title>
-        <description>&lt;p&gt;数据处理中，经常要做异构数据的数据转化，能看到很多开源项目都有类似的模块，&lt;/p&gt;
-
-&lt;p&gt;比如datax、canal、maxwell等。除了数据的ETL和计算外，还要处理字段类型。&lt;/p&gt;
-
-&lt;h2 id=&quot;section&quot;&gt;复杂度&lt;/h2&gt;
-
-&lt;p&gt;mysql的某个字段是bigint，写到hive时类型是string，这是一个非常简单的例子。&lt;/p&gt;
-
-&lt;p&gt;再说一个稍微复杂点的，mysql的某个字段是datetime，写入avro时是long。&lt;/p&gt;
-
-&lt;p&gt;我能想到最复杂的场景是mysql的某个字段是datetime，以binlog方式采集出来&lt;/p&gt;
-
-&lt;p&gt;写到kafka时转换为string(yyyy-MM-dd HH:mm:ss)，再写到parquetfile时类型为long。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-1&quot;&gt;表达类型和数据类型&lt;/h2&gt;
-
-&lt;p&gt;在Java里我们能看到的常见数据表达类型是很有限的：&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;boolean、int、long、float、double、string、byte[]、date、short、char
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;大多数情况下数据表达类型和数据类型是一致的，这里举个反例，Date类型(yyyy-MM-dd)和&lt;/p&gt;
-
-&lt;p&gt;DateTime类型(yyyy-MM-dd HH:mm:ss)的数据表达类型在java中都是util.Date。&lt;/p&gt;
-
-&lt;p&gt;无论是在存储中还是语言中，类型都可以分成数据本质类型和数据表达类型。表达类型是可以复用的。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-2&quot;&gt;目标&lt;/h2&gt;
-
-&lt;p&gt;前面我们把类型转化的问题进行了分析，如果我们是根据具体需求进行硬编码，那自然是很简单的。&lt;/p&gt;
-
-&lt;p&gt;我们希望设计一个结构，让增加一种数据类型或者增加一种数据表达更为简单。回归到具体业务中就是，&lt;/p&gt;
-
-&lt;p&gt;我们可以很容易的添加一种新的数据源类型，经过一些简答的配置就可以完成全类型的匹配转换。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-3&quot;&gt;解决方法&lt;/h2&gt;
-
-&lt;h3 id=&quot;section-4&quot;&gt;结构层次&lt;/h3&gt;
-
-&lt;p&gt;分为三层结构：数据本质类型、数据来源类型、数据输出类型&lt;/p&gt;
-
-&lt;h4 id=&quot;section-5&quot;&gt;数据来源类型&lt;/h4&gt;
-
-&lt;p&gt;可以为任意常见表达类型&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
-public interface UFrom {
-    void from(final Boolean p);
-    void from(final Integer p);
-    void from(final Long p);
-    void from(final Float p);
-    void from(final Double p);
-    void from(final String p);
-    void from(final Date p);
-    void from(final byte[] p);
-}
-
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;h4 id=&quot;section-6&quot;&gt;数据输出类型&lt;/h4&gt;
-
-&lt;p&gt;也可以为任意常见表达类型&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
-public interface UTo {
-    Boolean toBoolean();
-    Integer toInt();
-    Long toLong();
-    Float toFloat();
-    Double toDouble();
-    String toStr();
-    Date toDate();
-    byte[] toBytes();
-}
-
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;h4 id=&quot;section-7&quot;&gt;数据本质类型&lt;/h4&gt;
-
-&lt;blockquote&gt;
-  &lt;p&gt;1、UAbstDate(UDate、UDateTime、UTime、UYear)&lt;/p&gt;
-
-  &lt;p&gt;2、UBoolean&lt;/p&gt;
-
-  &lt;p&gt;3、UInteger&lt;/p&gt;
-
-  &lt;p&gt;4、ULong&lt;/p&gt;
-
-  &lt;p&gt;5、UFloat&lt;/p&gt;
-
-  &lt;p&gt;6、UDouble&lt;/p&gt;
-
-  &lt;p&gt;7、UString&lt;/p&gt;
-
-  &lt;p&gt;8、UBytes&lt;/p&gt;
-&lt;/blockquote&gt;
-
-&lt;p&gt;部分UData代码&lt;/p&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
-private UAbstFrom&amp;lt;U&amp;gt; from;
-
-private UAbstTo&amp;lt;U&amp;gt; to;
-
-private boolean lazy;
-
-private LazyCall[] lazyCalls = new LazyCall[MethodType.values().length];
-
-private int lazyCallIndex = -1;
-
-@Override
-    public void from(Date p) {
-
-        if (this.lazy) {
-            this.lazyCallIndex = MethodType.DATE.ordinal();
-            if (this.lazyCalls[this.lazyCallIndex] == null) {
-                this.lazyCalls[this.lazyCallIndex] = new LazyCall&amp;lt;Date&amp;gt;(p, MethodType.DATE) {
-
-
-                    @Override void exec() {
-
-                        if (raw == null) {
-                            from.setData(null);
-                            return;
-                        }
-                        from.from(raw);
-                    }
-                };
-            } else {
-                this.lazyCalls[this.lazyCallIndex].raw = p;
-            }
-            return;
-        } else {
-            if (p == null) {
-                this.from.setData(null);
-                return;
-            }
-            this.from.from(p);
-        }
-    }
-
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-
-&lt;p&gt;当from和to的类型是一致的时候，在lazy模式下就不进行类型转换了，可以提高效率。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-8&quot;&gt;最后&lt;/h2&gt;
-
-&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
-UDateTime u = new UDateTime(true);
-u.from(&quot;2019-11-11 00:05:01&quot;);
-u.toLong();
-
-&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-</description>
-        <pubDate>Mon, 11 Nov 2019 10:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2019-11-11-datatype</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2019-11-11-datatype</guid>
-        
-        
-        <category>datatype</category>
         
       </item>
     

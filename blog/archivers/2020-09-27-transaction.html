@@ -6,11 +6,11 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>websocket « Pei LiPing's Blog</title>
-  <meta name="description" content="最近一个多月在和websocket打交道，这次来总结一下最近一阶段的工作吧。">
+  <title>transaction « Pei LiPing's Blog</title>
+  <meta name="description" content="最近工作中大量的使用了Spring、Mybatis、JDBC的事务，这里稍作一下总结。">
 
   <link rel="stylesheet" href="/blog/css/main.css">
-  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2020-06-29-websocket">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2020-09-27-transaction">
   <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
 </head>
 
@@ -70,52 +70,50 @@
           <div class="post">
 
   <header class="post-header">
-    <h1 class="post-title">websocket</h1>
-    <p class="post-meta">Jun 29, 2020</p>
+    <h1 class="post-title">transaction</h1>
+    <p class="post-meta">Sep 27, 2020</p>
   </header>
 
   <article class="post-content">
-    <p>最近一个多月在和websocket打交道，这次来总结一下最近一阶段的工作吧。</p>
+    <p>最近工作中大量的使用了Spring、Mybatis、JDBC的事务，这里稍作一下总结。</p>
 
-<h2 id="hydra">hydra</h2>
+<h2 id="springtransaction">Spring的Transaction</h2>
 
-<p>三月份写了一篇关于netty的blog，介绍了我写的一个小项目叫<a href="https://github.com/peiliping/hydra">hydra</a>。</p>
+<p>现在Spring的Annotation就可以完成基本的事务配置，比起以前复杂的xml，确实方便了很多。</p>
 
-<p>经过这几个月的完善，已经可以作为一个websocket的压测工具了。</p>
+<p>网上能搜到很多介绍Spring-Transaction的，主要是讲事务的隔离级别和传播性，这里就不多说了。</p>
 
-<p>这两次压测实践中，单实例可以施压5W个并发连接数，满足大多数测试需求。</p>
+<p>提醒大家去看看Spring-Transaction失效的N个原因，避免事务没有完整性的执行。</p>
 
-<p>通过参数可以配置心跳消息、订阅指令等，满足业务测试的需求。</p>
+<p>我们犯的错是同class的非事务方法去调用事务方法，导致事务不起作用。</p>
 
-<h2 id="watchdog">watchdog</h2>
+<h2 id="jdbc">JDBC事务</h2>
 
-<p>使用netty作为websocket的client，如果解决重连重试的问题呢？</p>
+<p>mysql有个参数是flush_tx_commit需要关注一下，可能会影响你的事务性能。</p>
 
-<p>在实际业务中，要考虑网络不稳定导致的websocket中断问题。websocket中断后，</p>
+<p>事务中的操作肯定是串行的，所以还是尽量想办法让事务精简，能在事务外执行的尽量不要放进来。</p>
 
-<p>要重新建立连接，还要将业务的订阅指令重新发送一遍。</p>
+<p>比如序列化、反序列化等耗时的操作，尽量提前准备好，再开启事务。单个事务的执行时间越短，</p>
 
-<p>在netty的中断分为两种情况，一个是创建连接就直接失败了，一种是在运行中突然中断。</p>
+<p>多事务并发的性能才会更理想。在一些情况下，开启事务和逐个提交比起来会快一些，</p>
 
-<p>这两种情况分别有回调的接口可以捕获，而后触发延迟重连。可以参考<a href="https://github.com/peiliping/watchdog">watchdog</a>的实现。</p>
+<p>但不要为了追求这种性能而过分的扩大事务范围。锁的范围变大，大概率会与一些业务上的并发发生冲突，</p>
 
-<h2 id="bark">Bark</h2>
+<p>不利于整体性能的提升。</p>
 
-<p>最近无意间发现了一个iOS的App叫Bark，可以自定义手机通知提醒的消息。</p>
+<h2 id="mybatis">Mybatis</h2>
 
-<p>举个例子，你写了一个爬虫监控实时获取某只股票的价格，当他发生剧烈波动的时候，</p>
+<p>这次项目中用的是mybatis-plus，在压测的时候关注了一下，性能确实很一般。</p>
 
-<p>给自己的手机发送一条提醒，来提醒自己关注股票。那么如何给手机发送免费的消息呢？</p>
+<p>但是因为项目本身的业务复杂性，直接使用jdbc确实很不方便。第一个性能问题就是分表plugin，</p>
 
-<p>Bark就可以满足这个需求，安装Bark的App后，你会获得一个Url（包含一个uuid）。</p>
+<p>做表名替换的开销比较大，从sql的参数中提取表名也可能比较慢。第二个性能问题就是通过mybatis</p>
 
-<p>执行这个Url，你的手机就会收到来自Bark的通知消息了，消息的内容来自Url参数。</p>
+<p>处理数据，会导致比较频繁的ygc。</p>
 
-<h2 id="section">提醒助手</h2>
+<h2 id="section">最后</h2>
 
-<p>将watchdog和Bark结合在一起，实现了一个小功能。</p>
-
-<p>订阅Huobi的BTC行情信息，经过计算，将满足剧烈波动条件的消息通过Bark发送到手机上。</p>
+<p>之前并没有太多关于事务类型业务的开发经验，这次优化能提升两三倍还是很满意的。</p>
 
   </article>
   
