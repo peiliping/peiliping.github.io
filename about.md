@@ -43,7 +43,9 @@ public: true
 
 > 2018年7月  ~ 2019年6月	基于社区Flink1.5进行制定，完成了JD的FlinkOnK8s的研发工作，并持续迭代
 
-> 2019年1月  ~ 2019年6月	Fregata框架重构，成为单机版的流式数据处理框架
+> 2019年1月  ~ 2019年7月	Fregata框架重构，成为单机版的流式数据处理框架
+
+> 2019年12月			自由职业
 
 ### 主要技能 ###
 
@@ -63,3 +65,4 @@ public: true
 
 > FlinkOnK8s，增强了预览拓扑和运行时拓扑，重新封装了BatchSink、AsyncFunction等核心组件，重新设计了背压预警告警体系。
 
+> 维护一个单机流处理框架[【Fevernova】](https://github.com/fevernova-jakiro/fevernova)
