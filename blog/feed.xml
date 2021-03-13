@@ -6,9 +6,120 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Fri, 08 Jan 2021 23:50:05 +0800</pubDate>
-    <lastBuildDate>Fri, 08 Jan 2021 23:50:05 +0800</lastBuildDate>
+    <pubDate>Sat, 13 Mar 2021 22:25:09 +0800</pubDate>
+    <lastBuildDate>Sat, 13 Mar 2021 22:25:09 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>Master选举</title>
+        <description>&lt;p&gt;今年的第一篇就写写Master的选举吧，在之前的工作经历中，我们经常碰到Master选举问题。&lt;/p&gt;
+
+&lt;p&gt;比如Hbase、Hadoop的Master选举，都是通过Zookeeper来完成的，这几年比较流行K8s，&lt;/p&gt;
+
+&lt;p&gt;很多组件的选举是通过ETCD来完成的。说到这需要补充一点背景知识，那就是Paxos和Raft，&lt;/p&gt;
+
+&lt;p&gt;这里就不详细陈述了，自行搜索。&lt;/p&gt;
+
+&lt;h2 id=&quot;redis&quot;&gt;通过Redis选举&lt;/h2&gt;
+
+&lt;p&gt;不是任何时候我们都能使用ZK、ETCD来完成选举的，比如部署规模的限制。最近碰到了一个场景，&lt;/p&gt;
+
+&lt;p&gt;需要进行Master的选举，但是部署规模非常小，无法引入其他组件来辅助，项目中有使用到Redis，&lt;/p&gt;
+
+&lt;p&gt;于是开发了一个基于Redis的简易选举方案。&lt;/p&gt;
+
+&lt;h3 id=&quot;redis-1&quot;&gt;如何利用Redis选举&lt;/h3&gt;
+
+&lt;p&gt;网上有很多文章介绍，大体都是基于Redis的SetN指令的特性，进行一个分布式锁的争抢过程，&lt;/p&gt;
+
+&lt;p&gt;抢到锁的即为Master。如果你使用过Redission的客户端，可以直接使用Rlock来完成这个工作。&lt;/p&gt;
+
+&lt;p&gt;Redission中大量的封装了LuaScript，来完成一些事务性的工作。&lt;/p&gt;
+
+&lt;h3 id=&quot;redis-2&quot;&gt;利用Redis选举的弊端&lt;/h3&gt;
+
+&lt;p&gt;为了性能考量，在写入时只要主节点成功，就会返回True。所以在故障时，主从可能会不一致。&lt;/p&gt;
+
+&lt;p&gt;在抢锁这个场景中，也就是会短暂出现两把锁。当然通过结构上的设计是可以尽量降低这个概率的，&lt;/p&gt;
+
+&lt;p&gt;但无法彻底消除。&lt;/p&gt;
+
+&lt;h3 id=&quot;section&quot;&gt;选举的大致逻辑&lt;/h3&gt;
+
+&lt;p&gt;1、 无锁时，争抢创建锁&lt;/p&gt;
+
+&lt;p&gt;2、 有锁时，没有抢到锁的节点，观察等待锁消失&lt;/p&gt;
+
+&lt;p&gt;3、 有锁时，抢到锁的节点，延续锁的TTL&lt;/p&gt;
+
+&lt;h3 id=&quot;section-1&quot;&gt;代码示例&lt;/h3&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;while (true) {
+            try {
+                RBucket&amp;lt;String&amp;gt; currentLock = this.redis.getBucket(this.lockName, StringCodec.INSTANCE);
+                String currentLockValue = currentLock.get();
+
+                if (StringUtils.isBlank(currentLockValue)) {
+                    if (log.isDebugEnabled()) {
+                        log.debug(&quot;start election .&quot;);
+                    }
+                    boolean success = currentLock.trySet(this.deviceId, DURATION_TIME, TimeUnit.SECONDS);
+                    if (log.isDebugEnabled()) {
+                        log.debug(&quot;election result : &quot; + success);
+                    }
+                    update(success);
+                    Util.sleepSec(10);
+                } else {
+                    long remainTime = currentLock.remainTimeToLive();
+                    if (remainTime &amp;lt;= 0) {
+                        continue;
+                    }
+                    String tValue = currentLock.get();
+                    if (!currentLockValue.equals(tValue)) {
+                        continue;
+                    }
+
+                    if (this.deviceId.equals(currentLockValue)) {
+                        if (log.isDebugEnabled()) {
+                            log.debug(&quot;I am master .&quot;);
+                        }
+                        if (remainTime &amp;gt;= TimeUnit.SECONDS.toMillis(DISPUTE_TIME)) {
+                            currentLock.expire(DURATION_TIME, TimeUnit.SECONDS);
+                            if (log.isDebugEnabled()) {
+                                log.debug(&quot;renew lock ttl .&quot;);
+                            }
+                            update(true);
+                        } else {
+                            update(false);
+                            if (log.isDebugEnabled()) {
+                                log.debug(&quot;unstable .&quot;);
+                            }
+                        }
+                        Util.sleepSec(10);
+                    } else {
+                        update(false);
+                        if (log.isDebugEnabled()) {
+                            log.debug(&quot;wait for next time .&quot;);
+                        }
+                        Util.sleepMS(remainTime);
+                    }
+                }
+            } catch (Throwable e) {
+                log.error(&quot;Election Error : &quot;, e);
+                Util.sleepSec(1);
+            }
+        }
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+</description>
+        <pubDate>Tue, 19 Jan 2021 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2021-01-19-master</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2021-01-19-master</guid>
+        
+        
+        <category>master</category>
+        
+      </item>
     
       <item>
         <title>2020年总结</title>
@@ -578,53 +689,6 @@
         <category>jdbc</category>
         
         <category>database</category>
-        
-      </item>
-    
-      <item>
-        <title>hydra</title>
-        <description>&lt;p&gt;之前写过一篇关于netty的blog，经过几次梳理，hydra项目的代码基本稳定了。&lt;/p&gt;
-
-&lt;p&gt;hydra项目分为client和server两部分。&lt;/p&gt;
-
-&lt;h2 id=&quot;client&quot;&gt;client&lt;/h2&gt;
-
-&lt;p&gt;client用于weboscket的功能和性能测试，短时间可以轻松建立50000个连接。&lt;/p&gt;
-
-&lt;p&gt;可以通过参数指定subscribe的字符串，也可以定期发送指令维持heartbeat。&lt;/p&gt;
-
-&lt;p&gt;如果server返回的数据是gzip压缩的binary数据，也是支持解压缩的。&lt;/p&gt;
-
-&lt;p&gt;我尝试用client订阅了huobi的行情数据，配置启动参数就可以完成。其他同类网站也是没有问题的。&lt;/p&gt;
-
-&lt;p&gt;当然不要用它来对别人的网站进行压力测试，会被封IP的。&lt;/p&gt;
-
-&lt;h2 id=&quot;server&quot;&gt;server&lt;/h2&gt;
-
-&lt;p&gt;server主要是一个推送服务的基础框架。&lt;/p&gt;
-
-&lt;p&gt;推送的消息来源是从redis的topic中拉去的，采用redission的client。&lt;/p&gt;
-
-&lt;p&gt;从消息中提取部分字段信息，构建nameSpace，通过ChannelManager进行推送。&lt;/p&gt;
-
-&lt;p&gt;推送的消息格式，目前只支持text，未来需要考虑支持binary的压缩格式。&lt;/p&gt;
-
-&lt;p&gt;除了以nameSpace为基础的推送外，还实现了基于Uid的推送模式，之前的blog已经介绍过原理了。&lt;/p&gt;
-
-&lt;h2 id=&quot;section&quot;&gt;总结&lt;/h2&gt;
-
-&lt;p&gt;websocket推送可以应用的领域非常广，弹幕、聊天室、股票行情软件等等。&lt;/p&gt;
-
-&lt;p&gt;基于hydra的基础，后面要尝试一下netty的优化实践。&lt;/p&gt;
-</description>
-        <pubDate>Wed, 18 Mar 2020 10:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2020-03-18-hydra</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2020-03-18-hydra</guid>
-        
-        
-        <category>hydra</category>
-        
-        <category>netty</category>
         
       </item>
     

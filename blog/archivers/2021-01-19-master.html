@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Master选举 « Pei LiPing's Blog</title>
+  <meta name="description" content="今年的第一篇就写写Master的选举吧，在之前的工作经历中，我们经常碰到Master选举问题。">
+
+  <link rel="stylesheet" href="/blog/css/main.css">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2021-01-19-master">
+  <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
+</head>
+
+
+  <body>
+
+    <header class="header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Pei LiPing's Blog</a>
+    <nav class="site-nav">
+      
+        
+      
+        
+        <a class="page-link" href="/blog/about/">About</a>
+        
+      
+        
+        <a class="page-link" href="/blog/category/">Category</a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </nav>
+  </div>
+</header>
+
+    <div class="page-content">
+      <div class="wrapper">
+        <div class="col-main">
+          <div class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">Master选举</h1>
+    <p class="post-meta">Jan 19, 2021</p>
+  </header>
+
+  <article class="post-content">
+    <p>今年的第一篇就写写Master的选举吧，在之前的工作经历中，我们经常碰到Master选举问题。</p>
+
+<p>比如Hbase、Hadoop的Master选举，都是通过Zookeeper来完成的，这几年比较流行K8s，</p>
+
+<p>很多组件的选举是通过ETCD来完成的。说到这需要补充一点背景知识，那就是Paxos和Raft，</p>
+
+<p>这里就不详细陈述了，自行搜索。</p>
+
+<h2 id="redis">通过Redis选举</h2>
+
+<p>不是任何时候我们都能使用ZK、ETCD来完成选举的，比如部署规模的限制。最近碰到了一个场景，</p>
+
+<p>需要进行Master的选举，但是部署规模非常小，无法引入其他组件来辅助，项目中有使用到Redis，</p>
+
+<p>于是开发了一个基于Redis的简易选举方案。</p>
+
+<h3 id="redis-1">如何利用Redis选举</h3>
+
+<p>网上有很多文章介绍，大体都是基于Redis的SetN指令的特性，进行一个分布式锁的争抢过程，</p>
+
+<p>抢到锁的即为Master。如果你使用过Redission的客户端，可以直接使用Rlock来完成这个工作。</p>
+
+<p>Redission中大量的封装了LuaScript，来完成一些事务性的工作。</p>
+
+<h3 id="redis-2">利用Redis选举的弊端</h3>
+
+<p>为了性能考量，在写入时只要主节点成功，就会返回True。所以在故障时，主从可能会不一致。</p>
+
+<p>在抢锁这个场景中，也就是会短暂出现两把锁。当然通过结构上的设计是可以尽量降低这个概率的，</p>
+
+<p>但无法彻底消除。</p>
+
+<h3 id="section">选举的大致逻辑</h3>
+
+<p>1、 无锁时，争抢创建锁</p>
+
+<p>2、 有锁时，没有抢到锁的节点，观察等待锁消失</p>
+
+<p>3、 有锁时，抢到锁的节点，延续锁的TTL</p>
+
+<h3 id="section-1">代码示例</h3>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>while (true) {
+            try {
+                RBucket&lt;String&gt; currentLock = this.redis.getBucket(this.lockName, StringCodec.INSTANCE);
+                String currentLockValue = currentLock.get();
+
+                if (StringUtils.isBlank(currentLockValue)) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("start election .");
+                    }
+                    boolean success = currentLock.trySet(this.deviceId, DURATION_TIME, TimeUnit.SECONDS);
+                    if (log.isDebugEnabled()) {
+                        log.debug("election result : " + success);
+                    }
+                    update(success);
+                    Util.sleepSec(10);
+                } else {
+                    long remainTime = currentLock.remainTimeToLive();
+                    if (remainTime &lt;= 0) {
+                        continue;
+                    }
+                    String tValue = currentLock.get();
+                    if (!currentLockValue.equals(tValue)) {
+                        continue;
+                    }
+
+                    if (this.deviceId.equals(currentLockValue)) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("I am master .");
+                        }
+                        if (remainTime &gt;= TimeUnit.SECONDS.toMillis(DISPUTE_TIME)) {
+                            currentLock.expire(DURATION_TIME, TimeUnit.SECONDS);
+                            if (log.isDebugEnabled()) {
+                                log.debug("renew lock ttl .");
+                            }
+                            update(true);
+                        } else {
+                            update(false);
+                            if (log.isDebugEnabled()) {
+                                log.debug("unstable .");
+                            }
+                        }
+                        Util.sleepSec(10);
+                    } else {
+                        update(false);
+                        if (log.isDebugEnabled()) {
+                            log.debug("wait for next time .");
+                        }
+                        Util.sleepMS(remainTime);
+                    }
+                }
+            } catch (Throwable e) {
+                log.error("Election Error : ", e);
+                Util.sleepSec(1);
+            }
+        }
+</code></pre>
+</div>
+
+  </article>
+  
+  
+
+
+
+
+</div>
+
+        </div>
+        <div class="col-second">
+          <div class="col-box col-box-author">
+  <img class="avatar" src="//www.gravatar.com/avatar/your_email_md5?d=mm&s=135" alt="Pei LiPing">
+  <div class="col-box-title name">Pei LiPing</div>
+  <p>The Cabin Of Pei LiPing.</p>
+  <p class="contact">
+    
+    
+    
+    <a href="mailto:peilipingplp@gmail.com">Email</a>
+    
+  </p>
+</div>
+
+<div class="col-box">
+  <div class="col-box-title">Newest Posts</div>
+  <ul class="post-list">
+    
+      <li><a class="post-link" href="/blog/archivers/2021-01-19-master">Master选举</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2020-12-30-summary">2020年总结</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2020-11-19-doublestreaming">double streaming 2</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2020-10-14-doublestreaming">double streaming</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2020-09-27-transaction">transaction</a></li>
+    
+  </ul>
+</div>
+
+<div class="col-box post-toc hide">
+  <div class="col-box-title">TOC</div>
+</div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+<div class="wrapper">
+&copy; 2016 Pei LiPing
+</div>
+</footer>
+
+<script src="//upcdn.b0.upaiyun.com/libs/jquery/jquery-1.9.0.min.js"></script>
+<script src="/blog/js/easybook.js"></script>
+
+  </body>
+
+</html>
