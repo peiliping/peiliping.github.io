@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>flock « Pei LiPing's Blog</title>
+  <meta name="description" content="最近购买了一台腾讯云的服务器跑一些小程序，在整理crontab时发现了一个腾讯云的定时任务，">
+
+  <link rel="stylesheet" href="/blog/css/main.css">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2021-06-13-flock">
+  <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
+</head>
+
+
+  <body>
+
+    <header class="header">
+  <div class="wrapper">
+    <a class="site-title" href="/blog/">Pei LiPing's Blog</a>
+    <nav class="site-nav">
+      
+        
+      
+        
+        <a class="page-link" href="/blog/about/">About</a>
+        
+      
+        
+        <a class="page-link" href="/blog/category/">Category</a>
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </nav>
+  </div>
+</header>
+
+    <div class="page-content">
+      <div class="wrapper">
+        <div class="col-main">
+          <div class="post">
+
+  <header class="post-header">
+    <h1 class="post-title">flock</h1>
+    <p class="post-meta">Jun 13, 2021</p>
+  </header>
+
+  <article class="post-content">
+    <p>最近购买了一台腾讯云的服务器跑一些小程序，在整理crontab时发现了一个腾讯云的定时任务，</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>*/5 * * * * flock -xn /tmp/stargate.lock -c '/usr/local/qcloud/stargate/admin/start.sh &gt; /dev/null 2&gt;&amp;1 &amp;'
+</code></pre>
+</div>
+
+<p>脚本是为了保证腾讯云agent存活的，这个不是我们关注的重点，重点是flock这个命令。</p>
+
+<p>虽然经常与服务器打交道，但是flock这个命令还是比较陌生的。</p>
+
+<h2 id="flock">flock</h2>
+
+<p>以下内容摘抄自cnblogs。</p>
+
+<p>如果两个进程同时启动了某个脚本，那么很容易导致数据的混乱，这个时候需要锁来协调解决。</p>
+
+<p>flock是建议性锁，不具备强制性。一个进程使用flock将文件锁住，另一个进程也可以直接操作正在被锁的文件，修改文件中的数据。</p>
+
+<p>flock只是用于检测文件是否被加锁，针对文件已经被加锁，另一个进程写入数据的情况，内核不会阻止这个进程的写入操作。</p>
+
+<p>flock主要三种操作类型：</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>LOCK_SH，共享锁，多个进程可以使用同一把锁，常被用作读共享锁；
+LOCK_EX，排他锁，同时只允许一个进程使用，常被用作写锁；
+LOCK_UN，释放锁；
+</code></pre>
+</div>
+
+<h2 id="section">参数</h2>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>-s,--shared：获取一个共享锁，在定向为某文件的FD上设置共享锁而未释放锁的时间内，其他进程试图在定向为此文件的FD上设置独占锁的请求失败，而其他进程试图在定向为此文件的FD上设置共享锁的请求会成功。
+-x，-e，--exclusive：获取一个排它锁，或者称为写入锁，为默认项
+-u，--unlock：手动释放锁，一般情况不必须，当FD关闭时，系统会自动解锁，此参数用于脚本命令一部分需要异步执行，一部分可以同步执行的情况。
+-n，--nb, --nonblock：非阻塞模式，当获取锁失败时，返回1而不是等待
+-w, --wait, --timeout seconds：设置阻塞超时，当超过设置的秒数时，退出阻塞模式，返回1，并继续执行后面的语句
+-o, --close：表示当执行command前关闭设置锁的FD，以使command的子进程不保持锁。
+-c, --command command：在shell中执行其后的语句
+</code></pre>
+</div>
+
+<h2 id="section-1">最后</h2>
+
+<p>flock可以让很多脚本程序变得更规范，比如我有一些增量计算数据的脚本，如果不小心并发执行了就会导致数据错乱。</p>
+
+<p>以前不知道这个命令，都是用一个lock文件来替代，在脚本中判断文件是否存在，非常的繁琐，也不是很严谨。</p>
+
+<p>你是更喜欢把flock放在脚本外部，还是写在脚本里呢？</p>
+
+  </article>
+  
+  
+
+
+
+
+</div>
+
+        </div>
+        <div class="col-second">
+          <div class="col-box col-box-author">
+  <img class="avatar" src="//www.gravatar.com/avatar/your_email_md5?d=mm&s=135" alt="Pei LiPing">
+  <div class="col-box-title name">Pei LiPing</div>
+  <p>The Cabin Of Pei LiPing.</p>
+  <p class="contact">
+    
+    
+    
+    <a href="mailto:peilipingplp@gmail.com">Email</a>
+    
+  </p>
+</div>
+
+<div class="col-box">
+  <div class="col-box-title">Newest Posts</div>
+  <ul class="post-list">
+    
+      <li><a class="post-link" href="/blog/archivers/2021-06-13-flock">flock</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2021-05-20-CMD">CMD</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2021-04-27-UniswapOracle">UniswapOracle</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2021-03-16-chainlink">Chainlink</a></li>
+    
+      <li><a class="post-link" href="/blog/archivers/2021-02-22-contract">ETH合约</a></li>
+    
+  </ul>
+</div>
+
+<div class="col-box post-toc hide">
+  <div class="col-box-title">TOC</div>
+</div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+<div class="wrapper">
+&copy; 2016 Pei LiPing
+</div>
+</footer>
+
+<script src="//upcdn.b0.upaiyun.com/libs/jquery/jquery-1.9.0.min.js"></script>
+<script src="/blog/js/easybook.js"></script>
+
+  </body>
+
+</html>

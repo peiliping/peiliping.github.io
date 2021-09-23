@@ -6,9 +6,137 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Mon, 07 Jun 2021 13:23:51 +0800</pubDate>
-    <lastBuildDate>Mon, 07 Jun 2021 13:23:51 +0800</lastBuildDate>
+    <pubDate>Thu, 23 Sep 2021 10:45:56 +0800</pubDate>
+    <lastBuildDate>Thu, 23 Sep 2021 10:45:56 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>flock</title>
+        <description>&lt;p&gt;最近购买了一台腾讯云的服务器跑一些小程序，在整理crontab时发现了一个腾讯云的定时任务，&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;*/5 * * * * flock -xn /tmp/stargate.lock -c '/usr/local/qcloud/stargate/admin/start.sh &amp;gt; /dev/null 2&amp;gt;&amp;amp;1 &amp;amp;'
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;脚本是为了保证腾讯云agent存活的，这个不是我们关注的重点，重点是flock这个命令。&lt;/p&gt;
+
+&lt;p&gt;虽然经常与服务器打交道，但是flock这个命令还是比较陌生的。&lt;/p&gt;
+
+&lt;h2 id=&quot;flock&quot;&gt;flock&lt;/h2&gt;
+
+&lt;p&gt;以下内容摘抄自cnblogs。&lt;/p&gt;
+
+&lt;p&gt;如果两个进程同时启动了某个脚本，那么很容易导致数据的混乱，这个时候需要锁来协调解决。&lt;/p&gt;
+
+&lt;p&gt;flock是建议性锁，不具备强制性。一个进程使用flock将文件锁住，另一个进程也可以直接操作正在被锁的文件，修改文件中的数据。&lt;/p&gt;
+
+&lt;p&gt;flock只是用于检测文件是否被加锁，针对文件已经被加锁，另一个进程写入数据的情况，内核不会阻止这个进程的写入操作。&lt;/p&gt;
+
+&lt;p&gt;flock主要三种操作类型：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;LOCK_SH，共享锁，多个进程可以使用同一把锁，常被用作读共享锁；
+LOCK_EX，排他锁，同时只允许一个进程使用，常被用作写锁；
+LOCK_UN，释放锁；
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;参数&lt;/h2&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;-s,--shared：获取一个共享锁，在定向为某文件的FD上设置共享锁而未释放锁的时间内，其他进程试图在定向为此文件的FD上设置独占锁的请求失败，而其他进程试图在定向为此文件的FD上设置共享锁的请求会成功。
+-x，-e，--exclusive：获取一个排它锁，或者称为写入锁，为默认项
+-u，--unlock：手动释放锁，一般情况不必须，当FD关闭时，系统会自动解锁，此参数用于脚本命令一部分需要异步执行，一部分可以同步执行的情况。
+-n，--nb, --nonblock：非阻塞模式，当获取锁失败时，返回1而不是等待
+-w, --wait, --timeout seconds：设置阻塞超时，当超过设置的秒数时，退出阻塞模式，返回1，并继续执行后面的语句
+-o, --close：表示当执行command前关闭设置锁的FD，以使command的子进程不保持锁。
+-c, --command command：在shell中执行其后的语句
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;section-1&quot;&gt;最后&lt;/h2&gt;
+
+&lt;p&gt;flock可以让很多脚本程序变得更规范，比如我有一些增量计算数据的脚本，如果不小心并发执行了就会导致数据错乱。&lt;/p&gt;
+
+&lt;p&gt;以前不知道这个命令，都是用一个lock文件来替代，在脚本中判断文件是否存在，非常的繁琐，也不是很严谨。&lt;/p&gt;
+
+&lt;p&gt;你是更喜欢把flock放在脚本外部，还是写在脚本里呢？&lt;/p&gt;
+</description>
+        <pubDate>Sun, 13 Jun 2021 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2021-06-13-flock</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2021-06-13-flock</guid>
+        
+        
+        <category>shell</category>
+        
+        <category>lock</category>
+        
+      </item>
+    
+      <item>
+        <title>CMD</title>
+        <description>&lt;p&gt;使用linux的命令时，经常会用man来查询可选参数及其含义。偶尔我们也会开发自己的小工具。&lt;/p&gt;
+
+&lt;p&gt;如何给小工具快速添加可选参数呢？&lt;/p&gt;
+
+&lt;h2 id=&quot;java&quot;&gt;java&lt;/h2&gt;
+
+&lt;p&gt;java的开发者应该是更喜欢使用配置文件的方式来与程序交互，无论是property还是yml。&lt;/p&gt;
+
+&lt;p&gt;在参数不是特别多时，cmd的params也是不错的选择。提到给java传参数，大多数人一定是会&lt;/p&gt;
+
+&lt;p&gt;想到main函数的args数组，这是基础，但不太方便。&lt;/p&gt;
+
+&lt;p&gt;推荐使用commons-cli，能够设定长短参数(-i 或 –interval)，还能添加注解。&lt;/p&gt;
+
+&lt;p&gt;具体的方法我就不展开讲了，网上能搜到很多。&lt;/p&gt;
+
+&lt;h2 id=&quot;getopts&quot;&gt;getopt(s)&lt;/h2&gt;
+
+&lt;p&gt;shell中最普遍的解决办法就是getopt，配合while case处理输入的参数。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;while getopts 'h:j:m:u' OPT;do
+    case $OPTin
+        j) S_DIR=&quot;$OPTARG&quot;;;
+        m) D_DIR=&quot;$OPTARG&quot;;;
+        u) upload=&quot;true&quot;;;
+        h) func;;
+        ?) func;;
+    esac
+done
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;如何你想实现tab自动提示的话，可以了解一下_get_comp_words_by_ref。&lt;/p&gt;
+
+&lt;h2 id=&quot;shell&quot;&gt;shell默认的参数处理&lt;/h2&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
+$0 : 脚本名
+$N : 第N个参数.
+$# : 参数的个数，不包括命令本身.
+$@ : 参数本身的列表，也不包括命令本身，如上例为 -v -f -out /test.log –prefix=/home
+$* : 参数本身的列表，也不包括命令本身，但”$*” 和”\$@”(加引号)并不同，”$*“将所有的参数解释成一个字符串，而”$@”是一个参数数组。
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;这种处理方法没有getopt简洁，一般还是推荐使用getopt。但是下面这个特殊用法需要注意一下。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
+&quot;${@:2}&quot;  从第二参数开始往后的所有参数
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+</description>
+        <pubDate>Thu, 20 May 2021 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2021-05-20-CMD</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2021-05-20-CMD</guid>
+        
+        
+        <category>cmd</category>
+        
+        <category>shell</category>
+        
+      </item>
     
       <item>
         <title>UniswapOracle</title>
@@ -533,172 +661,6 @@
         
         
         <category>transaction</category>
-        
-      </item>
-    
-      <item>
-        <title>ta4j2</title>
-        <description>&lt;p&gt;上期讲了我在造一个类似ta4j的轮子，这次讲讲造轮子过程中的一些体会。&lt;/p&gt;
-
-&lt;h2 id=&quot;section&quot;&gt;关于回调的使用场景&lt;/h2&gt;
-
-&lt;p&gt;在我的实现中，回调是贯穿始终的，我之前使用这种模式的次数不多，稍微总结一下。&lt;/p&gt;
-
-&lt;blockquote&gt;
-  &lt;ol&gt;
-    &lt;li&gt;粗粒度的K线可以由细粒度的K线回调触发更新，非常方便回测实现。&lt;/li&gt;
-  &lt;/ol&gt;
-&lt;/blockquote&gt;
-
-&lt;blockquote&gt;
-  &lt;ol&gt;
-    &lt;li&gt;指标可以由K线或者其他指标的回调触发更新，保证数据的实时更新。&lt;/li&gt;
-  &lt;/ol&gt;
-&lt;/blockquote&gt;
-
-&lt;blockquote&gt;
-  &lt;ol&gt;
-    &lt;li&gt;当K线触发完所有指标的更新后，会触发Rule的回调，进行Rule的判断。&lt;/li&gt;
-  &lt;/ol&gt;
-&lt;/blockquote&gt;
-
-&lt;blockquote&gt;
-  &lt;ol&gt;
-    &lt;li&gt;规则判断后如果为True，可触发规则结果的回调，比如发消息、更新趋势、信号等。&lt;/li&gt;
-  &lt;/ol&gt;
-&lt;/blockquote&gt;
-
-&lt;h2 id=&quot;section-1&quot;&gt;多依赖指标的回调问题&lt;/h2&gt;
-
-&lt;p&gt;某些指标的计算依赖多个其他指标的计算结果，于是更新这个指标的回调就有了路径问题，比如MACD。&lt;/p&gt;
-
-&lt;p&gt;可以看看PairIndicatorSeries这个源码，构造时会进行指标的回调血缘分析。&lt;/p&gt;
-
-&lt;p&gt;多依赖指标的回调，并不需要人为设定，根据分析结果可自动选择最佳的触发时机（最近的共同父节点）。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-2&quot;&gt;指标重用问题&lt;/h2&gt;
-
-&lt;p&gt;如果两个指标都使用了某一条K线的MA(20)作为构成的一部分，那么这个MA(20)是可以共用的。&lt;/p&gt;
-
-&lt;p&gt;这样可以极大的减少计算量和内存开销，最典型的就是取K线的Close，极为常用。&lt;/p&gt;
-
-&lt;p&gt;指标在某一时刻无论重复计算多少次，其结果都是一样的。当然重复计算我们也想尽量避免，&lt;/p&gt;
-
-&lt;p&gt;在回调中提供了一个sequence，可以辅助去重。&lt;/p&gt;
-
-&lt;p&gt;指标的构造和相同功能节点的自动复用，目前这块设计是有问题的，还需要重构打磨。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-3&quot;&gt;规则重用问题&lt;/h2&gt;
-
-&lt;p&gt;上面提到的指标是可以复用的，但规则绝对不可以，在Manager中有是否使用过的检查。&lt;/p&gt;
-
-&lt;p&gt;Rule在某一时刻重复判断，其结果可能是不一样的，比如翻转规则、连续N次等。&lt;/p&gt;
-
-&lt;p&gt;举几个复杂规则的例子，有同时判断2条指标的规则，比如快慢指标的上穿判断；&lt;/p&gt;
-
-&lt;p&gt;还有由两个规则叠加起来组成的规则集，比如逻辑与运算。规则比指标要略微复杂一点。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-4&quot;&gt;订单与仓位&lt;/h2&gt;
-
-&lt;p&gt;订单的止盈止损也是个复杂问题，比如简单的止盈止损、追踪止盈止损等。&lt;/p&gt;
-
-&lt;p&gt;在波动幅度较大的标的物上，追踪止盈止损并不能起到很好的效果，需要谨慎使用。&lt;/p&gt;
-
-&lt;p&gt;控制盈利率与仓位比重是相对合理的做法，这样才能相对安全的达到收益最大化。&lt;/p&gt;
-
-&lt;p&gt;在回测中，经常有人会为了收益最大化而过度调节止盈止损，基本上都是过拟合效果。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-5&quot;&gt;最后&lt;/h2&gt;
-
-&lt;p&gt;ta4j的话题就到此为止了，我个人认为简单的量化交易策略是不可能挣钱的，&lt;/p&gt;
-
-&lt;p&gt;但是通过程序化的方式，做个辅助交易助手还是非常现实可行的。&lt;/p&gt;
-</description>
-        <pubDate>Tue, 18 Aug 2020 10:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2020-08-18-ta4j2</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2020-08-18-ta4j2</guid>
-        
-        
-        <category>ta4j</category>
-        
-      </item>
-    
-      <item>
-        <title>ta4j</title>
-        <description>&lt;p&gt;今天介绍一个比较有意思的java库叫&lt;a href=&quot;https://github.com/ta4j/ta4j&quot;&gt;ta4j&lt;/a&gt;。&lt;/p&gt;
-
-&lt;p&gt;最近一段时间接触了一些跟程序化交易、自动交易有关的业务，每天跟k线、指标打交道，&lt;/p&gt;
-
-&lt;p&gt;无意中在github上发现了一个叫ta4j的java库，虽然不是很成熟，但还是很有借鉴意义的。&lt;/p&gt;
-
-&lt;p&gt;从综合成本上来说，不建议用java来搞程序化交易，python和nodejs更为合适一些，&lt;/p&gt;
-
-&lt;p&gt;公共库更为成熟，而且更利于支持可视化的需求。&lt;/p&gt;
-
-&lt;h2 id=&quot;ta4j&quot;&gt;ta4j主要提供了如下功能：&lt;/h2&gt;
-
-&lt;blockquote&gt;
-  &lt;ol&gt;
-    &lt;li&gt;k线&lt;/li&gt;
-    &lt;li&gt;指标&lt;/li&gt;
-    &lt;li&gt;判断规则、规则的逻辑运算&lt;/li&gt;
-    &lt;li&gt;策略&lt;/li&gt;
-    &lt;li&gt;回测、报告&lt;/li&gt;
-  &lt;/ol&gt;
-&lt;/blockquote&gt;
-
-&lt;h2 id=&quot;section&quot;&gt;关于指标&lt;/h2&gt;
-
-&lt;p&gt;k线的技术指标主要是基于k线值的算术运算得来的，比如均值、加权均值、差值、方差等。&lt;/p&gt;
-
-&lt;p&gt;指标会随着k线的实时变化而变化，其表现形式跟K线是一样的，存储在一个时间序列数组里。&lt;/p&gt;
-
-&lt;p&gt;ta4j在保存时间序列数据时采用的ArrayList，这个地方不是很好。当超过一定数量时，&lt;/p&gt;
-
-&lt;p&gt;就需要淘汰最老的数据，会不断触发ArrayList的arraycopy，感觉换成ringbuffer更合理。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-1&quot;&gt;关于规则、策略&lt;/h2&gt;
-
-&lt;p&gt;基于K线和指标线的逻辑判断就是规则，比如在股票里我们常听说的多头排列。&lt;/p&gt;
-
-&lt;p&gt;这种图形上的形态，需要转化为代码，成为一个识别规则(match)。ta4j里提供了一些常见的规则，&lt;/p&gt;
-
-&lt;p&gt;比如交叉、向上突破、向下突破、阈值等等。&lt;/p&gt;
-
-&lt;p&gt;因为在K线的使用和识别中，会应用到很多个规则的组合，所以规则需要支持逻辑运算(and/or/xor)。&lt;/p&gt;
-
-&lt;p&gt;针对买入和卖出的一系列规则的集合，我们可以称之为策略，这个是整个程序交易的核心。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-2&quot;&gt;关于回测&lt;/h2&gt;
-
-&lt;p&gt;程序化交易里面回测是非常重要的一个环节，回测越接近真实，你的策略盈利的可能性就越大。&lt;/p&gt;
-
-&lt;p&gt;最理想的回测就是将实时数据录制下来，这是最准的了。但是如此明细的数据是很难拿到的，&lt;/p&gt;
-
-&lt;p&gt;大多数是用1min的k线替代明细数据。其实这样的数据是严重失真的，1min里的变化压缩为一个点。&lt;/p&gt;
-
-&lt;p&gt;我一般的做法是将1min的k线点拆分为4个点，分别是开、高、低、收，依次写入数据集合进行测试。&lt;/p&gt;
-
-&lt;p&gt;这样能尽量还原一个k线点的轨迹，比如一个K线点是上涨的，那就是开、低、高、收，依次变化。&lt;/p&gt;
-
-&lt;p&gt;另外还要特别注意，在回测的时候用到的数据会不会是“未来的数据”，可能会让程序未卜先知。&lt;/p&gt;
-
-&lt;p&gt;比如短线指标基于15min，中线是1hour的指标，在判断15min的指标规则时，1hour指标就是“未来”。&lt;/p&gt;
-
-&lt;p&gt;我一般在回测的时候，其他粒度的k线会用1min的聚合而来，保持与1minK线的同步关系。&lt;/p&gt;
-
-&lt;h2 id=&quot;watchdog-hubble&quot;&gt;watchdog-hubble&lt;/h2&gt;
-
-&lt;p&gt;ta4j虽然给了我很多启发，但是问题还是非常多的。所以我自己造了一个轮子，放在watchdog下。&lt;/p&gt;
-
-&lt;p&gt;结合上个月介绍的websocket和bark，我自己用起来还是非常顺手的。&lt;/p&gt;
-</description>
-        <pubDate>Mon, 20 Jul 2020 10:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2020-07-20-ta4j</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2020-07-20-ta4j</guid>
-        
-        
-        <category>ta4j</category>
         
       </item>
     
