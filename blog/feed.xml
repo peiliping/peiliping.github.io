@@ -6,9 +6,113 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Thu, 23 Sep 2021 10:45:56 +0800</pubDate>
-    <lastBuildDate>Thu, 23 Sep 2021 10:45:56 +0800</lastBuildDate>
+    <pubDate>Sun, 28 Nov 2021 23:53:27 +0800</pubDate>
+    <lastBuildDate>Sun, 28 Nov 2021 23:53:27 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>Baby</title>
+        <description>&lt;p&gt;前几天我们家的宝宝出生了，真的是一波三折。&lt;/p&gt;
+
+&lt;p&gt;希望小豌豆健康成长，本月停更，学习换尿布去了。&lt;/p&gt;
+</description>
+        <pubDate>Sun, 10 Oct 2021 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2021-10-10-baby</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2021-10-10-baby</guid>
+        
+        
+        <category>baby</category>
+        
+        <category>birthday</category>
+        
+      </item>
+    
+      <item>
+        <title>write file</title>
+        <description>&lt;p&gt;最近在优化一些shell脚本任务，涉及到对文件的读写过程，这里聊聊我碰到的一些问题。&lt;/p&gt;
+
+&lt;p&gt;我的脚本主要是对数据进行统计和计算，数据具有时序性，每分钟会有一行结果存在结果文件中。&lt;/p&gt;
+
+&lt;p&gt;脚本每分钟执行一次，每次计算上一分钟和当前分钟的结果。保存结果数据时，会涉及到删除结果文件的最后一行，因为最后一分钟会被修正。&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;如何衔接两次任务的时间&lt;/h2&gt;
+
+&lt;p&gt;数据结果的文件每一行都对应一分钟的数据，每行开头都记录对应的时间戳。&lt;/p&gt;
+
+&lt;p&gt;每次任务开始时，都读取结果文件的末尾，计算合理的数据时间。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
+thishourday=`date &quot;+%Y-%m-%d&quot;`
+startTime=`date -d &quot;${thishourday}&quot; +%s`
+
+if [ -f &quot;$rfile&quot; ]; then
+  startTime=`tail -n 1 $rfile | awk '{print $1}'`
+else
+  touch $rfile
+fi
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;dailyrolling&quot;&gt;原始数据文件有DailyRolling&lt;/h2&gt;
+
+&lt;p&gt;这就意味着每天00:00处理数据时，需要读取前一天的文件和当天文件。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
+starthourday=`date --date=@${startTime} &quot;+%Y-%m-%d&quot;`
+
+if [ $starthourday = $thishourday  ];then
+  dfile=$dfile
+else
+  dfile=$dfile&quot;-&quot;$starthourday&quot; &quot;$dfile
+fi
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;section-1&quot;&gt;保存计算结果&lt;/h2&gt;
+
+&lt;p&gt;每次计算任务完成后，都先将数据写入临时文件tfile中，接下来我们删除结果文件的最后一行。&lt;/p&gt;
+
+&lt;p&gt;删除我们用了一个简单的命令&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
+sed -i '$ d' $rfile
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;最后我们将临时文件Merge到结果文件的末尾，删除临时文件。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
+cat $tfile &amp;gt;&amp;gt; $rfile
+rm -rf $tfile
+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;section-2&quot;&gt;性能问题&lt;/h2&gt;
+
+&lt;p&gt;如果结果文件越来越大，这个任务会越来越慢，主要的性能问题在删除文件最后一行这一步。&lt;/p&gt;
+
+&lt;p&gt;sed删除最后一行这样的方式，几乎等于把整个文件重写了一遍。有兴趣的朋友可以看看这篇&lt;a href=&quot;https://www.codenong.com/4881930/&quot;&gt;Blog&lt;/a&gt;。&lt;/p&gt;
+
+&lt;p&gt;我觉得出现这个问题本身就代表了设计问题，临时数据（最后一行）是否要直接写入结果文件？&lt;/p&gt;
+
+&lt;p&gt;可以借鉴Compaction那样的思路，将不确定的临时数据写入临时文件，当可以确定时写入正式的结果文件中,规避性能问题。&lt;/p&gt;
+
+&lt;p&gt;最好还是把这些数据存入数据库吧，时序数据库千千万。&lt;/p&gt;
+</description>
+        <pubDate>Wed, 28 Jul 2021 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2021-07-28-writefile</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2021-07-28-writefile</guid>
+        
+        
+        <category>shell</category>
+        
+        <category>file</category>
+        
+      </item>
     
       <item>
         <title>flock</title>
@@ -523,144 +627,6 @@ $* : 参数本身的列表，也不包括命令本身，但”$*” 和”\$@”
         
         
         <category>streaming</category>
-        
-      </item>
-    
-      <item>
-        <title>double streaming</title>
-        <description>&lt;p&gt;今天聊聊双流的实时计算问题，我个人觉得算是流处理中最复杂的一个场景了。&lt;/p&gt;
-
-&lt;p&gt;想要在两个Source同时作为input时，保证流处理的恰好一次计算，仅仅依靠chandy-lamport是不够的。&lt;/p&gt;
-
-&lt;p&gt;两个Source的input交叉顺序是随机的行为，在业务上有严格的恰好一次要求，且代码还做不到&lt;/p&gt;
-
-&lt;p&gt;顺序不敏感时，怎么办呢？&lt;/p&gt;
-
-&lt;h2 id=&quot;section&quot;&gt;合并流&lt;/h2&gt;
-
-&lt;p&gt;最简单的办法是将两条流合并，将不确定的交叉行为给确定了,这样可以用chandy-lamport了。&lt;/p&gt;
-
-&lt;p&gt;合并流会增加一个merge任务和一个新的kafka topic，相当于增加了一个环节、增加了一点延迟。&lt;/p&gt;
-
-&lt;p&gt;虽然会浪费一点资源，但是简单高效。如果两个Source的Merge依据是Event Time，那么情况还&lt;/p&gt;
-
-&lt;p&gt;要更复杂一些。单纯的把两条流Merge在一起并不能解决问题，还需要在一个时间窗口内进行缓冲排序。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-1&quot;&gt;流转批&lt;/h2&gt;
-
-&lt;p&gt;将流式处理转为批量处理也是可以解决这个问题的，以窗口1min为例。将两个Source的数据都&lt;/p&gt;
-
-&lt;p&gt;缓存1min（内存里或者依赖外部存储），当窗口关闭时发起对这期间的数据进行处理。&lt;/p&gt;
-
-&lt;p&gt;在处理时可指定某种确定的数据排序方法，保证处理顺序的一致性。这种方式只适用于数据量不大，&lt;/p&gt;
-
-&lt;p&gt;对时效性要求不高的场景。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-2&quot;&gt;限位器&lt;/h2&gt;
-
-&lt;p&gt;不想合并出一个新的topic，也不想延迟太高，就需要在Streaming的模式下进行两个流的协调和缓冲。&lt;/p&gt;
-
-&lt;h3 id=&quot;section-3&quot;&gt;驱动流&lt;/h3&gt;
-
-&lt;p&gt;首先，在两个Source中选出来一个，作为时间驱动的，要求是他的数据时间具备单调性，也就是有序的。&lt;/p&gt;
-
-&lt;p&gt;在实际生产中，我们很难保证写入kafkaTopic里的数据一直单调有序，除非启用transaction。&lt;/p&gt;
-
-&lt;p&gt;但是我个人觉得使用事务造成的问题远大于收益。我这里说的单调性和有序是相对的，应该叫整体有序，&lt;/p&gt;
-
-&lt;p&gt;可以接受局部的重复和回退。当我们实时处理这个Source的数据时，有内存状态记录这上一条的时间&lt;/p&gt;
-
-&lt;p&gt;或者序号进行过滤，一旦发生了回退或者重复的数据就直接跳过。这样我们在经过filter后，就得到了&lt;/p&gt;
-
-&lt;p&gt;一条绝对有序的驱动数据流A，（后面简称为A）。注意，如果A在一定时间内没有数据产生，最好写入&lt;/p&gt;
-
-&lt;p&gt;带有时间戳的心跳数据包，以方便时间管理的协调控制后。&lt;/p&gt;
-
-&lt;h3 id=&quot;section-4&quot;&gt;被动流&lt;/h3&gt;
-
-&lt;p&gt;如果另外一个Source也是和驱动流一样，具备整体有序特征的话，就非常简单了。经过filter后，&lt;/p&gt;
-
-&lt;p&gt;与A汇合入同一个Operator中，只需要按照两个流的时间进度进行控制，以A的时间为主，这个时候&lt;/p&gt;
-
-&lt;p&gt;心跳数据包的作用就体现出来了，防止被动流的数据提前被加载进来。&lt;/p&gt;
-
-&lt;p&gt;如果被动流的数据，不具备单调性，就需要建立缓冲空间，将被动流的数据变的有序起来。&lt;/p&gt;
-
-&lt;p&gt;A可以适当延迟个几秒，等带被动流的窗口排序工作完成后再去驱动时间。同时也就是对被动流提出来&lt;/p&gt;
-
-&lt;p&gt;新的要求，那就是虽然可以乱序，但是时效性必须高。&lt;/p&gt;
-
-&lt;h3 id=&quot;section-5&quot;&gt;协调器&lt;/h3&gt;
-
-&lt;p&gt;一共需要四个组件：驱动流缓存池、被动流缓存池、被动流增量加载方法、被流动回溯方法。&lt;/p&gt;
-
-&lt;p&gt;缓存驱动流最近N条数据，主要是给被动流严重delay数据进行回溯时使用的。&lt;/p&gt;
-
-&lt;p&gt;如果被动数据没有严重delay，那么就写入到被动流缓冲池中。&lt;/p&gt;
-
-&lt;p&gt;驱动流有新数据时，触发被流动缓冲池中的数据进行增量加载。&lt;/p&gt;
-
-&lt;h3 id=&quot;section-6&quot;&gt;总结&lt;/h3&gt;
-
-&lt;p&gt;上面提到的方案有很大的局限性，还需要进一步的实践的检验。&lt;/p&gt;
-</description>
-        <pubDate>Wed, 14 Oct 2020 10:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2020-10-14-doublestreaming</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2020-10-14-doublestreaming</guid>
-        
-        
-        <category>streaming</category>
-        
-      </item>
-    
-      <item>
-        <title>transaction</title>
-        <description>&lt;p&gt;最近工作中大量的使用了Spring、Mybatis、JDBC的事务，这里稍作一下总结。&lt;/p&gt;
-
-&lt;h2 id=&quot;springtransaction&quot;&gt;Spring的Transaction&lt;/h2&gt;
-
-&lt;p&gt;现在Spring的Annotation就可以完成基本的事务配置，比起以前复杂的xml，确实方便了很多。&lt;/p&gt;
-
-&lt;p&gt;网上能搜到很多介绍Spring-Transaction的，主要是讲事务的隔离级别和传播性，这里就不多说了。&lt;/p&gt;
-
-&lt;p&gt;提醒大家去看看Spring-Transaction失效的N个原因，避免事务没有完整性的执行。&lt;/p&gt;
-
-&lt;p&gt;我们犯的错是同class的非事务方法去调用事务方法，导致事务不起作用。&lt;/p&gt;
-
-&lt;h2 id=&quot;jdbc&quot;&gt;JDBC事务&lt;/h2&gt;
-
-&lt;p&gt;mysql有个参数是flush_tx_commit需要关注一下，可能会影响你的事务性能。&lt;/p&gt;
-
-&lt;p&gt;事务中的操作肯定是串行的，所以还是尽量想办法让事务精简，能在事务外执行的尽量不要放进来。&lt;/p&gt;
-
-&lt;p&gt;比如序列化、反序列化等耗时的操作，尽量提前准备好，再开启事务。单个事务的执行时间越短，&lt;/p&gt;
-
-&lt;p&gt;多事务并发的性能才会更理想。在一些情况下，开启事务和逐个提交比起来会快一些，&lt;/p&gt;
-
-&lt;p&gt;但不要为了追求这种性能而过分的扩大事务范围。锁的范围变大，大概率会与一些业务上的并发发生冲突，&lt;/p&gt;
-
-&lt;p&gt;不利于整体性能的提升。&lt;/p&gt;
-
-&lt;h2 id=&quot;mybatis&quot;&gt;Mybatis&lt;/h2&gt;
-
-&lt;p&gt;这次项目中用的是mybatis-plus，在压测的时候关注了一下，性能确实很一般。&lt;/p&gt;
-
-&lt;p&gt;但是因为项目本身的业务复杂性，直接使用jdbc确实很不方便。第一个性能问题就是分表plugin，&lt;/p&gt;
-
-&lt;p&gt;做表名替换的开销比较大，从sql的参数中提取表名也可能比较慢。第二个性能问题就是通过mybatis&lt;/p&gt;
-
-&lt;p&gt;处理数据，会导致比较频繁的ygc。&lt;/p&gt;
-
-&lt;h2 id=&quot;section&quot;&gt;最后&lt;/h2&gt;
-
-&lt;p&gt;之前并没有太多关于事务类型业务的开发经验，这次优化能提升两三倍还是很满意的。&lt;/p&gt;
-</description>
-        <pubDate>Sun, 27 Sep 2020 10:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2020-09-27-transaction</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2020-09-27-transaction</guid>
-        
-        
-        <category>transaction</category>
         
       </item>
     
