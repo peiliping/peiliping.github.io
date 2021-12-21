@@ -6,8 +6,8 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Tue, 21 Dec 2021 20:33:52 +0800</pubDate>
-    <lastBuildDate>Tue, 21 Dec 2021 20:33:52 +0800</lastBuildDate>
+    <pubDate>Tue, 21 Dec 2021 21:47:07 +0800</pubDate>
+    <lastBuildDate>Tue, 21 Dec 2021 21:47:07 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
     
       <item>
@@ -24,6 +24,75 @@
         <category>baby</category>
         
         <category>birthday</category>
+        
+      </item>
+    
+      <item>
+        <title>Wyckoff2</title>
+        <description>&lt;p&gt;上一篇讲了点有关威科夫的量价理论，这里继续说一说。&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;趋势与画辅助线&lt;/h2&gt;
+
+&lt;p&gt;无论是何门何派，画辅助线都是必须的，但是辅助线经常是主观的。&lt;/p&gt;
+
+&lt;p&gt;K线与辅助线交织在一起，经常无法做出决策。看历史怎么都对，实战中一卖就涨。&lt;/p&gt;
+
+&lt;p&gt;如果等辅助线和K线的关系明确了，那么大部分利润也就没有了。&lt;/p&gt;
+
+&lt;p&gt;威科夫理论中经常画横线作为支撑和压力线，这个方法我觉得还是比较可取的，&lt;/p&gt;
+
+&lt;p&gt;但画横线不是单纯的基于价格和图形，也是要基于成交量的。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-1&quot;&gt;关于成交量&lt;/h2&gt;
+
+&lt;p&gt;在威科夫的理论中成交量是非常的关键，但是所有人都知道主力自己可以创造无效成交量。&lt;/p&gt;
+
+&lt;p&gt;所以一个充分博弈的标的，他的成交量才失真最小，可靠性最大。&lt;/p&gt;
+
+&lt;p&gt;至于什么主力动向数据、大单买入卖出，更是扯淡。&lt;/p&gt;
+
+&lt;p&gt;去看看操盘软件里如何买卖就知道了，这种方法根本判断不出来。&lt;/p&gt;
+
+&lt;p&gt;大单成交方向不一定代表主力方向，但是小单成交一定包含散户的趋势。&lt;/p&gt;
+
+&lt;p&gt;如果大单连续主动买入时，只与深度中的大单成交而不与散单成交，基本上就是主力在自成交。&lt;/p&gt;
+
+&lt;p&gt;大单如果想隐秘买入行为的话，一般是连下两单。第一单是LimitBuy，并且数量远超过深度中的量。&lt;/p&gt;
+
+&lt;p&gt;此单成交后会把价格拉升到LimitBuy的目标价，并且买一位置有一个很大的买单。&lt;/p&gt;
+
+&lt;p&gt;第二单为IOC Sell，价格与LimitBuy的价格相同。IOC的意思是立即成交，余下的取消。&lt;/p&gt;
+
+&lt;p&gt;这样买一的大单就被吃掉了，如果Sell的Amout大于买一的Amount，成交后余下的会被自动取消。&lt;/p&gt;
+
+&lt;p&gt;如果有人统计这一分钟里的大单的主动买入和卖出，会发现主动买入100个，主动卖出500个，&lt;/p&gt;
+
+&lt;p&gt;统计结果为主动卖出400个。而实际情况是只主动买了100个。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-2&quot;&gt;压力与支撑&lt;/h2&gt;
+
+&lt;p&gt;通过成交量来判断支撑与压力，我觉得也不是很合理，当然绝大部分交易者只能用成交量来判断。&lt;/p&gt;
+
+&lt;p&gt;压力与支撑本质上有两个数据组成，一个是盘口数据（也就是买卖盘深度），一个是成交明细。&lt;/p&gt;
+
+&lt;p&gt;分别举个例子：&lt;/p&gt;
+
+&lt;p&gt;1、如果有人在买一挂了一个无比巨大的买单，无形中就是一个支撑，愿意卖的人就少了。&lt;/p&gt;
+
+&lt;p&gt;2、关注已成交订单中被成交的方向，当前1h下跌2%，看似十分凶猛，但是却不继续下跌了。&lt;/p&gt;
+
+&lt;p&gt;有可能某些主力资金在这里连续的挂PostOnly单子悄悄的收货，利用恐慌的抛盘完成收货目的。&lt;/p&gt;
+
+&lt;p&gt;这种把抛盘密集消化掉的行为才是最有效的支撑，但统计却都是主动卖出行为。&lt;/p&gt;
+
+&lt;p&gt;大多数人对压力和支撑的判断基本上是意识流，我还是建议把他数值化，可以参考加权跳动量的计算方式。&lt;/p&gt;
+</description>
+        <pubDate>Sat, 11 Sep 2021 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2021-09-11-wyckoff2</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2021-09-11-wyckoff2</guid>
+        
+        
+        <category>wyckoff</category>
         
       </item>
     
@@ -584,49 +653,6 @@ $* : 参数本身的列表，也不包括命令本身，但”$*” 和”\$@”
         
         
         <category>master</category>
-        
-      </item>
-    
-      <item>
-        <title>2020年总结</title>
-        <description>&lt;p&gt;2020年真的非常魔幻，也经历了很多变化。庆幸的是现在做的事情是自己喜欢的。&lt;/p&gt;
-
-&lt;p&gt;以前都是写写总结，这次就写设想和展望吧。&lt;/p&gt;
-
-&lt;p&gt;希望2021年能更新一下自己的Java知识，这几年一直在使用Java8，也是时候升级了。&lt;/p&gt;
-
-&lt;p&gt;需要补充一点Go或者Rust的知识，看一些区块链项目的时候会用到。如果还有时间的话，&lt;/p&gt;
-
-&lt;p&gt;Lua还需要捡起来了，未来也会用得上。&lt;/p&gt;
-
-&lt;p&gt;2021年需要花点时间在机器学习的入门上，这方面之前没什么涉猎，可能会辛苦一点。&lt;/p&gt;
-
-&lt;p&gt;之前几年的工作都和算法没什么关系，这方面需要多储备一点了。&lt;/p&gt;
-
-&lt;p&gt;2021年需要多学习一些金融知识，尤其是期权和对冲相关的。&lt;/p&gt;
-
-&lt;p&gt;之前几年都在做实时流计算方面的事，尤其是今年实时流计算非常的火热，但我并不看好这个方向。&lt;/p&gt;
-
-&lt;p&gt;实时计算是个非常昂贵的事情，并不能普及在大多数无价值和意义的业务和数据上，完全是在浪费。&lt;/p&gt;
-
-&lt;p&gt;真正有实时价值的业务其实非常的少，目前在跑的实时业务有很多是在滥竽充数，完成KPI而已。&lt;/p&gt;
-
-&lt;p&gt;那些真正具有“实时”要求的业务，Flink也是无法满足的，因为他的实时能力是非常有限的。&lt;/p&gt;
-
-&lt;p&gt;2021年我不会投入精力在这方面了，很有可能会转向CEP，也算是个延续吧。&lt;/p&gt;
-
-&lt;p&gt;工作十年，大多实在研究技术本身，而非业务问题。从2021年开始，我会更关注问题本身，&lt;/p&gt;
-
-&lt;p&gt;从另外一个角度来组合使用这些年的积累和认知。&lt;/p&gt;
-
-&lt;p&gt;感谢各位看官，来年再见。&lt;/p&gt;
-</description>
-        <pubDate>Wed, 30 Dec 2020 10:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2020-12-30-summary</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2020-12-30-summary</guid>
-        
-        
-        <category>summary</category>
         
       </item>
     
