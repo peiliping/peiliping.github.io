@@ -6,8 +6,8 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Sun, 28 Nov 2021 23:53:27 +0800</pubDate>
-    <lastBuildDate>Sun, 28 Nov 2021 23:53:27 +0800</lastBuildDate>
+    <pubDate>Tue, 21 Dec 2021 20:33:52 +0800</pubDate>
+    <lastBuildDate>Tue, 21 Dec 2021 20:33:52 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
     
       <item>
@@ -24,6 +24,55 @@
         <category>baby</category>
         
         <category>birthday</category>
+        
+      </item>
+    
+      <item>
+        <title>Wyckoff</title>
+        <description>&lt;p&gt;最近在和一个做二级市场投资的朋友聊天时，听说了威科夫的量价理论。&lt;/p&gt;
+
+&lt;p&gt;在了解了大致的思想之后，我觉得当中的量价关系十分有趣，花了一些时间探索了一下。&lt;/p&gt;
+
+&lt;h2 id=&quot;section&quot;&gt;量价理论&lt;/h2&gt;
+
+&lt;p&gt;K线图有两个核心元素：价格（开高低收）和成交量，价格的趋势和成交量的情况相互验证。&lt;/p&gt;
+
+&lt;p&gt;量价理论并不是一个指标，而是一种对抗的思维。市场中存在少数派盈利的主力和盲从的韭菜，&lt;/p&gt;
+
+&lt;p&gt;在一个大的涨跌周期中，反复对抗博弈，量与价就在表达这个对抗博弈的过程。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-1&quot;&gt;关于指标&lt;/h2&gt;
+
+&lt;p&gt;市面上绝大多数交易策略都是以XX指标组合为基础，比如均线、MACD、KDJ等。&lt;/p&gt;
+
+&lt;p&gt;我之前也写过两期关于ta4j的blog，还实现了一个指标基础函数库。&lt;/p&gt;
+
+&lt;p&gt;对比量价理论后，我把基于指标的策略称为静态策略，就好像诸葛亮给的三个锦囊。&lt;/p&gt;
+
+&lt;p&gt;这种神话故事根本就不具备实操性，你可能会觉得在某个时期这个策略能挣钱，但长期一定无法盈利。&lt;/p&gt;
+
+&lt;p&gt;有的人做了大量的回测来提高他策略的有效性，我觉得通过回测来调整参数，可以直接定义为过拟合。&lt;/p&gt;
+
+&lt;p&gt;其实绝大多数指标和图形理论都和量价有联系，比如头肩图形、波浪理论等等。&lt;/p&gt;
+
+&lt;p&gt;将复杂的对抗归纳成一些可被识别的图形，方便教学传播、办班收费。&lt;/p&gt;
+
+&lt;p&gt;而且指标基本上都只用价格信息，不用成交量，因为成交量随机性太强，很难被指标化。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-2&quot;&gt;充分博弈市场&lt;/h2&gt;
+
+&lt;p&gt;如果你想践行量价理论，我个人觉得一定要找一个充分博弈的标的。&lt;/p&gt;
+
+&lt;p&gt;成交量巨大、参与人数众多、还有很多自以为是的量化策略在跑。&lt;/p&gt;
+
+&lt;p&gt;在这种标的下，专业机构盈利是需要极其复杂的操盘手法的，趋势惯性和量价博弈也才有意义。&lt;/p&gt;
+</description>
+        <pubDate>Thu, 19 Aug 2021 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2021-08-19-wyckoff</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2021-08-19-wyckoff</guid>
+        
+        
+        <category>wyckoff</category>
         
       </item>
     
@@ -578,55 +627,6 @@ $* : 参数本身的列表，也不包括命令本身，但”$*” 和”\$@”
         
         
         <category>summary</category>
-        
-      </item>
-    
-      <item>
-        <title>double streaming 2</title>
-        <description>&lt;p&gt;上期我们聊了双流的问题，接下来借着一个实际案例来看看。&lt;/p&gt;
-
-&lt;p&gt;有两条信息流，一条是Tesla股票的K线行情变化，一条是用户设置的条件单记录。&lt;/p&gt;
-
-&lt;p&gt;那么要如何设计一个流处理装置，来保证恰好一次计算呢？&lt;/p&gt;
-
-&lt;h2 id=&quot;section&quot;&gt;行情信息流&lt;/h2&gt;
-
-&lt;p&gt;该流具备驱动流的特征，有单调性和持续性。因为一直有数据产生，所以不需要额外增加心跳数据包，&lt;/p&gt;
-
-&lt;p&gt;只需要增加一个单调性的filter就可以了（当前数据的时间或者序号需要大于前一条）。当行情数据&lt;/p&gt;
-
-&lt;p&gt;到达时会写入内存缓存中，该缓存会保持一段时间，后面会介绍它的用途。最后通过行情数据本身的&lt;/p&gt;
-
-&lt;p&gt;时间戳来控制条件单记录的加载的时机。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-1&quot;&gt;条件单信息流&lt;/h2&gt;
-
-&lt;p&gt;该流的数据量比较小，而且可能局部乱序，为此增加了心跳数据包，代表时间进度。心跳数据包只包&lt;/p&gt;
-
-&lt;p&gt;含一个时间戳，其含义是该信息流中不会再出现比此时间戳更早的数据了，在生成心跳包的时候我们&lt;/p&gt;
-
-&lt;p&gt;可以刻意的delay几秒。这个和flink中的watermarket很相似。心跳包的数据到达时，可以触发过&lt;/p&gt;
-
-&lt;p&gt;期行情缓存数据的清理工作。因为这些行情信息再也用不到了。条件单的数据到达时，如果早于行情&lt;/p&gt;
-
-&lt;p&gt;当前的时间进度，那么就放在cache里，等待行情数据到达时触发其加载。如果晚于行情的当前的时&lt;/p&gt;
-
-&lt;p&gt;间进度的话，就要触发一个特殊环节，利用行情缓存的历史数据进行计算，之后合并结果。&lt;/p&gt;
-
-&lt;h2 id=&quot;section-2&quot;&gt;总结&lt;/h2&gt;
-
-&lt;p&gt;上面两条流的处理方式就是前一篇Blog中提到的协调器，满足如下四个功能：&lt;/p&gt;
-
-&lt;p&gt;驱动流缓存池、被动流缓存池、被动流增量加载方法、被流动回溯方法。&lt;/p&gt;
-
-&lt;p&gt;具体代码可以在fevernova的markettracing中找到，这里就不多说了。&lt;/p&gt;
-</description>
-        <pubDate>Thu, 19 Nov 2020 10:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2020-11-19-doublestreaming</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2020-11-19-doublestreaming</guid>
-        
-        
-        <category>streaming</category>
         
       </item>
     
