@@ -6,11 +6,11 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>Baby « Pei LiPing's Blog</title>
-  <meta name="description" content="前几天我们家的宝宝出生了，真的是一波三折。">
+  <title>Pine « Pei LiPing's Blog</title>
+  <meta name="description" content="最近看到Tradingview的Pine脚本，感觉很有意思，打算尝试一下。">
 
   <link rel="stylesheet" href="/blog/css/main.css">
-  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2021-10-10-baby">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2021-11-20-Pine">
   <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
 </head>
 
@@ -74,14 +74,58 @@
           <div class="post">
 
   <header class="post-header">
-    <h1 class="post-title">Baby</h1>
-    <p class="post-meta">Oct 10, 2021</p>
+    <h1 class="post-title">Pine</h1>
+    <p class="post-meta">Nov 20, 2021</p>
   </header>
 
   <article class="post-content">
-    <p>前几天我们家的宝宝出生了，真的是一波三折。</p>
+    <p>最近看到Tradingview的Pine脚本，感觉很有意思，打算尝试一下。</p>
 
-<p>希望小豌豆健康成长，本月停更，学习换尿布去了。</p>
+<h2 id="ma">MA指标</h2>
+
+<p>TV上的指标都可以看到源代码，我们就从最简单的MA指标看看吧。</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>
+indicator(title="Moving Average", shorttitle="MA", overlay=true, timeframe="", timeframe_gaps=true)
+len = input.int(9, minval=1, title="Length")
+src = input(close, title="Source")
+offset = input.int(title="Offset", defval=0, minval=-500, maxval=500)
+out = ta.sma(src, len)
+plot(out, color=color.blue, title="MA", offset=offset)
+
+</code></pre>
+</div>
+
+<p>简单注释一下：</p>
+
+<p>input代表从图形化界面的设置中可以填写变更的，close指k线的收盘价。</p>
+
+<p>ta.sma就是MA指标的计算公式，plot函数我们就理解为渲染好了,plot有很多参数可调，</p>
+
+<p>比如控制线的粗细、颜色。</p>
+
+<h2 id="mac">照葫芦画瓢 MAC指标</h2>
+
+<p>第一次体验我们就不挑战难度了，弄一个MA指标的组合指标，一般使用MA的人都会用一个短周期的和一个长周期的。</p>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>
+indicator(title="Moving Average Couple", shorttitle="MAC", overlay=true, timeframe="", timeframe_gaps=true)
+
+len1 = input.int(30, minval=1, title="Length")
+len2 = input.int(59, minval=1, title="Length")
+
+out1 = ta.sma(close, len1)
+out2 = ta.sma(close, len2)
+
+plot(out1, color=color.green, linewidth=2, title="MAC1", offset=0)
+plot(out2, color=color.blue, linewidth=2, title="MAC2", offset=0)
+
+</code></pre>
+</div>
+
+<p>只是简单的加了一条线，然后控制了一下线的颜色和粗细。</p>
+
+<p>免费版TV限制了同时使用的Indicator数量，可以把多个指标的代码合并到一起，绕过限制吧。</p>
 
   </article>
   
