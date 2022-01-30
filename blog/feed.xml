@@ -6,9 +6,65 @@
 </description>
     <link>http://peiliping.github.io/blog/</link>
     <atom:link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Tue, 25 Jan 2022 15:24:43 +0800</pubDate>
-    <lastBuildDate>Tue, 25 Jan 2022 15:24:43 +0800</lastBuildDate>
+    <pubDate>Sun, 30 Jan 2022 19:55:22 +0800</pubDate>
+    <lastBuildDate>Sun, 30 Jan 2022 19:55:22 +0800</lastBuildDate>
     <generator>Jekyll v3.4.3</generator>
+    
+      <item>
+        <title>Linear</title>
+        <description>&lt;p&gt;经常看到一些人的K线图上花了很多辅助线，有压力支撑，也有涨跌趋势。&lt;/p&gt;
+
+&lt;p&gt;今天介绍一种自动化斜线的方法，平行斜线通道。&lt;/p&gt;
+
+&lt;h3 id=&quot;section&quot;&gt;中轴线&lt;/h3&gt;
+
+&lt;p&gt;最近N个K线点，有一个趋势方向，由这些点的分布决定，比如震荡向上，&lt;/p&gt;
+
+&lt;p&gt;这是我们在头脑中抽象的画面，需要将他们具体化。&lt;/p&gt;
+
+&lt;p&gt;在二维坐标系中，已知一些点，如何判断他们内在隐含的趋势呢？&lt;/p&gt;
+
+&lt;p&gt;这个问题在数学中非常简单，那就是一次方程(y=ax+b)的拟合过程。&lt;/p&gt;
+
+&lt;p&gt;如果这部分知识已经还给老师的话，先复习一下最小二乘法吧。&lt;/p&gt;
+
+&lt;p&gt;计算完成后，我们将得到方程的参数slope和intercept。&lt;/p&gt;
+
+&lt;h3 id=&quot;section-1&quot;&gt;平行线&lt;/h3&gt;
+
+&lt;p&gt;将我们得到的中轴线进行平移，使绝大多数点都在线的上方（或者下方），&lt;/p&gt;
+
+&lt;p&gt;就会得到一组平行于中轴线的通道了。&lt;/p&gt;
+
+&lt;p&gt;那么这个平移的过程如何计算呢？可以参考Bolling指标的计算方法，&lt;/p&gt;
+
+&lt;p&gt;我们先求所有散点与中轴线的标准差，然后将中轴线的方程向上（或向下）&lt;/p&gt;
+
+&lt;p&gt;移动2个标准差的距离，就得到了一组平行于中轴线的平行通道了。&lt;/p&gt;
+
+&lt;p&gt;就是保持slope不变，intercept加（或者减）2×标准差。&lt;/p&gt;
+
+&lt;h3 id=&quot;section-2&quot;&gt;周期&lt;/h3&gt;
+
+&lt;p&gt;搞定了计算逻辑后，最后一个问题就是周期问题了，选择多少个点呢？&lt;/p&gt;
+
+&lt;p&gt;没有哪一个周期是绝对有效的，按照自己的操作周期来决定吧。&lt;/p&gt;
+
+&lt;p&gt;和使用均线等技术指标差不多，可以同时看长短两个周期的数据，一个定方向，一个找机会。&lt;/p&gt;
+
+&lt;h3 id=&quot;section-3&quot;&gt;最后&lt;/h3&gt;
+
+&lt;p&gt;自动化线并不能指导你盈利，但可以减少盯盘时间，如果是自动化交易作为增减仓方案是不错的。&lt;/p&gt;
+
+</description>
+        <pubDate>Wed, 29 Dec 2021 10:00:00 +0800</pubDate>
+        <link>http://peiliping.github.io/blog/archivers/2021-12-29-Linear</link>
+        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2021-12-29-Linear</guid>
+        
+        
+        <category>Linear</category>
+        
+      </item>
     
       <item>
         <title>Pine</title>
@@ -542,65 +598,6 @@ $* : 参数本身的列表，也不包括命令本身，但”$*” 和”\$@”
         
         
         <category>chainlink</category>
-        
-      </item>
-    
-      <item>
-        <title>ETH合约</title>
-        <description>&lt;p&gt;最近开始接触了一下ETH的智能合约，主要是通过Chainlink这个优秀的预言机项目。&lt;/p&gt;
-
-&lt;h2 id=&quot;section&quot;&gt;合约的特点&lt;/h2&gt;
-
-&lt;p&gt;ETH上的合约主要是用Solidity语言来开发的，使用下来感觉语言本身还不是很成熟，&lt;/p&gt;
-
-&lt;p&gt;数据结构比较单一，适合实现简单的计算逻辑和数据存储。&lt;/p&gt;
-
-&lt;p&gt;与其他开发项目相比，代码一旦发布后很难修改，代码“性能”需要特别关注。&lt;/p&gt;
-
-&lt;p&gt;合约代码在执行过程中依据Op来计算需要消耗的gas费，所以代码的质量非常关键。&lt;/p&gt;
-
-&lt;p&gt;在我们了解Chainlink项目和开发自己的合约时碰到了下面几个案例，分享一下。&lt;/p&gt;
-
-&lt;h3 id=&quot;section-1&quot;&gt;写入与更新&lt;/h3&gt;
-
-&lt;p&gt;Chainlink的历史数据是保存在合约的一个Map中，key是roundid，value是价格。&lt;/p&gt;
-
-&lt;p&gt;在我们测试Map的写入与更新时发现，第一次写入某一个key和后面更新key的Value，&lt;/p&gt;
-
-&lt;p&gt;费用差距是巨大的，大概是2倍左右。我们在设计类似保存历史数据的环节时，采用了&lt;/p&gt;
-
-&lt;p&gt;循环key值，比如自增ID对1024取模，这样只有第一轮是insert，第1025次之后就是&lt;/p&gt;
-
-&lt;p&gt;update了，费用会降低下来，在合约里只能查询一段时间的历史记录，之前的会被覆盖。&lt;/p&gt;
-
-&lt;h3 id=&quot;section-2&quot;&gt;代理&lt;/h3&gt;
-
-&lt;p&gt;因为链上的合约一旦部署成功后，就不能修改了，如果想要升级就要使用新的合约地址了，&lt;/p&gt;
-
-&lt;p&gt;这对外部依赖是非常不友好的。参考Chainlink和Openzapplin项目，一般都是采用代理&lt;/p&gt;
-
-&lt;p&gt;模式将接口和实现解耦和，接口层记录了实现合约的地址，提供一个Update实现合约地址的&lt;/p&gt;
-
-&lt;p&gt;方法，进行替换，来达到升级的目的。虽然可以实现，但是开发时非常繁琐。&lt;/p&gt;
-
-&lt;h3 id=&quot;section-3&quot;&gt;存储与计算分离&lt;/h3&gt;
-
-&lt;p&gt;上面提到了升级的问题，如果你的合约里还保存了一些数据，那么在升级时也需要将其转移到&lt;/p&gt;
-
-&lt;p&gt;新的合约里。部署合约是有费用成本的，如果在部署合约时，涉及到了大量的数据copy，&lt;/p&gt;
-
-&lt;p&gt;这个成本会变得非常昂贵。代理模式只是解决了升级当中的持续稳定服务问题，在设计合约时，&lt;/p&gt;
-
-&lt;p&gt;还需要将合约里的存储结构和计算逻辑进行解耦，一般我们只对计算逻辑进行升级，而存储部分&lt;/p&gt;
-
-&lt;p&gt;不会移动，仅仅会修改一些写权限的控制，将新合约地址更新到存储数据的合约中去。&lt;/p&gt;
-</description>
-        <pubDate>Mon, 22 Feb 2021 10:00:00 +0800</pubDate>
-        <link>http://peiliping.github.io/blog/archivers/2021-02-22-contract</link>
-        <guid isPermaLink="true">http://peiliping.github.io/blog/archivers/2021-02-22-contract</guid>
-        
-        
-        <category>contract</category>
         
       </item>
     

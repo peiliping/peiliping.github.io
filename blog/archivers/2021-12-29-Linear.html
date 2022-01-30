@@ -6,11 +6,11 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>Pine « Pei LiPing's Blog</title>
-  <meta name="description" content="最近看到Tradingview的Pine脚本，感觉很有意思，打算尝试一下。">
+  <title>Linear « Pei LiPing's Blog</title>
+  <meta name="description" content="经常看到一些人的K线图上花了很多辅助线，有压力支撑，也有涨跌趋势。">
 
   <link rel="stylesheet" href="/blog/css/main.css">
-  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2021-11-20-Pine">
+  <link rel="canonical" href="http://peiliping.github.io/blog/archivers/2021-12-29-Linear">
   <link rel="alternate" type="application/rss+xml" title="Pei LiPing's Blog" href="http://peiliping.github.io/blog/feed.xml" />
 </head>
 
@@ -76,58 +76,55 @@
           <div class="post">
 
   <header class="post-header">
-    <h1 class="post-title">Pine</h1>
-    <p class="post-meta">Nov 20, 2021</p>
+    <h1 class="post-title">Linear</h1>
+    <p class="post-meta">Dec 29, 2021</p>
   </header>
 
   <article class="post-content">
-    <p>最近看到Tradingview的Pine脚本，感觉很有意思，打算尝试一下。</p>
+    <p>经常看到一些人的K线图上花了很多辅助线，有压力支撑，也有涨跌趋势。</p>
 
-<h2 id="ma">MA指标</h2>
+<p>今天介绍一种自动化斜线的方法，平行斜线通道。</p>
 
-<p>TV上的指标都可以看到源代码，我们就从最简单的MA指标看看吧。</p>
+<h3 id="section">中轴线</h3>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>
-indicator(title="Moving Average", shorttitle="MA", overlay=true, timeframe="", timeframe_gaps=true)
-len = input.int(9, minval=1, title="Length")
-src = input(close, title="Source")
-offset = input.int(title="Offset", defval=0, minval=-500, maxval=500)
-out = ta.sma(src, len)
-plot(out, color=color.blue, title="MA", offset=offset)
+<p>最近N个K线点，有一个趋势方向，由这些点的分布决定，比如震荡向上，</p>
 
-</code></pre>
-</div>
+<p>这是我们在头脑中抽象的画面，需要将他们具体化。</p>
 
-<p>简单注释一下：</p>
+<p>在二维坐标系中，已知一些点，如何判断他们内在隐含的趋势呢？</p>
 
-<p>input代表从图形化界面的设置中可以填写变更的，close指k线的收盘价。</p>
+<p>这个问题在数学中非常简单，那就是一次方程(y=ax+b)的拟合过程。</p>
 
-<p>ta.sma就是MA指标的计算公式，plot函数我们就理解为渲染好了,plot有很多参数可调，</p>
+<p>如果这部分知识已经还给老师的话，先复习一下最小二乘法吧。</p>
 
-<p>比如控制线的粗细、颜色。</p>
+<p>计算完成后，我们将得到方程的参数slope和intercept。</p>
 
-<h2 id="mac">照葫芦画瓢 MAC指标</h2>
+<h3 id="section-1">平行线</h3>
 
-<p>第一次体验我们就不挑战难度了，弄一个MA指标的组合指标，一般使用MA的人都会用一个短周期的和一个长周期的。</p>
+<p>将我们得到的中轴线进行平移，使绝大多数点都在线的上方（或者下方），</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>
-indicator(title="Moving Average Couple", shorttitle="MAC", overlay=true, timeframe="", timeframe_gaps=true)
+<p>就会得到一组平行于中轴线的通道了。</p>
 
-len1 = input.int(30, minval=1, title="Length")
-len2 = input.int(59, minval=1, title="Length")
+<p>那么这个平移的过程如何计算呢？可以参考Bolling指标的计算方法，</p>
 
-out1 = ta.sma(close, len1)
-out2 = ta.sma(close, len2)
+<p>我们先求所有散点与中轴线的标准差，然后将中轴线的方程向上（或向下）</p>
 
-plot(out1, color=color.green, linewidth=2, title="MAC1", offset=0)
-plot(out2, color=color.blue, linewidth=2, title="MAC2", offset=0)
+<p>移动2个标准差的距离，就得到了一组平行于中轴线的平行通道了。</p>
 
-</code></pre>
-</div>
+<p>就是保持slope不变，intercept加（或者减）2×标准差。</p>
 
-<p>只是简单的加了一条线，然后控制了一下线的颜色和粗细。</p>
+<h3 id="section-2">周期</h3>
 
-<p>免费版TV限制了同时使用的Indicator数量，可以把多个指标的代码合并到一起，绕过限制吧。</p>
+<p>搞定了计算逻辑后，最后一个问题就是周期问题了，选择多少个点呢？</p>
+
+<p>没有哪一个周期是绝对有效的，按照自己的操作周期来决定吧。</p>
+
+<p>和使用均线等技术指标差不多，可以同时看长短两个周期的数据，一个定方向，一个找机会。</p>
+
+<h3 id="section-3">最后</h3>
+
+<p>自动化线并不能指导你盈利，但可以减少盯盘时间，如果是自动化交易作为增减仓方案是不错的。</p>
+
 
   </article>
   
