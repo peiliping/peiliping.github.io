@@ -30,7 +30,7 @@
 
         	var symbol = getUrlParam('symbol');
         	var now = new Date().getTime();
-        	var beginning = parseInt(now / 3600000) * 3600000 - 86400000 * 28;
+        	var beginning = parseInt(now / 3600000) * 3600000 - 86400000 * 30;
 
             var result = {
                 positions : [],
@@ -145,13 +145,15 @@
                 var endTime = startTime + 86400000 * 10;
                 var ps = "symbol=" + symbol.toUpperCase() + "USDT&period=30m&limit=500&starttime=" + startTime + "&endTime=" + endTime;
                 $.getJSON('https://fapi.binance.com/futures/data/globalLongShortAccountRatio?' + ps, function (data) {
-                    for (var i = 0; i < data.length; i++){                     
-                        var item = [data[i]["timestamp"] , (data[i]["longAccount"] - data[i]["shortAccount"])];
+                    for (var i = 0; i < data.length; i++){ 
+                    	var w = Math.floor((data[i]["longAccount"] - data[i]["shortAccount"])*1000)/1000;
+                        var item = [data[i]["timestamp"] , w];
                         result.positions.push(item);
                     }
                     if(endTime < now){
                         getRatio(endTime);
                     }else{
+                    	document.title = "PD : " + result.positions[result.positions.length-1][1]
                         getKlines();
                     }   
                 });
