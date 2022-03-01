@@ -25,7 +25,16 @@
             var result = {
                 positions : [],
                 prices : []
-            };
+            };            
+
+            function getUrlParam(name) {
+            	var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
+            	var r = window.location.search.substr(1).match(reg);
+            	if (r != null) return unescape(r[2]); return null;
+        	}        	
+
+        	var symbol = getUrlParam('symbol');
+
             function chart(){
                 Highcharts.stockChart('container', {
                     title: {
@@ -105,7 +114,7 @@
                 });
             }
 
-            $.getJSON('https://fapi.binance.com/fapi/v1/klines?symbol=btcusdt&interval=30m&limit=1500', function (data) {
+            $.getJSON('https://fapi.binance.com/fapi/v1/klines?symbol=' + symbol.toLowerCase() + 'usdt&interval=30m&limit=1500', function (data) {
                 for (var i = 0; i < data.length; i++){                     
                     var item = [data[i][0] , parseFloat(data[i][4])];
                     result.prices.push(item);
@@ -113,7 +122,7 @@
                 var now = new Date().getTime();
                 function getRatio(startTime){
                     var endTime = startTime + 86400000 * 10;
-                    var ps = "symbol=BTCUSDT&period=30m&limit=500&starttime=" + startTime + "&endTime=" + endTime;
+                    var ps = "symbol=" + symbol.toUpperCase() + "USDT&period=30m&limit=500&starttime=" + startTime + "&endTime=" + endTime;
                     $.getJSON('https://fapi.binance.com/futures/data/globalLongShortAccountRatio?' + ps, function (data) {
                         for (var i = 0; i < data.length; i++){                     
                             var item = [data[i]["timestamp"] , (data[i]["longAccount"] - data[i]["shortAccount"])];
