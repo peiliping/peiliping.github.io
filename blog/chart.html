@@ -22,18 +22,21 @@
     <body>
         <div id="container"></div>
         <script>
-            var result = {
-                positions : [],
-                prices : []
-            };            
-
-            function getUrlParam(name) {
+        	function getUrlParam(name) {
             	var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
             	var r = window.location.search.substr(1).match(reg);
             	if (r != null) return unescape(r[2]); return null;
-        	}        	
+        	}
 
         	var symbol = getUrlParam('symbol');
+        	var now = new Date().getTime();
+        	var beginning = parseInt(now / 3600000) * 3600000 - 86400000 * 28;
+
+            var result = {
+                positions : [],
+                prices : [],
+                opens : []
+            };            
 
             function chart(){
                 Highcharts.stockChart('container', {
@@ -69,19 +72,20 @@
                         selected: 1
                     },
                     yAxis: [
-                        {
-                            labels: {
-                                style: {
-                                    color: Highcharts.getOptions().colors[0]
-                                }
-                            },
+                    	{                            
                             title: {
                                 text: '价格',
                                 style: {
                                     color: Highcharts.getOptions().colors[0]
                                 }
                             },
-                            opposite: false
+                            labels: {
+                                style: {
+                                    color: Highcharts.getOptions().colors[0]
+                                }
+                            },
+                            opposite: false,
+                            height: '80%',
                         }, {
                             title: {
                                 text: '仓位差',
@@ -94,9 +98,17 @@
                                     color: Highcharts.getOptions().colors[1]
                                 }
                             },
-                            opposite: true
-                        }
-                    ],        
+                            opposite: true,
+                            height: '80%',
+                        },{
+							labels: {
+								align: 'left'
+							},
+							top: '80%',
+							height: '20%',
+							offset: 0
+						}
+					],        
                     tooltip: {
                         shared: true
                     },
@@ -109,34 +121,59 @@
                         name: 'Position',
                         type: 'spline',
                         yAxis: 1,
-                        data: result.positions
+                        data: result.positions,
+                    },{
+                    	name: 'Opens',
+                        type: 'spline',
+                        yAxis: 2,
+                        data: result.opens,
                     }]
                 });
             }
 
-            $.getJSON('https://fapi.binance.com/fapi/v1/klines?symbol=' + symbol.toLowerCase() + 'usdt&interval=30m&limit=1500', function (data) {
-                for (var i = 0; i < data.length; i++){                     
-                    var item = [data[i][0] , parseFloat(data[i][4])];
-                    result.prices.push(item);
-                }
-                var now = new Date().getTime();
-                function getRatio(startTime){
-                    var endTime = startTime + 86400000 * 10;
-                    var ps = "symbol=" + symbol.toUpperCase() + "USDT&period=30m&limit=500&starttime=" + startTime + "&endTime=" + endTime;
-                    $.getJSON('https://fapi.binance.com/futures/data/globalLongShortAccountRatio?' + ps, function (data) {
-                        for (var i = 0; i < data.length; i++){                     
-                            var item = [data[i]["timestamp"] , (data[i]["longAccount"] - data[i]["shortAccount"])];
-                            result.positions.push(item);
-                        }
-                        if(endTime < now){
-                            getRatio(endTime);
-                        }else{
-                            chart();
-                        }   
-                    });
-                } 
-                getRatio(parseInt(now / 3600000) * 3600000 - 86400000 * 28);
-            });
+            function getKlines(){
+				$.getJSON('https://fapi.binance.com/fapi/v1/klines?symbol=' + symbol.toLowerCase() + 'usdt&interval=30m&limit=1500', function (data) {
+                	for (var i = 0; i < data.length; i++){                     
+                    	var item = [data[i][0] , parseFloat(data[i][4])];
+                    	result.prices.push(item);
+                	}
+                	chart();
+            	});
+            }
+
+            function getRatio(startTime){
+                var endTime = startTime + 86400000 * 10;
+                var ps = "symbol=" + symbol.toUpperCase() + "USDT&period=30m&limit=500&starttime=" + startTime + "&endTime=" + endTime;
+                $.getJSON('https://fapi.binance.com/futures/data/globalLongShortAccountRatio?' + ps, function (data) {
+                    for (var i = 0; i < data.length; i++){                     
+                        var item = [data[i]["timestamp"] , (data[i]["longAccount"] - data[i]["shortAccount"])];
+                        result.positions.push(item);
+                    }
+                    if(endTime < now){
+                        getRatio(endTime);
+                    }else{
+                        getKlines();
+                    }   
+                });
+            }
+
+            function getOpen(startTime){
+                var endTime = startTime + 86400000 * 10;
+                var ps = "symbol=" + symbol.toUpperCase() + "USDT&period=30m&limit=500&starttime=" + startTime + "&endTime=" + endTime;
+                $.getJSON('https://fapi.binance.com/futures/data/openInterestHist?' + ps, function (data) {
+                    for (var i = 0; i < data.length; i++){                     
+                        var item = [data[i]["timestamp"] , parseFloat(data[i]["sumOpenInterest"])];
+                        result.opens.push(item);
+                    }
+                    if(endTime < now){
+                        getOpen(endTime);
+                    }else{
+                        getRatio(beginning);
+                    }   
+                });
+            }
+
+            getOpen(beginning);
         </script>
     </body>
 </html>
