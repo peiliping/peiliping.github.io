@@ -39,6 +39,8 @@
             };            
 
             function chart(){
+                console.log(JSON.stringify(result.positions));
+                console.log(JSON.stringify(result.opens));
                 Highcharts.stockChart('container', {
                     title: {
                         text: 'Price & Position'
