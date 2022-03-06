@@ -28,15 +28,15 @@
             	if (r != null) return unescape(r[2]); return null;
         	}
 
-        	var symbol = getUrlParam('symbol');
         	var now = new Date().getTime();
-        	var beginning = parseInt(now / 3600000) * 3600000 - 86400000 * 28;
-
             var result = {
-                positions : [],
                 prices : [],
-                opens : []
-            };            
+                positions : [],
+                opens : [],
+				symbol : getUrlParam('symbol'),
+                now : now,
+                beginning : parseInt(now / 3600000) * 3600000 - 86400000 * 28,
+            };          
 
             function chart(){
                 console.log(JSON.stringify(result.positions));
@@ -87,7 +87,7 @@
                                 }
                             },
                             opposite: false,
-                            height: '80%',
+                            height: '85%',
                         }, {
                             title: {
                                 text: '仓位差',
@@ -101,13 +101,22 @@
                                 }
                             },
                             opposite: true,
-                            height: '80%',
+                            height: '85%',
                         },{
+                        	title: {
+                                text: '开仓量',
+                                style: {
+                                    color: Highcharts.getOptions().colors[1]
+                                }
+                            },
 							labels: {
+								style: {
+                                    color: Highcharts.getOptions().colors[1]
+                                },
 								align: 'left'
 							},
-							top: '80%',
-							height: '20%',
+							top: '85%',
+							height: '15%',
 							offset: 0
 						}
 					],        
@@ -115,12 +124,12 @@
                         shared: true
                     },
                     series: [{
-                        name: 'Price',
+                        name: 'Prices',
                         type: 'spline',
                         yAxis: 0,
                         data: result.prices,
                     },{
-                        name: 'Position',
+                        name: 'Positions',
                         type: 'spline',
                         yAxis: 1,
                         data: result.positions,
@@ -134,7 +143,8 @@
             }
 
             function getKlines(){
-				$.getJSON('https://fapi.binance.com/fapi/v1/klines?symbol=' + symbol.toLowerCase() + 'usdt&interval=30m&limit=1500', function (data) {
+            	var symbol = result.symbol.toLowerCase();
+				$.getJSON('https://fapi.binance.com/fapi/v1/klines?symbol=' + symbol + 'usdt&interval=30m&limit=1350', function (data) {
                 	for (var i = 0; i < data.length; i++){                     
                     	var item = [data[i][0] , parseFloat(data[i][4])];
                     	result.prices.push(item);
@@ -143,41 +153,47 @@
             	});
             }
 
-            function getRatio(startTime){
+            function getPositions(startTime){
+                var symbol = result.symbol.toUpperCase();
                 var endTime = startTime + 86400000 * 10;
-                var ps = "symbol=" + symbol.toUpperCase() + "USDT&period=30m&limit=500&starttime=" + startTime + "&endTime=" + endTime;
+                var ps = 'symbol=' + symbol + 'USDT&period=30m&limit=500&starttime=' + startTime + '&endTime=' + endTime;
                 $.getJSON('https://fapi.binance.com/futures/data/globalLongShortAccountRatio?' + ps, function (data) {
                     for (var i = 0; i < data.length; i++){ 
-                    	var w = Math.floor((data[i]["longAccount"] - data[i]["shortAccount"])*1000)/1000;
-                        var item = [data[i]["timestamp"] , w];
+                    	var w = Math.floor((data[i].longAccount - data[i].shortAccount)*1000)/1000;
+                        var item = [data[i].timestamp , w];
                         result.positions.push(item);
                     }
                     if(endTime < now){
-                        getRatio(endTime);
+                        getPositions(endTime);
                     }else{
-                    	document.title = "PD : " + result.positions[result.positions.length-1][1]
+                    	document.title = 'PD : ' + result.positions[result.positions.length-1][1]
                         getKlines();
-                    }   
+                    }
                 });
             }
 
-            function getOpen(startTime){
+            function getOpens(startTime){
+                var symbol = result.symbol.toUpperCase();
                 var endTime = startTime + 86400000 * 10;
-                var ps = "symbol=" + symbol.toUpperCase() + "USDT&period=30m&limit=500&starttime=" + startTime + "&endTime=" + endTime;
+                var ps = 'symbol=' + symbol + 'USDT&period=30m&limit=500&starttime=' + startTime + '&endTime=' + endTime;
                 $.getJSON('https://fapi.binance.com/futures/data/openInterestHist?' + ps, function (data) {
                     for (var i = 0; i < data.length; i++){                     
-                        var item = [data[i]["timestamp"] , parseFloat(data[i]["sumOpenInterest"])];
+                        var item = [data[i].timestamp , parseFloat(data[i].sumOpenInterest)];
                         result.opens.push(item);
                     }
                     if(endTime < now){
-                        getOpen(endTime);
+                        getOpens(endTime);
                     }else{
-                        getRatio(beginning);
+                        getPositions(result.beginning);
                     }   
                 });
             }
 
-            getOpen(beginning);
+            if(result.symbol == null || result.symbol == ''){
+            	alert('symbol is missing .');
+            }else{
+            	getOpens(result.beginning);
+            }
         </script>
     </body>
 </html>
