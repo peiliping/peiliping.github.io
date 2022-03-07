@@ -47,7 +47,16 @@
                     },
                     time: {
                         useUTC: false
-                    },                 
+                    },
+                    legend: {
+						enabled: true
+					},
+					tooltip: {
+                        shared: true
+                    },
+                    chart: {
+                    	animation: false
+                    },
                     rangeSelector: {
                         buttons: [
                             {
@@ -120,9 +129,6 @@
 							offset: 0
 						}
 					],        
-                    tooltip: {
-                        shared: true
-                    },
                     series: [{
                         name: 'Prices',
                         type: 'spline',
