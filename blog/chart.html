@@ -31,7 +31,8 @@
         	var now = new Date().getTime();
             var result = {
                 prices : [],
-                positions : [],
+                globalPositions : [],
+                topPositions : [],
                 opens : [],
                 events : [],
 				symbol : getUrlParam('symbol'),
@@ -40,7 +41,7 @@
             };          
 
             function chart(){
-                console.log(JSON.stringify(result.positions));
+                console.log(JSON.stringify(result.globalPositions));
                 console.log(JSON.stringify(result.opens));
                 Highcharts.stockChart('container', {
                     title: {
@@ -136,10 +137,16 @@
                         yAxis: 0,
                         data: result.prices,
                     },{
-                        name: 'Positions',
+                        name: 'GlobalPositions',
                         type: 'spline',
                         yAxis: 1,
-                        data: result.positions,
+                        data: result.globalPositions,
+                    },{
+                        name: 'TopPositions',
+                        type: 'spline',
+                        yAxis: 1,
+                        data: result.topPositions,
+                        visible: false,
                     },{
                     	name: 'Opens',
                         type: 'spline',
@@ -182,7 +189,25 @@
             	});
             }
 
-            function getPositions(startTime){
+            function getTopPositions(startTime){
+                var symbol = result.symbol.toUpperCase();
+                var endTime = startTime + 86400000 * 10;
+                var ps = 'symbol=' + symbol + 'USDT&period=30m&limit=500&starttime=' + startTime + '&endTime=' + endTime + '&_ts=' + now;
+                $.getJSON('https://fapi.binance.com/futures/data/topLongShortAccountRatio?' + ps, function (data) {
+                    for (var i = 0; i < data.length; i++){ 
+                    	var w = Math.floor((data[i].longAccount - data[i].shortAccount)*1000)/1000;
+                        var item = [data[i].timestamp , w];
+                        result.topPositions.push(item);
+                    }
+                    if(endTime < now){
+                        getTopPositions(endTime);
+                    }else{
+                        getFundingRates();
+                    }
+                });
+            }
+
+            function getGlobalPositions(startTime){
                 var symbol = result.symbol.toUpperCase();
                 var endTime = startTime + 86400000 * 10;
                 var ps = 'symbol=' + symbol + 'USDT&period=30m&limit=500&starttime=' + startTime + '&endTime=' + endTime + '&_ts=' + now;
@@ -190,13 +215,13 @@
                     for (var i = 0; i < data.length; i++){ 
                     	var w = Math.floor((data[i].longAccount - data[i].shortAccount)*1000)/1000;
                         var item = [data[i].timestamp , w];
-                        result.positions.push(item);
+                        result.globalPositions.push(item);
                     }
                     if(endTime < now){
-                        getPositions(endTime);
+                        getGlobalPositions(endTime);
                     }else{
-                    	document.title = 'PD : ' + result.positions[result.positions.length-1][1]
-                        getFundingRates();
+                    	document.title = 'PD : ' + result.globalPositions[result.globalPositions.length-1][1]
+                        getTopPositions(result.beginning);
                     }
                 });
             }
@@ -215,7 +240,7 @@
                     if(endTime < now){
                         getOpens(endTime);
                     }else{
-                        getPositions(result.beginning);
+                        getGlobalPositions(result.beginning);
                     }   
                 });
             }
