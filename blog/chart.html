@@ -53,7 +53,7 @@
 						enabled: true
 					},
 					tooltip: {
-                        shared: true
+                        shared: true,
                     },
                     chart: {
                     	animation: false
@@ -150,24 +150,10 @@
 						type: 'flags',
 						data: result.events,
 						shape: 'squarepin',
-						width: 16
+						width: 16,
+						enableMouseTracking: false,
 					}]
                 });
-            }
-
-            function getFundingRate(){
-            	var symbol = result.symbol.toUpperCase();
-            	$.getJSON('https://fapi.binance.com/fapi/v1/fundingRate?symbol=' + symbol + 'USDT&limit=100&_ts=' + now, function (data) {
-                	for (var i = 0; i < data.length; i++){                     
-                		var ts = parseInt(data[i].fundingTime /1000) * 1000;
-                		var ratio = parseFloat(data[i].fundingRate);
-                		if(ratio < -0.00001){
-                			var item = {x: ts, title: "S", text: "short"};
-                			result.events.push(item);
-                		}
-                	}
-                	chart();
-            	});
             }
 
             function getKlines(){
@@ -177,7 +163,22 @@
                     	var item = [data[i][0] , parseFloat(data[i][4])];
                     	result.prices.push(item);
                 	}
-                	getFundingRate();
+                	chart();
+            	});
+            }
+
+			function getFundingRates(){
+            	var symbol = result.symbol.toUpperCase();
+            	$.getJSON('https://fapi.binance.com/fapi/v1/fundingRate?symbol=' + symbol + 'USDT&limit=100&_ts=' + now, function (data) {
+                	for (var i = 0; i < data.length; i++){                     
+                		var ts = parseInt(data[i].fundingTime /1000) * 1000;
+                		var ratio = parseFloat(data[i].fundingRate);
+                		if(ratio < -0.00001){
+                			var item = {x: ts, title: "S"};
+                			result.events.push(item);
+                		}
+                	}
+                	getKlines();
             	});
             }
 
@@ -195,7 +196,7 @@
                         getPositions(endTime);
                     }else{
                     	document.title = 'PD : ' + result.positions[result.positions.length-1][1]
-                        getKlines();
+                        getFundingRates();
                     }
                 });
             }
