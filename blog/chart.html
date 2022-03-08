@@ -5,7 +5,6 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <script src="https://code.highcharts.com.cn/jquery/jquery-1.8.3.min.js"></script>
         <script src="https://cdn.highcharts.com.cn/highstock/highstock.js"></script>
-        <script src="https://cdn.highcharts.com.cn/highcharts/modules/exporting.js"></script>
         <script src="https://code.highcharts.com.cn/highcharts-plugins/highcharts-zh_CN.js"></script>
         <style>
             *{
@@ -133,7 +132,7 @@
 					],        
                     series: [{
                         name: 'Prices',
-                        type: 'spline',
+                        type: 'candlestick',
                         yAxis: 0,
                         data: result.prices,
                     },{
@@ -167,7 +166,7 @@
             	var symbol = result.symbol.toLowerCase();
 				$.getJSON('https://fapi.binance.com/fapi/v1/klines?symbol=' + symbol + 'usdt&interval=30m&limit=1350&_ts=' + now, function (data) {
                 	for (var i = 0; i < data.length; i++){                     
-                    	var item = [data[i][0] , parseFloat(data[i][4])];
+                    	var item = [data[i][0] , parseFloat(data[i][1]), parseFloat(data[i][2]), parseFloat(data[i][3]), parseFloat(data[i][4])];
                     	result.prices.push(item);
                 	}
                 	chart();
