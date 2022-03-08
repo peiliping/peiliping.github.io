@@ -206,6 +206,20 @@
                 });
             }
 
+            function getGlobalPositionLatest(){
+            	var symbol = result.symbol.toUpperCase();
+            	var ps = 'symbol=' + symbol + 'USDT&period=5m&limit=1&_ts=' + now;
+                $.getJSON('https://fapi.binance.com/futures/data/globalLongShortAccountRatio?' + ps, function (data) {
+                    for (var i = 0; i < data.length; i++){ 
+                    	var w = Math.floor((data[i].longAccount - data[i].shortAccount)*1000)/1000;
+                        var item = [data[i].timestamp , w];
+                        result.globalPositions.push(item);
+                    }
+                    document.title = 'PD : ' + result.globalPositions[result.globalPositions.length-1][1]
+                    getTopPositions(result.beginning);
+                });
+            }
+
             function getGlobalPositions(startTime){
                 var symbol = result.symbol.toUpperCase();
                 var endTime = startTime + 86400000 * 10;
@@ -219,8 +233,7 @@
                     if(endTime < now){
                         getGlobalPositions(endTime);
                     }else{
-                    	document.title = 'PD : ' + result.globalPositions[result.globalPositions.length-1][1]
-                        getTopPositions(result.beginning);
+                    	getGlobalPositionLatest();
                     }
                 });
             }
