@@ -78,6 +78,24 @@
                                         });
                                     }
                                 },
+                            },{
+                                type: 'day',
+                                count: 3,
+                                text: '3day',
+                                title: 'View 3 day',
+                                events: {
+                                    click: function () {
+                                        stockChart.update({
+                                            plotOptions: {
+                                                series: {
+                                                    dataGrouping: {
+                                                        enabled: false
+                                                    }
+                                                }
+                                            },
+                                        });
+                                    }
+                                },
                             }, {
                                 type: 'week',
                                 count: 1,
