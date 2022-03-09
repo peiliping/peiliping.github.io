@@ -42,7 +42,7 @@
             function chart(){
                 console.log(JSON.stringify(result.globalPositions));
                 console.log(JSON.stringify(result.opens));
-                Highcharts.stockChart('container', {
+                var stockChart = Highcharts.stockChart('container', {
                     title: {
                         text: 'Price & Position'
                     },
@@ -56,7 +56,7 @@
                         shared: true,
                     },
                     chart: {
-                    	animation: false
+                    	animation: false,
                     },
                     rangeSelector: {
                         buttons: [
@@ -64,24 +64,66 @@
                                 type: 'day',
                                 count: 1,
                                 text: '1day',
-                                title: 'View 1 day'
+                                title: 'View 1 day',
+                                events: {
+                                    click: function () {
+                                        stockChart.update({
+                                            plotOptions: {
+                                                series: {
+                                                    dataGrouping: {
+                                                        enabled: false
+                                                    }
+                                                }
+                                            },
+                                        });
+                                    }
+                                },
                             }, {
                                 type: 'week',
                                 count: 1,
                                 text: '1w',
-                                title: 'View 1 week'
+                                title: 'View 1 week',
+                                events: {
+                                    click: function () {
+                                        stockChart.update({
+                                            plotOptions: {
+                                                series: {
+                                                    dataGrouping: {
+                                                        enabled: false
+                                                    }
+                                                }
+                                            },
+                                        });
+                                    }
+                                },
                             }, {
                                 type: 'month',
                                 count: 1,
                                 text: '1m',
-                                title: 'View 1 month'
-                            }, {
-                                type: 'all',
-                                text: 'All',
-                                title: 'View all'
+                                title: 'View 1 month',
+                                events: {
+                                    click: function () {
+                                        stockChart.update({
+                                            plotOptions: {
+                                                series: {
+                                                    dataGrouping: {
+                                                        enabled: true
+                                                    }
+                                                }
+                                            },
+                                        });
+                                    }
+                                },
                             }
                         ],
                         selected: 1
+                    },
+                    plotOptions: {
+                        series: {
+                            dataGrouping: {
+                                enabled: false
+                            }
+                        }
                     },
                     yAxis: [
                     	{                            
