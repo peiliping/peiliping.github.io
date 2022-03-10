@@ -34,23 +34,28 @@
                 topPositions : [],
                 opens : [],
                 events : [],
-				symbol : getUrlParam('symbol'),
+				symbol : '',
+                symbolSuffix : 'USDT',
+                symbolParamKey : 'symbol',
                 now : now,
                 beginning : parseInt(now / 3600000) * 3600000 - 86400000 * 28,
-            };          
+                domain : 'https://fapi.binance.com',
+                pathPreffix : '/fapi',
+            };
+
+            var buildSymbolParamStr = function(){return result.symbolParamKey + '=' + result.symbol + result.symbolSuffix;}
 
             function chart(){
-                console.log(JSON.stringify(result.globalPositions));
-                console.log(JSON.stringify(result.opens));
+                //console.log(JSON.stringify(result.globalPositions));
                 var stockChart = Highcharts.stockChart('container', {
                     title: {
-                        text: 'Price & Position'
+                        text: 'Price & Position',
                     },
                     time: {
-                        useUTC: false
+                        useUTC: false,
                     },
                     legend: {
-						enabled: true
+						enabled: true,
 					},
 					tooltip: {
                         shared: true,
@@ -119,6 +124,24 @@
                                 count: 1,
                                 text: '1m',
                                 title: 'View 1 month',
+                                events: {
+                                    click: function () {
+                                        stockChart.update({
+                                            plotOptions: {
+                                                series: {
+                                                    dataGrouping: {
+                                                        enabled: true
+                                                    }
+                                                }
+                                            },
+                                        });
+                                    }
+                                },
+                            }, {
+                                type : 'all',
+                                count : 1,
+                                text : 'All',
+                                title: 'View All',
                                 events: {
                                     click: function () {
                                         stockChart.update({
@@ -222,20 +245,25 @@
                 });
             }
 
-            function getKlines(){
-            	var symbol = result.symbol.toLowerCase();
-				$.getJSON('https://fapi.binance.com/fapi/v1/klines?symbol=' + symbol + 'usdt&interval=30m&limit=1350&_ts=' + now, function (data) {
+            function getKlines(startTime){
+                var endTime = startTime + 86400000 * 10;
+                endTime = (endTime > result.now ? result.now : endTime);
+                var ps = buildSymbolParamStr() + '&interval=30m&limit=500&startTime=' + startTime + '&endTime=' + endTime + '&_ts=' + now;
+				$.getJSON(result.domain + result.pathPreffix + '/v1/klines?' + ps, function (data) {
                 	for (var i = 0; i < data.length; i++){                     
                     	var item = [data[i][0] , parseFloat(data[i][1]), parseFloat(data[i][2]), parseFloat(data[i][3]), parseFloat(data[i][4])];
                     	result.prices.push(item);
                 	}
-                	chart();
+                    if(endTime < now){
+                        getKlines(endTime);
+                    }else{
+                        chart();
+                    }
             	});
             }
 
 			function getFundingRates(){
-            	var symbol = result.symbol.toUpperCase();
-            	$.getJSON('https://fapi.binance.com/fapi/v1/fundingRate?symbol=' + symbol + 'USDT&limit=100&_ts=' + now, function (data) {
+            	$.getJSON(result.domain + result.pathPreffix + '/v1/fundingRate?' + buildSymbolParamStr() + '&limit=100&_ts=' + now, function (data) {
                 	for (var i = 0; i < data.length; i++){                     
                 		var ts = parseInt(data[i].fundingTime /1000) * 1000;
                 		var ratio = parseFloat(data[i].fundingRate);
@@ -244,15 +272,15 @@
                 			result.events.push(item);
                 		}
                 	}
-                	getKlines();
+                	getKlines(result.beginning);
             	});
             }
 
             function getTopPositions(startTime){
-                var symbol = result.symbol.toUpperCase();
                 var endTime = startTime + 86400000 * 10;
-                var ps = 'symbol=' + symbol + 'USDT&period=30m&limit=500&starttime=' + startTime + '&endTime=' + endTime + '&_ts=' + now;
-                $.getJSON('https://fapi.binance.com/futures/data/topLongShortAccountRatio?' + ps, function (data) {
+                endTime = (endTime > result.now ? result.now : endTime);
+                var ps = buildSymbolParamStr() + '&period=30m&limit=500&starttime=' + startTime + '&endTime=' + endTime + '&_ts=' + now;
+                $.getJSON(result.domain + '/futures/data/topLongShortAccountRatio?' + ps, function (data) {
                     for (var i = 0; i < data.length; i++){ 
                     	var w = Math.floor((data[i].longAccount - data[i].shortAccount)*1000)/1000;
                         var item = [data[i].timestamp , w];
@@ -267,9 +295,8 @@
             }
 
             function getGlobalPositionLatest(){
-            	var symbol = result.symbol.toUpperCase();
-            	var ps = 'symbol=' + symbol + 'USDT&period=5m&limit=1&_ts=' + now;
-                $.getJSON('https://fapi.binance.com/futures/data/globalLongShortAccountRatio?' + ps, function (data) {
+            	var ps = buildSymbolParamStr() + '&period=5m&limit=1&_ts=' + now;
+                $.getJSON(result.domain + '/futures/data/globalLongShortAccountRatio?' + ps, function (data) {
                     for (var i = 0; i < data.length; i++){ 
                     	var w = Math.floor((data[i].longAccount - data[i].shortAccount)*1000)/1000;
                         var item = [data[i].timestamp , w];
@@ -281,10 +308,10 @@
             }
 
             function getGlobalPositions(startTime){
-                var symbol = result.symbol.toUpperCase();
                 var endTime = startTime + 86400000 * 10;
-                var ps = 'symbol=' + symbol + 'USDT&period=30m&limit=500&starttime=' + startTime + '&endTime=' + endTime + '&_ts=' + now;
-                $.getJSON('https://fapi.binance.com/futures/data/globalLongShortAccountRatio?' + ps, function (data) {
+                endTime = (endTime > result.now ? result.now : endTime);
+                var ps = buildSymbolParamStr() + '&period=30m&limit=500&starttime=' + startTime + '&endTime=' + endTime + '&_ts=' + now;
+                $.getJSON(result.domain + '/futures/data/globalLongShortAccountRatio?' + ps, function (data) {
                     for (var i = 0; i < data.length; i++){ 
                     	var w = Math.floor((data[i].longAccount - data[i].shortAccount)*1000)/1000;
                         var item = [data[i].timestamp , w];
@@ -299,10 +326,10 @@
             }
 
             function getOpens(startTime){
-                var symbol = result.symbol.toUpperCase();
                 var endTime = startTime + 86400000 * 10;
-                var ps = 'symbol=' + symbol + 'USDT&period=30m&limit=500&starttime=' + startTime + '&endTime=' + endTime + '&_ts=' + now;
-                $.getJSON('https://fapi.binance.com/futures/data/openInterestHist?' + ps, function (data) {
+                endTime = (endTime > result.now ? result.now : endTime);
+                var ps = buildSymbolParamStr() + '&period=30m&limit=500&starttime=' + startTime + '&endTime=' + endTime + '&_ts=' + now;
+                $.getJSON(result.domain + '/futures/data/openInterestHist?' + ps, function (data) {
                     for (var i = 0; i < data.length; i++){
                     	if(data[i].sumOpenInterest > 0){
                     		var item = [data[i].timestamp , parseFloat(data[i].sumOpenInterest)];
@@ -317,10 +344,12 @@
                 });
             }
 
-            if(result.symbol == null || result.symbol == ''){
-            	alert('symbol is missing .');
+            var t_symbol = getUrlParam('symbol');
+            if(t_symbol == null || t_symbol == ''){
+                alert('symbol is missing .');
             }else{
-            	getOpens(result.beginning);
+                result.symbol = t_symbol.toUpperCase();
+                getOpens(result.beginning);
             }
         </script>
     </body>
