@@ -41,6 +41,7 @@
                 beginning : parseInt(now / 3600000) * 3600000 - 86400000 * 28,
                 domain : 'https://fapi.binance.com',
                 pathPreffix : '/fapi',
+                initPeriod : 1,
             };
 
             var buildSymbolParamStr = function(){return result.symbolParamKey + '=' + result.symbol + result.symbolSuffix;}
@@ -70,6 +71,24 @@
                                 count: 1,
                                 text: '1day',
                                 title: 'View 1 day',
+                                events: {
+                                    click: function () {
+                                        stockChart.update({
+                                            plotOptions: {
+                                                series: {
+                                                    dataGrouping: {
+                                                        enabled: false
+                                                    }
+                                                }
+                                            },
+                                        });
+                                    }
+                                },
+                            },{
+                                type: 'day',
+                                count: 2,
+                                text: '2day',
+                                title: 'View 2 day',
                                 events: {
                                     click: function () {
                                         stockChart.update({
@@ -157,7 +176,7 @@
                                 },
                             }
                         ],
-                        selected: 1
+                        selected: result.initPeriod,
                     },
                     plotOptions: {
                         series: {
@@ -349,6 +368,10 @@
                 alert('symbol is missing .');
             }else{
                 result.symbol = t_symbol.toUpperCase();
+                var t_range = getUrlParam('range');
+                if(t_range !=null && t_range != ''){
+                    result.initPeriod = parseInt(t_range) - 1;
+                }
                 getOpens(result.beginning);
             }
         </script>
