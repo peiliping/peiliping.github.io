@@ -42,12 +42,22 @@
                 domain : 'https://fapi.binance.com',
                 pathPreffix : '/fapi',
                 initPeriod : 1,
+                pmax : 0.6,
+                pmin : -0.25,
             };
 
             var buildSymbolParamStr = function(){return result.symbolParamKey + '=' + result.symbol + result.symbolSuffix;}
 
             function chart(){
                 //console.log(JSON.stringify(result.globalPositions));
+                var f = function(a, b){return a[0]-b[0];}
+                result.prices.sort(f);
+                result.globalPositions.sort(f);
+                result.topPositions.sort(f);
+                result.opens.sort(f);
+                result.pmax =  0.1 + result.topPositions.reduce((ac , cur) => {return ac > cur[1] ? ac : cur[1]; });
+                result.pmin = -0.1 + result.topPositions.reduce((ac , cur) => {if(ac == null){ac=1;} return ac < cur[1] ? ac : cur[1]; });
+
                 var stockChart = Highcharts.stockChart('container', {
                     title: {
                         text: 'Price & Position',
@@ -214,6 +224,9 @@
                             },
                             opposite: true,
                             height: '85%',
+                            tickInterval: 0.05,
+                            softMax: result.pmax,
+                            softMin: result.pmin,
                         },{
                         	title: {
                                 text: '开仓量',
