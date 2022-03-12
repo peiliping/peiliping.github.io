@@ -42,8 +42,7 @@
                 domain : 'https://fapi.binance.com',
                 pathPreffix : '/fapi',
                 initPeriod : 1,
-                pmax : 0.6,
-                pmin : -0.25,
+                yMarks : [],
             };
 
             var buildSymbolParamStr = function(){return result.symbolParamKey + '=' + result.symbol + result.symbolSuffix;}
@@ -55,8 +54,13 @@
                 result.globalPositions.sort(f);
                 result.topPositions.sort(f);
                 result.opens.sort(f);
-                result.pmax =  0.1 + result.topPositions.reduce((ac , cur) => {return ac > cur[1] ? ac : cur[1]; });
-                result.pmin = -0.1 + result.topPositions.reduce((ac , cur) => {if(ac == null){ac=1;} return ac < cur[1] ? ac : cur[1]; });
+                var pmax =  0.1 + result.topPositions.reduce((ac , cur) => {return ac > cur[1] ? ac : cur[1]; });
+                var pmin = -0.1 + result.topPositions.reduce((ac , cur) => {if(ac == null){ac=1;} return ac < cur[1] ? ac : cur[1]; });
+                for (var i = -100; i < 100; i+=5){
+                    if(i >= pmin*100 && i <= pmax*100){
+                        result.yMarks.push(i/100);
+                    }
+                }
 
                 var stockChart = Highcharts.stockChart('container', {
                     title: {
@@ -224,9 +228,7 @@
                             },
                             opposite: true,
                             height: '85%',
-                            tickInterval: 0.1,
-                            softMax: result.pmax,
-                            softMin: result.pmin,
+                            tickPositions: result.yMarks,
                         },{
                         	title: {
                                 text: '开仓量',
