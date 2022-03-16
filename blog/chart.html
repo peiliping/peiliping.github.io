@@ -37,7 +37,6 @@
 				symbol : '',
                 symbolSuffix : 'USDT',
                 symbolParamKey : 'symbol',
-                now : now,
                 beginning : parseInt(now / 3600000) * 3600000 - 86400000 * 28,
                 domain : 'https://fapi.binance.com',
                 pathPreffix : '/fapi',
@@ -282,7 +281,7 @@
 
             function getKlines(startTime){
                 var endTime = startTime + 86400000 * 10;
-                endTime = (endTime > result.now ? result.now : endTime);
+                endTime = (endTime > now ? now : endTime);
                 var ps = buildSymbolParamStr() + '&interval=30m&limit=500&startTime=' + startTime + '&endTime=' + endTime + '&_ts=' + now;
 				$.getJSON(result.domain + result.pathPreffix + '/v1/klines?' + ps, function (data) {
                 	for (var i = 0; i < data.length; i++){                     
@@ -313,7 +312,7 @@
 
             function getTopPositions(startTime){
                 var endTime = startTime + 86400000 * 10;
-                endTime = (endTime > result.now ? result.now : endTime);
+                endTime = (endTime > now ? now : endTime);
                 var ps = buildSymbolParamStr() + '&period=30m&limit=500&starttime=' + startTime + '&endTime=' + endTime + '&_ts=' + now;
                 $.getJSON(result.domain + '/futures/data/topLongShortAccountRatio?' + ps, function (data) {
                     for (var i = 0; i < data.length; i++){ 
@@ -344,7 +343,7 @@
 
             function getGlobalPositions(startTime){
                 var endTime = startTime + 86400000 * 10;
-                endTime = (endTime > result.now ? result.now : endTime);
+                endTime = (endTime > now ? now : endTime);
                 var ps = buildSymbolParamStr() + '&period=30m&limit=500&starttime=' + startTime + '&endTime=' + endTime + '&_ts=' + now;
                 $.getJSON(result.domain + '/futures/data/globalLongShortAccountRatio?' + ps, function (data) {
                     for (var i = 0; i < data.length; i++){ 
@@ -362,7 +361,7 @@
 
             function getOpens(startTime){
                 var endTime = startTime + 86400000 * 10;
-                endTime = (endTime > result.now ? result.now : endTime);
+                endTime = (endTime > now ? now : endTime);
                 var ps = buildSymbolParamStr() + '&period=30m&limit=500&starttime=' + startTime + '&endTime=' + endTime + '&_ts=' + now;
                 $.getJSON(result.domain + '/futures/data/openInterestHist?' + ps, function (data) {
                     for (var i = 0; i < data.length; i++){
