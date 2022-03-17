@@ -33,6 +33,7 @@
                 globalPositions : [],
                 topPositions : [],
                 opens : [],
+                opensV : [],
                 events : [],
 				symbol : '',
                 symbolSuffix : 'USDT',
@@ -47,7 +48,7 @@
             var buildSymbolParamStr = function(){return result.symbolParamKey + '=' + result.symbol + result.symbolSuffix;}
 
             function chart(){
-                //console.log(JSON.stringify(result.globalPositions));
+                console.log('globalPos : ' + JSON.stringify(result.globalPositions));
                 var f = function(a, b){return a[0]-b[0];}
                 result.prices.sort(f);
                 result.globalPositions.sort(f);
@@ -203,12 +204,12 @@
                             title: {
                                 text: '价格',
                                 style: {
-                                    color: Highcharts.getOptions().colors[0]
+                                    color: Highcharts.getOptions().colors[1]
                                 }
                             },
                             labels: {
                                 style: {
-                                    color: Highcharts.getOptions().colors[0]
+                                    color: Highcharts.getOptions().colors[1]
                                 }
                             },
                             opposite: false,
@@ -231,7 +232,7 @@
                             gridLineWidth: 0,
                         },{
                         	title: {
-                                text: '开仓量',
+                                text: '开仓量B',
                                 style: {
                                     color: Highcharts.getOptions().colors[1]
                                 }
@@ -240,12 +241,28 @@
 								style: {
                                     color: Highcharts.getOptions().colors[1]
                                 },
-								align: 'left'
 							},
+                            offset: 0,
+                            opposite: false,
 							top: '85%',
 							height: '15%',
-							offset: 0
-						}
+						},{
+                            title: {
+                                text: '开仓量U(W)',
+                                style: {
+                                    color: Highcharts.getOptions().colors[1]
+                                }
+                            },
+                            labels: {
+                                style: {
+                                    color: Highcharts.getOptions().colors[1]
+                                },
+                            },
+                            offset: 0,
+                            opposite: true,
+                            top: '85%',
+                            height: '15%',
+                        }
 					],        
                     series: [{
                         name: 'Prices',
@@ -264,10 +281,15 @@
                         data: result.topPositions,
                         visible: false,
                     },{
-                    	name: 'Opens',
+                    	name: 'Opens(B)',
                         type: 'spline',
                         yAxis: 2,
                         data: result.opens,
+                    },{
+                        name: 'Opens(U)',
+                        type: 'spline',
+                        yAxis: 3,
+                        data: result.opensV,
                     },{
                     	name: 'FundingRates',
 						type: 'flags',
@@ -367,7 +389,9 @@
                     for (var i = 0; i < data.length; i++){
                     	if(data[i].sumOpenInterest > 0){
                     		var item = [data[i].timestamp , parseFloat(data[i].sumOpenInterest)];
+                            var itemV = [data[i].timestamp , parseFloat(data[i].sumOpenInterestValue)/10000];
                         	result.opens.push(item);	
+                            result.opensV.push(itemV);
                     	}
                     }
                     if(endTime < now){
