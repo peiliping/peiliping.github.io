@@ -35,10 +35,10 @@
                 opens : [],
                 opensV : [],
                 events : [],
-                symbol : '',
+                symbol : 'BTC',
                 symbolSuffix : 'USDT',
                 symbolParamKey : 'symbol',
-                beginning : parseInt(now / 3600000) * 3600000 - 86400000 * 28,
+                beginning : parseInt(now / 3600000) * 3600000 - 86400000 * 8,
                 domain : 'https://fapi.binance.com',
                 pathPreffix : '/fapi',
                 initPeriod : 1,
@@ -290,6 +290,7 @@
                         type: 'spline',
                         yAxis: 3,
                         data: result.opensV,
+                        visible: false,
                     },{
                         name: 'FundingRates',
                         type: 'flags',
@@ -403,16 +404,18 @@
             }
 
             var t_symbol = getUrlParam('symbol');
-            if(t_symbol == null || t_symbol == ''){
-                alert('symbol is missing .');
-            }else{
-                result.symbol = t_symbol.toUpperCase();
-                var t_range = getUrlParam('range');
-                if(t_range !=null && t_range != ''){
-                    result.initPeriod = parseInt(t_range) - 1;
-                }
-                getOpens(result.beginning);
+            if(t_symbol != null && t_symbol != ''){
+              result.symbol = t_symbol.toUpperCase();
             }
+            var t_range = getUrlParam('range');
+            if(t_range !=null && t_range != ''){
+              result.beginning = parseInt(now / 3600000) * 3600000 - 86400000 * parseInt(t_range);
+            }
+            var t_period = getUrlParam('period');
+            if(t_period != null && t_period != ''){
+              result.initPeriod = parseInt(t_period) - 1;
+            }
+            getOpens(result.beginning);
         </script>
     </body>
 </html>
