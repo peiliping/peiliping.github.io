@@ -33,7 +33,7 @@
                 globalPositions : [],
                 topPositions : [],
                 opens : [],
-                opensV : [],
+                opensU : [],
                 events : [],
                 symbol : 'BTC',
                 symbolSuffix : 'USDT',
@@ -54,6 +54,7 @@
                 result.globalPositions.sort(f);
                 result.topPositions.sort(f);
                 result.opens.sort(f);
+                result.opensU.sort(f);
                 var pmax =  0.1 + result.topPositions.reduce((ac , cur) => {return ac > cur[1] ? ac : cur[1]; });
                 var pmin = -0.1 + result.topPositions.reduce((ac , cur) => {if(ac == null){ac=1;} return ac < cur[1] ? ac : cur[1]; });
                 for (var i = -100; i < 100; i+=5){
@@ -232,7 +233,7 @@
                             gridLineWidth: 0,
                         },{
                             title: {
-                                text: '开仓量B',
+                                text: '开仓量B(W)',
                                 style: {
                                     color: Highcharts.getOptions().colors[1]
                                 }
@@ -248,7 +249,7 @@
                             height: '15%',
                         },{
                             title: {
-                                text: '开仓量U(W)',
+                                text: '开仓量U(亿)',
                                 style: {
                                     color: Highcharts.getOptions().colors[1]
                                 }
@@ -290,7 +291,7 @@
                         name: 'Opens(U)',
                         type: 'spline',
                         yAxis: 3,
-                        data: result.opensV,
+                        data: result.opensU,
                     },{
                         name: 'FundingRates',
                         type: 'flags',
@@ -389,10 +390,10 @@
                 $.getJSON(result.domain + '/futures/data/openInterestHist?' + ps, function (data) {
                     for (var i = 0; i < data.length; i++){
                         if(data[i].sumOpenInterest > 0){
-                            var item = [data[i].timestamp , parseFloat(data[i].sumOpenInterest)];
-                            var itemV = [data[i].timestamp , parseFloat(data[i].sumOpenInterestValue)/10000];
+                            var item = [data[i].timestamp , parseFloat(data[i].sumOpenInterest)/10000];
+                            var itemV = [data[i].timestamp , parseFloat(data[i].sumOpenInterestValue)/100000000];
                             result.opens.push(item);    
-                            result.opensV.push(itemV);
+                            result.opensU.push(itemV);
                         }
                     }
                     if(endTime < now){
