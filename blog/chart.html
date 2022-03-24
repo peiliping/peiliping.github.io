@@ -214,7 +214,6 @@
                                 }
                             },
                             opposite: false,
-                            height: '85%',
                         }, {
                             title: {
                                 text: '仓位差',
@@ -228,41 +227,38 @@
                                 }
                             },
                             opposite: true,
-                            height: '85%',
                             tickPositions: result.yMarks,
                             gridLineWidth: 0,
                         },{
                             title: {
-                                text: '开仓量B(W)',
+                                text: '',
                                 style: {
                                     color: Highcharts.getOptions().colors[1]
                                 }
                             },
                             labels: {
+                            	enabled: false,
                                 style: {
                                     color: Highcharts.getOptions().colors[1]
-                                },
+                                }
                             },
-                            offset: 0,
                             opposite: false,
-                            top: '85%',
-                            height: '15%',
+                            gridLineWidth: 0,
                         },{
                             title: {
-                                text: '开仓量U(亿)',
+                                text: '',
                                 style: {
                                     color: Highcharts.getOptions().colors[1]
                                 }
                             },
                             labels: {
+                            	enabled: false,
                                 style: {
                                     color: Highcharts.getOptions().colors[1]
-                                },
+                                }
                             },
-                            offset: 0,
-                            opposite: true,
-                            top: '85%',
-                            height: '15%',
+                            opposite: false,
+                            gridLineWidth: 0,
                         }
                     ],        
                     series: [{
@@ -270,16 +266,22 @@
                         type: 'candlestick',
                         yAxis: 0,
                         data: result.prices,
+                        color: 'green',
+                        lineColor: 'green',
+                        upColor: 'red',
+                        upLineColor: 'red',
                     },{
                         name: 'GlobalPositions',
                         type: 'spline',
                         yAxis: 1,
                         data: result.globalPositions,
+                        color: Highcharts.getOptions().colors[0],
                     },{
                         name: 'TopPositions',
                         type: 'spline',
                         yAxis: 1,
                         data: result.topPositions,
+                        color: Highcharts.getOptions().colors[0],
                         visible: false,
                     },{
                         name: 'Opens(B)',
@@ -287,11 +289,15 @@
                         yAxis: 2,
                         data: result.opens,
                         visible: false,
+                        dashStyle: 'Dash',
+                        color: Highcharts.getOptions().colors[0],
                     },{
                         name: 'Opens(U)',
                         type: 'spline',
                         yAxis: 3,
                         data: result.opensU,
+                        dashStyle: 'Dash',
+                        color: Highcharts.getOptions().colors[0],
                     },{
                         name: 'FundingRates',
                         type: 'flags',
@@ -299,6 +305,7 @@
                         shape: 'squarepin',
                         width: 16,
                         enableMouseTracking: false,
+                        color: Highcharts.getOptions().colors[1],
                     }]
                 });
             }
