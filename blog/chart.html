@@ -30,6 +30,7 @@
             var now = new Date().getTime();
             var result = {
                 prices : [],
+                volume : [],
                 globalPositions : [],
                 topPositions : [],
                 opens : [],
@@ -214,6 +215,7 @@
                                 }
                             },
                             opposite: false,
+                            height: '85%',
                         }, {
                             title: {
                                 text: '仓位差',
@@ -227,6 +229,7 @@
                                 }
                             },
                             opposite: true,
+                            height: '85%',
                             tickPositions: result.yMarks,
                             gridLineWidth: 0,
                         },{
@@ -243,6 +246,7 @@
                                 }
                             },
                             opposite: false,
+                            height: '85%',
                             gridLineWidth: 0,
                         },{
                             title: {
@@ -258,7 +262,19 @@
                                 }
                             },
                             opposite: false,
+                            height: '85%',
                             gridLineWidth: 0,
+                        },{
+                            title: {
+                                text: '成交量',
+                                style: {
+                                    color: Highcharts.getOptions().colors[1]
+                                }
+                            },
+                            opposite: false,
+                            offset: 0,
+                            top: '85%',
+                            height: '15%',
                         }
                     ],        
                     series: [{
@@ -306,6 +322,12 @@
                         width: 16,
                         enableMouseTracking: false,
                         color: Highcharts.getOptions().colors[1],
+                    },{
+                        name: 'Volume',
+                        type: 'column',
+                        yAxis: 4,
+                        data: result.volume,
+                        color: Highcharts.getOptions().colors[0],
                     }]
                 });
             }
@@ -318,6 +340,8 @@
                     for (var i = 0; i < data.length; i++){                     
                         var item = [data[i][0] , parseFloat(data[i][1]), parseFloat(data[i][2]), parseFloat(data[i][3]), parseFloat(data[i][4])];
                         result.prices.push(item);
+                        var item2 = [data[i][0] , parseFloat(data[i][5])];
+                        result.volume.push(item2);
                     }
                     if(endTime < now){
                         getKlines(endTime);
