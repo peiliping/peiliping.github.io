@@ -21,19 +21,11 @@
     <body>
         <div id="container"></div>
         <script>
-            function getUrlParam(name) {
-                var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
-                var r = window.location.search.substr(1).match(reg);
-                if (r != null) return unescape(r[2]); return null;
-            }
-
             var now = new Date().getTime();
             var result = {
                 prices : [],
                 volume : [],
                 globalPositions : [],
-                topPositions : [],
-                opens : [],
                 opensU : [],
                 events : [],
                 symbol : 'BTC',
@@ -46,23 +38,21 @@
                 yMarks : [],
             };
 
-            var buildSymbolParamStr = function(){return result.symbolParamKey + '=' + result.symbol + result.symbolSuffix;}
-
             function chart(){
-                console.log('globalPos : ' + JSON.stringify(result.globalPositions));
                 var f = function(a, b){return a[0]-b[0];}
                 result.prices.sort(f);
+                result.volume.sort(f);
                 result.globalPositions.sort(f);
-                result.topPositions.sort(f);
-                result.opens.sort(f);
                 result.opensU.sort(f);
-                var pmax =  0.1 + result.topPositions.reduce((ac , cur) => {return ac > cur[1] ? ac : cur[1]; });
-                var pmin = -0.1 + result.topPositions.reduce((ac , cur) => {if(ac == null){ac=1;} return ac < cur[1] ? ac : cur[1]; });
+                var pmax =  0.1 + result.globalPositions.reduce((ac , cur) => {return ac > cur[1] ? ac : cur[1];});
+                var pmin = -0.1 + result.globalPositions.reduce((ac , cur) => {if(ac == null){ac=1;} return ac < cur[1] ? ac : cur[1];});
                 for (var i = -100; i < 100; i+=5){
-                    if(i >= pmin*100 && i <= pmax*100){
+                    if(i >= pmin * 100 && i <= pmax * 100){
                         result.yMarks.push(i/100);
                     }
                 }
+                document.title = 'PD:' + result.globalPositions[result.globalPositions.length-1][1] 
+                              + ' OP:' + result.opensU[result.opensU.length-1][1];
 
                 var stockChart = Highcharts.stockChart('container', {
                     title: {
@@ -250,22 +240,6 @@
                             gridLineWidth: 0,
                         },{
                             title: {
-                                text: '',
-                                style: {
-                                    color: Highcharts.getOptions().colors[1]
-                                }
-                            },
-                            labels: {
-                            	enabled: false,
-                                style: {
-                                    color: Highcharts.getOptions().colors[1]
-                                }
-                            },
-                            opposite: false,
-                            height: '85%',
-                            gridLineWidth: 0,
-                        },{
-                            title: {
                                 text: '成交量',
                                 style: {
                                     color: Highcharts.getOptions().colors[1]
@@ -293,24 +267,9 @@
                         data: result.globalPositions,
                         color: Highcharts.getOptions().colors[0],
                     },{
-                        name: 'TopPositions',
-                        type: 'spline',
-                        yAxis: 1,
-                        data: result.topPositions,
-                        color: Highcharts.getOptions().colors[0],
-                        visible: false,
-                    },{
-                        name: 'Opens(B)',
-                        type: 'spline',
-                        yAxis: 2,
-                        data: result.opens,
-                        visible: false,
-                        dashStyle: 'Dash',
-                        color: Highcharts.getOptions().colors[0],
-                    },{
                         name: 'Opens(U)',
                         type: 'spline',
-                        yAxis: 3,
+                        yAxis: 2,
                         data: result.opensU,
                         dashStyle: 'Dash',
                         color: Highcharts.getOptions().colors[0],
@@ -325,23 +284,32 @@
                     },{
                         name: 'Volume',
                         type: 'column',
-                        yAxis: 4,
+                        yAxis: 3,
                         data: result.volume,
                         color: Highcharts.getOptions().colors[0],
                     }]
                 });
             }
 
-            function getKlines(startTime){
-                var endTime = startTime + 86400000 * 10;
+            function buildSymbolParamStr(){
+                return result.symbolParamKey + '=' + result.symbol + result.symbolSuffix;
+            }
+
+            function buildEndTime(st){
+                var endTime = st + 86400000 * 10;
                 endTime = (endTime > now ? now : endTime);
+                return endTime;
+            }
+
+            function getKlines(startTime){
+                var endTime = buildEndTime(startTime);
                 var ps = buildSymbolParamStr() + '&interval=30m&limit=500&startTime=' + startTime + '&endTime=' + endTime + '&_ts=' + now;
                 $.getJSON(result.domain + result.pathPreffix + '/v1/klines?' + ps, function (data) {
                     for (var i = 0; i < data.length; i++){                     
-                        var item = [data[i][0] , parseFloat(data[i][1]), parseFloat(data[i][2]), parseFloat(data[i][3]), parseFloat(data[i][4])];
+                        var item = [data[i][0], parseFloat(data[i][1]), parseFloat(data[i][2]), parseFloat(data[i][3]), parseFloat(data[i][4])];
                         result.prices.push(item);
-                        var item2 = [data[i][0] , parseFloat(data[i][5])];
-                        result.volume.push(item2);
+                        item = [data[i][0], parseFloat(data[i][5])];
+                        result.volume.push(item);
                     }
                     if(endTime < now){
                         getKlines(endTime);
@@ -354,9 +322,9 @@
             function getFundingRates(){
                 $.getJSON(result.domain + result.pathPreffix + '/v1/fundingRate?' + buildSymbolParamStr() + '&limit=100&_ts=' + now, function (data) {
                     for (var i = 0; i < data.length; i++){                     
-                        var ts = parseInt(data[i].fundingTime /1000) * 1000;
+                        var ts = parseInt(data[i].fundingTime/1000)*1000;
                         var ratio = parseFloat(data[i].fundingRate);
-                        if(ratio < -0.00001){
+                        if(ts >= result.beginning && ratio < -0.00001){
                             var item = {x: ts, title: "S"};
                             result.events.push(item);
                         }
@@ -365,66 +333,30 @@
                 });
             }
 
-            function getTopPositions(startTime){
-                var endTime = startTime + 86400000 * 10;
-                endTime = (endTime > now ? now : endTime);
+            function getGlobalPositions(startTime){
+                var endTime = buildEndTime(startTime);
                 var ps = buildSymbolParamStr() + '&period=30m&limit=500&starttime=' + startTime + '&endTime=' + endTime + '&_ts=' + now;
-                $.getJSON(result.domain + '/futures/data/topLongShortAccountRatio?' + ps, function (data) {
+                $.getJSON(result.domain + '/futures/data/globalLongShortAccountRatio?' + ps, function (data) {
                     for (var i = 0; i < data.length; i++){ 
-                        var w = Math.floor((data[i].longAccount - data[i].shortAccount)*1000)/1000;
-                        var item = [data[i].timestamp , w];
-                        result.topPositions.push(item);
+                        var item = [data[i].timestamp , Math.floor((data[i].longAccount - data[i].shortAccount)*1000)/1000];
+                        result.globalPositions.push(item);
                     }
                     if(endTime < now){
-                        getTopPositions(endTime);
+                        getGlobalPositions(endTime);
                     }else{
                         getFundingRates();
                     }
                 });
             }
 
-            function getGlobalPositionLatest(){
-                var ps = buildSymbolParamStr() + '&period=5m&limit=1&_ts=' + now;
-                $.getJSON(result.domain + '/futures/data/globalLongShortAccountRatio?' + ps, function (data) {
-                    for (var i = 0; i < data.length; i++){ 
-                        var w = Math.floor((data[i].longAccount - data[i].shortAccount)*1000)/1000;
-                        var item = [data[i].timestamp , w];
-                        result.globalPositions.push(item);
-                    }
-                    document.title = 'PD : ' + result.globalPositions[result.globalPositions.length-1][1]
-                    getTopPositions(result.beginning);
-                });
-            }
-
-            function getGlobalPositions(startTime){
-                var endTime = startTime + 86400000 * 10;
-                endTime = (endTime > now ? now : endTime);
-                var ps = buildSymbolParamStr() + '&period=30m&limit=500&starttime=' + startTime + '&endTime=' + endTime + '&_ts=' + now;
-                $.getJSON(result.domain + '/futures/data/globalLongShortAccountRatio?' + ps, function (data) {
-                    for (var i = 0; i < data.length; i++){ 
-                        var w = Math.floor((data[i].longAccount - data[i].shortAccount)*1000)/1000;
-                        var item = [data[i].timestamp , w];
-                        result.globalPositions.push(item);
-                    }
-                    if(endTime < now){
-                        getGlobalPositions(endTime);
-                    }else{
-                        getGlobalPositionLatest();
-                    }
-                });
-            }
-
             function getOpens(startTime){
-                var endTime = startTime + 86400000 * 10;
-                endTime = (endTime > now ? now : endTime);
+                var endTime = buildEndTime(startTime);
                 var ps = buildSymbolParamStr() + '&period=30m&limit=500&starttime=' + startTime + '&endTime=' + endTime + '&_ts=' + now;
                 $.getJSON(result.domain + '/futures/data/openInterestHist?' + ps, function (data) {
                     for (var i = 0; i < data.length; i++){
                         if(data[i].sumOpenInterest > 0){
-                            var item = [data[i].timestamp , parseFloat(data[i].sumOpenInterest)/10000];
-                            var itemV = [data[i].timestamp , parseFloat(data[i].sumOpenInterestValue)/100000000];
-                            result.opens.push(item);    
-                            result.opensU.push(itemV);
+                            var item = [data[i].timestamp , parseInt(parseFloat(data[i].sumOpenInterestValue)/1000000)/100];
+                            result.opensU.push(item);
                         }
                     }
                     if(endTime < now){
@@ -433,6 +365,12 @@
                         getGlobalPositions(result.beginning);
                     }   
                 });
+            }
+
+            function getUrlParam(name) {
+                var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
+                var r = window.location.search.substr(1).match(reg);
+                if (r != null) return unescape(r[2]); return null;
             }
 
             var t_symbol = getUrlParam('symbol');
