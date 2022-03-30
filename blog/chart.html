@@ -31,10 +31,12 @@
                 symbol : 'BTC',
                 symbolSuffix : 'USDT',
                 symbolParamKey : 'symbol',
-                beginning : parseInt(now / 3600000) * 3600000 - 86400000 * 8,
+                beginning : parseInt(now / 3600000) * 3600000 - 86400000 * 9,
                 domain : 'https://fapi.binance.com',
                 pathPreffix : '/fapi',
                 initPeriod : 1,
+                interval : '30m',
+                intervalTS : 1800000,
                 yMarks : [],
             };
 
@@ -296,14 +298,18 @@
             }
 
             function buildEndTime(st){
-                var endTime = st + 86400000 * 10;
+                var endTime = st + 86400000 * 5;
                 endTime = (endTime > now ? now : endTime);
                 return endTime;
             }
 
+            function formatTs(ts){
+                return parseInt(ts / result.intervalTS) * result.intervalTS;
+            }
+
             function getKlines(startTime){
                 var endTime = buildEndTime(startTime);
-                var ps = buildSymbolParamStr() + '&interval=30m&limit=500&startTime=' + startTime + '&endTime=' + endTime + '&_ts=' + now;
+                var ps = buildSymbolParamStr() + '&interval=' + result.interval + '&limit=500&startTime=' + startTime + '&endTime=' + endTime + '&_ts=' + now;
                 $.getJSON(result.domain + result.pathPreffix + '/v1/klines?' + ps, function (data) {
                     for (var i = 0; i < data.length; i++){                     
                         var item = [data[i][0], parseFloat(data[i][1]), parseFloat(data[i][2]), parseFloat(data[i][3]), parseFloat(data[i][4])];
@@ -337,7 +343,7 @@
                 var ps = buildSymbolParamStr() + '&period=5m&limit=1&_ts=' + now;
                 $.getJSON(result.domain + '/futures/data/globalLongShortAccountRatio?' + ps, function (data) {
                     for (var i = 0; i < data.length; i++){ 
-                        var ts = parseInt(data[i].timestamp / 1800000) * 1800000;
+                        var ts = formatTs(data[i].timestamp);
                         var item = [ts , Math.floor((data[i].longAccount - data[i].shortAccount)*1000)/1000];
                         if(result.globalPositions[result.globalPositions.length-1][0] == ts){
                             result.globalPositions[result.globalPositions.length-1] = item;
@@ -351,7 +357,7 @@
 
             function getGlobalPositions(startTime){
                 var endTime = buildEndTime(startTime);
-                var ps = buildSymbolParamStr() + '&period=30m&limit=500&starttime=' + startTime + '&endTime=' + endTime + '&_ts=' + now;
+                var ps = buildSymbolParamStr() + '&period=' + result.interval + '&limit=500&starttime=' + startTime + '&endTime=' + endTime + '&_ts=' + now;
                 $.getJSON(result.domain + '/futures/data/globalLongShortAccountRatio?' + ps, function (data) {
                     for (var i = 0; i < data.length; i++){ 
                         var item = [data[i].timestamp , Math.floor((data[i].longAccount - data[i].shortAccount)*1000)/1000];
@@ -370,7 +376,7 @@
                 $.getJSON(result.domain + '/futures/data/openInterestHist?' + ps, function (data) {
                     for (var i = 0; i < data.length; i++){
                         if(data[i].sumOpenInterest > 0){
-                            var ts = parseInt(data[i].timestamp / 1800000) * 1800000;
+                            var ts = formatTs(data[i].timestamp);
                             var item = [ts , parseInt(parseFloat(data[i].sumOpenInterestValue)/1000000)/100];
                             if(result.opensU[result.opensU.length-1][0] == ts){
                                 result.opensU[result.opensU.length-1] = item;
@@ -385,7 +391,7 @@
 
             function getOpens(startTime){
                 var endTime = buildEndTime(startTime);
-                var ps = buildSymbolParamStr() + '&period=30m&limit=500&starttime=' + startTime + '&endTime=' + endTime + '&_ts=' + now;
+                var ps = buildSymbolParamStr() + '&period=' + result.interval + '&limit=500&starttime=' + startTime + '&endTime=' + endTime + '&_ts=' + now;
                 $.getJSON(result.domain + '/futures/data/openInterestHist?' + ps, function (data) {
                     for (var i = 0; i < data.length; i++){
                         if(data[i].sumOpenInterest > 0){
@@ -401,10 +407,23 @@
                 });
             }
 
-            function getUrlParam(name) {
+            function getUrlParam(name){
                 var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
                 var r = window.location.search.substr(1).match(reg);
                 if (r != null) return unescape(r[2]); return null;
+            }
+
+            function checkInterval(){
+                if('15m' == result.interval){
+                    result.intervalTS = 900000;
+                }else if('30m' == result.interval){
+                    result.intervalTS = 1800000;
+                }else if('1h' == result.interval){
+                    result.intervalTS = 3600000;
+                }else{
+                    result.interval = '30m';
+                    alert('interval in (15m,30m,1h)');
+                }
             }
 
             var t_symbol = getUrlParam('symbol');
@@ -419,6 +438,12 @@
             if(t_period != null && t_period != ''){
               result.initPeriod = parseInt(t_period) - 1;
             }
+            var t_interval = getUrlParam('interval');
+            if(t_interval != null && t_interval != ''){
+              result.interval = t_interval;
+              checkInterval();
+            }
+
             getOpens(result.beginning);
         </script>
     </body>
