@@ -333,6 +333,22 @@
                 });
             }
 
+            function getLatestGlobalPositions(){
+                var ps = buildSymbolParamStr() + '&period=5m&limit=1&_ts=' + now;
+                $.getJSON(result.domain + '/futures/data/globalLongShortAccountRatio?' + ps, function (data) {
+                    for (var i = 0; i < data.length; i++){ 
+                        var ts = parseInt(data[i].timestamp / 1800000) * 1800000;
+                        var item = [ts , Math.floor((data[i].longAccount - data[i].shortAccount)*1000)/1000];
+                        if(result.globalPositions[result.globalPositions.length-1][0] == ts){
+                            result.globalPositions[result.globalPositions.length-1] = item;
+                        }else{
+                            result.globalPositions.push(item);    
+                        }
+                    }
+                    getFundingRates();
+                });
+            }
+
             function getGlobalPositions(startTime){
                 var endTime = buildEndTime(startTime);
                 var ps = buildSymbolParamStr() + '&period=30m&limit=500&starttime=' + startTime + '&endTime=' + endTime + '&_ts=' + now;
@@ -344,8 +360,26 @@
                     if(endTime < now){
                         getGlobalPositions(endTime);
                     }else{
-                        getFundingRates();
+                        getLatestGlobalPositions();
                     }
+                });
+            }
+
+            function getLatestOpens(){
+                var ps = buildSymbolParamStr() + '&period=5m&limit=1&_ts=' + now;
+                $.getJSON(result.domain + '/futures/data/openInterestHist?' + ps, function (data) {
+                    for (var i = 0; i < data.length; i++){
+                        if(data[i].sumOpenInterest > 0){
+                            var ts = parseInt(data[i].timestamp / 1800000) * 1800000;
+                            var item = [ts , parseInt(parseFloat(data[i].sumOpenInterestValue)/1000000)/100];
+                            if(result.opensU[result.opensU.length-1][0] == ts){
+                                result.opensU[result.opensU.length-1] = item;
+                            }else{
+                                result.opensU.push(item);
+                            }
+                        }
+                    }
+                    getGlobalPositions(result.beginning);
                 });
             }
 
@@ -362,7 +396,7 @@
                     if(endTime < now){
                         getOpens(endTime);
                     }else{
-                        getGlobalPositions(result.beginning);
+                        getLatestOpens();
                     }   
                 });
             }
