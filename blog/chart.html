@@ -311,11 +311,14 @@
                 var endTime = buildEndTime(startTime);
                 var ps = buildSymbolParamStr() + '&interval=' + result.interval + '&limit=500&startTime=' + startTime + '&endTime=' + endTime + '&_ts=' + now;
                 $.getJSON(result.domain + result.pathPreffix + '/v1/klines?' + ps, function (data) {
-                    for (var i = 0; i < data.length; i++){                     
-                        var item = [data[i][0], parseFloat(data[i][1]), parseFloat(data[i][2]), parseFloat(data[i][3]), parseFloat(data[i][4])];
-                        result.prices.push(item);
-                        item = [data[i][0], parseFloat(data[i][5])];
-                        result.volume.push(item);
+                    for (var i = 0; i < data.length; i++){
+                        var lastTS = (result.prices.length == 0 ? 0 : result.prices[result.prices.length-1][0]);
+                        if(data[i][0] >= result.beginning && data[i][0] > lastTS){
+                            var item = [data[i][0], parseFloat(data[i][1]), parseFloat(data[i][2]), parseFloat(data[i][3]), parseFloat(data[i][4])];
+                            result.prices.push(item);
+                            item = [data[i][0], parseFloat(data[i][5])];
+                            result.volume.push(item);
+                        }
                     }
                     if(endTime < now){
                         getKlines(endTime);
@@ -361,7 +364,8 @@
                 $.getJSON(result.domain + '/futures/data/globalLongShortAccountRatio?' + ps, function (data) {
                     for (var i = 0; i < data.length; i++){ 
                         var item = [data[i].timestamp , Math.floor((data[i].longAccount - data[i].shortAccount)*1000)/1000];
-                        if(item[0] >= result.beginning){
+                        var lastTS = (result.globalPositions.length == 0 ? 0 : result.globalPositions[result.globalPositions.length-1][0]);
+                        if(item[0] >= result.beginning && item[0] > lastTS){
                             result.globalPositions.push(item);
                         }
                     }
@@ -398,7 +402,8 @@
                     for (var i = 0; i < data.length; i++){
                         if(data[i].sumOpenInterest > 0){
                             var item = [data[i].timestamp , parseInt(parseFloat(data[i].sumOpenInterestValue)/1000000)/100];
-                            if(item[0] >= result.beginning){
+                            var lastTS = (result.opensU.length == 0 ? 0 : result.opensU[result.opensU.length-1][0]);
+                            if(item[0] >= result.beginning && item[0] > lastTS){
                                 result.opensU.push(item);
                             }
                         }
