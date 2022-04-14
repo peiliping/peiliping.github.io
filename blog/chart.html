@@ -56,6 +56,9 @@
                 document.title = 'PD:' + result.globalPositions[result.globalPositions.length-1][1] 
                               + ' OP:' + result.opensU[result.opensU.length-1][1];
 
+                console.log(JSON.stringify(result.globalPositions));
+                console.log(JSON.stringify(result.opensU));
+
                 var stockChart = Highcharts.stockChart('container', {
                     title: {
                         text: 'Price & Position',
