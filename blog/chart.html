@@ -446,6 +446,10 @@
             if(t_symbol != null && t_symbol != ''){
               result.symbol = t_symbol.toUpperCase();
             }
+            var t_symbol_suffix = getUrlParam('symbolSuffix');
+            if(t_symbol_suffix != null && t_symbol_suffix != ''){
+                result.symbolSuffix = t_symbol_suffix.toUpperCase();
+            }
             var t_range = getUrlParam('range');
             if(t_range !=null && t_range != ''){
               result.beginning = parseInt(now / 3600000) * 3600000 - 86400000 * parseInt(t_range);
