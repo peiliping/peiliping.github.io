@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>ta4j | Pei LiPing’s Blog</title>
+<meta name="generator" content="Jekyll v4.2.2" />
+<meta property="og:title" content="ta4j" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="今天介绍一个比较有意思的java库叫ta4j。" />
+<meta property="og:description" content="今天介绍一个比较有意思的java库叫ta4j。" />
+<link rel="canonical" href="http://peiliping.github.io/blog/2020/07/20/ta4j.html" />
+<meta property="og:url" content="http://peiliping.github.io/blog/2020/07/20/ta4j.html" />
+<meta property="og:site_name" content="Pei LiPing’s Blog" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2020-07-20T10:00:00+08:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="ta4j" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2020-07-20T10:00:00+08:00","datePublished":"2020-07-20T10:00:00+08:00","description":"今天介绍一个比较有意思的java库叫ta4j。","headline":"ta4j","mainEntityOfPage":{"@type":"WebPage","@id":"http://peiliping.github.io/blog/2020/07/20/ta4j.html"},"url":"http://peiliping.github.io/blog/2020/07/20/ta4j.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/blog/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://peiliping.github.io/blog/feed.xml" title="Pei LiPing&apos;s Blog" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/blog/">Pei LiPing&#39;s Blog</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/blog/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">ta4j</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2020-07-20T10:00:00+08:00" itemprop="datePublished">Jul 20, 2020
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>今天介绍一个比较有意思的java库叫<a href="https://github.com/ta4j/ta4j">ta4j</a>。</p>
+
+<p>最近一段时间接触了一些跟程序化交易、自动交易有关的业务，每天跟k线、指标打交道，</p>
+
+<p>无意中在github上发现了一个叫ta4j的java库，虽然不是很成熟，但还是很有借鉴意义的。</p>
+
+<p>从综合成本上来说，不建议用java来搞程序化交易，python和nodejs更为合适一些，</p>
+
+<p>公共库更为成熟，而且更利于支持可视化的需求。</p>
+
+<h2 id="ta4j主要提供了如下功能">ta4j主要提供了如下功能：</h2>
+
+<blockquote>
+  <ol>
+    <li>k线</li>
+    <li>指标</li>
+    <li>判断规则、规则的逻辑运算</li>
+    <li>策略</li>
+    <li>回测、报告</li>
+  </ol>
+</blockquote>
+
+<h2 id="关于指标">关于指标</h2>
+
+<p>k线的技术指标主要是基于k线值的算术运算得来的，比如均值、加权均值、差值、方差等。</p>
+
+<p>指标会随着k线的实时变化而变化，其表现形式跟K线是一样的，存储在一个时间序列数组里。</p>
+
+<p>ta4j在保存时间序列数据时采用的ArrayList，这个地方不是很好。当超过一定数量时，</p>
+
+<p>就需要淘汰最老的数据，会不断触发ArrayList的arraycopy，感觉换成ringbuffer更合理。</p>
+
+<h2 id="关于规则策略">关于规则、策略</h2>
+
+<p>基于K线和指标线的逻辑判断就是规则，比如在股票里我们常听说的多头排列。</p>
+
+<p>这种图形上的形态，需要转化为代码，成为一个识别规则(match)。ta4j里提供了一些常见的规则，</p>
+
+<p>比如交叉、向上突破、向下突破、阈值等等。</p>
+
+<p>因为在K线的使用和识别中，会应用到很多个规则的组合，所以规则需要支持逻辑运算(and/or/xor)。</p>
+
+<p>针对买入和卖出的一系列规则的集合，我们可以称之为策略，这个是整个程序交易的核心。</p>
+
+<h2 id="关于回测">关于回测</h2>
+
+<p>程序化交易里面回测是非常重要的一个环节，回测越接近真实，你的策略盈利的可能性就越大。</p>
+
+<p>最理想的回测就是将实时数据录制下来，这是最准的了。但是如此明细的数据是很难拿到的，</p>
+
+<p>大多数是用1min的k线替代明细数据。其实这样的数据是严重失真的，1min里的变化压缩为一个点。</p>
+
+<p>我一般的做法是将1min的k线点拆分为4个点，分别是开、高、低、收，依次写入数据集合进行测试。</p>
+
+<p>这样能尽量还原一个k线点的轨迹，比如一个K线点是上涨的，那就是开、低、高、收，依次变化。</p>
+
+<p>另外还要特别注意，在回测的时候用到的数据会不会是“未来的数据”，可能会让程序未卜先知。</p>
+
+<p>比如短线指标基于15min，中线是1hour的指标，在判断15min的指标规则时，1hour指标就是“未来”。</p>
+
+<p>我一般在回测的时候，其他粒度的k线会用1min的聚合而来，保持与1minK线的同步关系。</p>
+
+<h2 id="watchdog-hubble">watchdog-hubble</h2>
+
+<p>ta4j虽然给了我很多启发，但是问题还是非常多的。所以我自己造了一个轮子，放在watchdog下。</p>
+
+<p>结合上个月介绍的websocket和bark，我自己用起来还是非常顺手的。</p>
+
+  </div><a class="u-url" href="/blog/2020/07/20/ta4j.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/blog/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Pei LiPing&#39;s Blog</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Pei LiPing&#39;s Blog</li><li><a class="u-email" href="mailto:peilipingplp@gmail.com">peilipingplp@gmail.com</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/peiliping"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#github"></use></svg> <span class="username">peiliping</span></a></li><li><a href="https://www.twitter.com/plp_rapper"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">plp_rapper</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>初识flink5 | Pei LiPing’s Blog</title>
+<meta name="generator" content="Jekyll v4.2.2" />
+<meta property="og:title" content="初识flink5" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="先简单介绍一下我们Flink的一个优化，关于asyncfunction的优化" />
+<meta property="og:description" content="先简单介绍一下我们Flink的一个优化，关于asyncfunction的优化" />
+<link rel="canonical" href="http://peiliping.github.io/blog/2018/12/05/flink5.html" />
+<meta property="og:url" content="http://peiliping.github.io/blog/2018/12/05/flink5.html" />
+<meta property="og:site_name" content="Pei LiPing’s Blog" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2018-12-05T10:00:00+08:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="初识flink5" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2018-12-05T10:00:00+08:00","datePublished":"2018-12-05T10:00:00+08:00","description":"先简单介绍一下我们Flink的一个优化，关于asyncfunction的优化","headline":"初识flink5","mainEntityOfPage":{"@type":"WebPage","@id":"http://peiliping.github.io/blog/2018/12/05/flink5.html"},"url":"http://peiliping.github.io/blog/2018/12/05/flink5.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/blog/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://peiliping.github.io/blog/feed.xml" title="Pei LiPing&apos;s Blog" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/blog/">Pei LiPing&#39;s Blog</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/blog/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">初识flink5</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2018-12-05T10:00:00+08:00" itemprop="datePublished">Dec 5, 2018
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>先简单介绍一下我们Flink的一个优化，关于asyncfunction的优化</p>
+
+<h2 id="asyncfunction">AsyncFunction</h2>
+
+<p>阿里为flink社区提供了async的patch，为解决流计算中的IO性能提升带来了新思路，</p>
+
+<p>但我个人觉得这个问题并没有真正解决，Asyncfunction更像是一个饮鸩止渴的方案。</p>
+
+<p>随着异步线程的增加，很快会将外部服务打满，性能极具下降。</p>
+
+<p>我们的优化思路是这样的，在与外部系统交互时，尽量使用小批量，而不是单条数据处理。</p>
+
+<p>将async和batch结合起来，提升asyncfunction的效率。</p>
+
+<p>具体的实现：</p>
+
+<p>引入一个ringbuffer作为缓冲，asyncfunction在asyncinvoke时，将数据写入buffer中，</p>
+
+<p>配置N个消费线程，消费ringbuffer里的数据，进行batch的积攒，并配置ringbuffer的timeout，</p>
+
+<p>一次来实现N条最大M秒的批量数据积攒，在消费线程内，对积攒的批量数据进行处理，</p>
+
+<p>返回结果的拆分，最后调用ResultFuture，将数据交还给asyncfunction。</p>
+
+<h2 id="通用batchasyncfunction的实现">通用BatchAsyncFunction的实现</h2>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+  @Override
+    public void asyncInvoke(IN input, ResultFuture&lt;OUT&gt; resultFuture) throws Exception {
+        long seq = this.ringBuffer.next();
+        Event event = this.ringBuffer.get(seq);
+        event.data = input;
+        event.resultFuture = resultFuture;
+        this.ringBuffer.publish(seq);
+    }
+
+
+</code></pre></div></div>
+
+<h2 id="通用批量消费线程的抽象">通用批量消费线程的抽象</h2>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+public abstract class Processor&lt;D, T, P&gt; implements WorkHandler&lt;Event&lt;D, T&gt;&gt;, TimeoutHandler, LifecycleAware {
+
+    protected AsyncConfig asyncConfig;
+
+    private boolean initedBatch;
+
+    private List&lt;Triple&lt;D, ResultFuture&lt;T&gt;, P&gt;&gt; batch;
+
+    private long lastBatchTime;
+
+    public Processor(AsyncConfig asyncConfig) {
+        this.asyncConfig = asyncConfig;
+        this.batch = Lists.newArrayList();
+    }
+
+    @Override
+    public void onStart() {
+        cleanAfterBatch();
+    }
+
+    @Override
+    public void onEvent(Event&lt;D, T&gt; event) throws Exception {
+        if (!this.initedBatch) {
+            initBatch(false);
+            this.initedBatch = true;
+        }
+
+        P param = buildBatchParams(event.data);
+        this.batch.add(Triple.of(event.data, event.resultFuture, param));
+
+        if ((this.batch.size() &gt;= this.asyncConfig.getRingbufferMaxBatchSize()) || (System.currentTimeMillis() - this
+                .lastBatchTime &gt;= this.asyncConfig.getRingbufferLingerMs())) {
+            execBatch(0);
+            cleanAfterBatch();
+        }
+    }
+
+    @Override
+    public void onTimeout(long l) throws Exception {
+        if (this.initedBatch) {
+            execBatch(0);
+            cleanAfterBatch();
+        }
+    }
+
+    @Override
+    public void onShutdown() {
+        if (this.initedBatch) {
+            execBatch(0);
+            cleanAfterBatch();
+        }
+    }
+
+    protected abstract void initBatch(boolean retry);
+
+    protected abstract P buildBatchParams(D data);
+
+    protected void cleanAfterBatch() {
+        this.initedBatch = false;
+        this.batch.clear();
+        this.lastBatchTime = System.currentTimeMillis();
+    }
+
+    protected void execBatch(int times) {
+        Validate.isTrue(this.asyncConfig.getAsyncMaxRetry() &gt; times, "execbatch retry-times : " + times);
+        try {
+            if (times &gt; 0) {
+                initBatch(true);
+            }
+            commitAndGetResultsAndCloseBatch();
+            this.batch.forEach(triple -&gt; pushData(triple.getLeft(), triple.getMiddle(), triple.getRight()));
+        } catch (Exception e) {
+            try {
+                Thread.sleep(this.asyncConfig.getAsyncRetryIntervalMs());
+            } catch (InterruptedException e1) {
+                throw new RuntimeException("Failed to exec batch", e1);
+            }
+            execBatch(times + 1);
+        }
+    }
+
+    protected abstract void commitAndGetResultsAndCloseBatch() throws Exception;
+
+    protected abstract void pushData(D data, ResultFuture&lt;T&gt; resultFuture, P param);
+
+}
+
+</code></pre></div></div>
+
+  </div><a class="u-url" href="/blog/2018/12/05/flink5.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/blog/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Pei LiPing&#39;s Blog</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Pei LiPing&#39;s Blog</li><li><a class="u-email" href="mailto:peilipingplp@gmail.com">peilipingplp@gmail.com</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/peiliping"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#github"></use></svg> <span class="username">peiliping</span></a></li><li><a href="https://www.twitter.com/plp_rapper"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">plp_rapper</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

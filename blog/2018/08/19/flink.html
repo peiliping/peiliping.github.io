@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>初识flink | Pei LiPing’s Blog</title>
+<meta name="generator" content="Jekyll v4.2.2" />
+<meta property="og:title" content="初识flink" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="2016年的时候，开始关注flink，觉得是一个非常不错的流计算项目，当时也做了一些简单的demo，" />
+<meta property="og:description" content="2016年的时候，开始关注flink，觉得是一个非常不错的流计算项目，当时也做了一些简单的demo，" />
+<link rel="canonical" href="http://peiliping.github.io/blog/2018/08/19/flink.html" />
+<meta property="og:url" content="http://peiliping.github.io/blog/2018/08/19/flink.html" />
+<meta property="og:site_name" content="Pei LiPing’s Blog" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2018-08-19T10:00:00+08:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="初识flink" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2018-08-19T10:00:00+08:00","datePublished":"2018-08-19T10:00:00+08:00","description":"2016年的时候，开始关注flink，觉得是一个非常不错的流计算项目，当时也做了一些简单的demo，","headline":"初识flink","mainEntityOfPage":{"@type":"WebPage","@id":"http://peiliping.github.io/blog/2018/08/19/flink.html"},"url":"http://peiliping.github.io/blog/2018/08/19/flink.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/blog/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://peiliping.github.io/blog/feed.xml" title="Pei LiPing&apos;s Blog" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/blog/">Pei LiPing&#39;s Blog</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/blog/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">初识flink</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2018-08-19T10:00:00+08:00" itemprop="datePublished">Aug 19, 2018
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>2016年的时候，开始关注flink，觉得是一个非常不错的流计算项目，当时也做了一些简单的demo，</p>
+
+<p>了解其简单的应用，之后的两年里flink社区发展迅猛，包括阿里的强力支撑blink，在稳定性和性能</p>
+
+<p>方面都有很大的提升，8月份我们开始筹划上线flink on k8s服务，做了一些基础性的调研工作。</p>
+
+<h2 id="flink-on-k8s">flink on k8s</h2>
+
+<p>我们在github上搜索了不少关于flink on k8s的资料，基本上都不太靠谱，所以基础镜像方面我们</p>
+
+<p>是自己制作的，这个过程非常耗时，但事后来看非常的必要，我们对flink有了更为深入的了解。</p>
+
+<p>jobmanager和taskmanager我们是分为2个deployment，跟唯品会的方案不太相同（statefulset）。</p>
+
+<p>我们将flink的shell脚本、yaml配置等内容进行了通读，对其参数做了详细的标注，最后将这些</p>
+
+<p>参数进行合并，整理出大概20多个有效配置项和默认值，之后我们又将这些参数进行分类，大致分为</p>
+
+<p>两类：容器级参数和业务参数。</p>
+
+<p>举个例子：容器内存大小就属于容器级别参数，集群名称也属于容器级参数（相当于deploymentname）。</p>
+
+<p>每个taskmanager有多少个slot，就属于业务参数。jvm的各种堆大小属于容器内存大小的衍生参数，</p>
+
+<p>有一个统一的计算公式得到，并不进行传递。</p>
+
+<p>容器级别的参数由docker的env进行传递，业务参数通过http接口获得。</p>
+
+<p>所以我们的docker启动时，首先获取env中的参数，然后通过脚本调http接口获得一个json，再结合</p>
+
+<p>本地的default.property文件中的默认值，进行合并，最后渲染配置文件和shell脚本，这里用了一个</p>
+
+<p>python的模板引擎，类似javaweb中的velocity，freemaker等。</p>
+
+<h2 id="联通">联通</h2>
+
+<p>flinkjobmanager的HA是通过zk来实现的，taskmanager和jobmanager之间的服务发现也要基于zk，</p>
+
+<p>所以在docker模式下是可以很容易组成集群的。比较麻烦的一个问题是jobmanager的webui port，</p>
+
+<p>由于我们的k8s上是使用物理机IP的，所以port是非常宝贵的资源，如果我们的port只能使用固定的端口，</p>
+
+<p>意味着一台物理机只能启动一个jobmanager，所以在启动docker时，我们要指定要container的port，</p>
+
+<p>这样k8s就能根据port来调度，不会发生冲突。为了解决port资源的问题，我们向k8s申请了专用port范围，</p>
+
+<p>我们的集群随机从范围里选择一个port来启动任务。</p>
+
+<h2 id="内存使用比率">内存使用比率</h2>
+
+<p>内存比例相关的参数是我们调试最多的一个环节，flink启动脚本中关于内存的计算非常复杂，</p>
+
+<p>下面列举一些核心的点：</p>
+
+<p>networkbuffer的大小</p>
+
+<p>是否使用堆外内存来支持flink框架的计算逻辑</p>
+
+<p>堆外与堆内的分配比例</p>
+
+<p>jvm各个分代的大小</p>
+
+<p>垃圾回收器的选择</p>
+
+
+  </div><a class="u-url" href="/blog/2018/08/19/flink.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/blog/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Pei LiPing&#39;s Blog</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Pei LiPing&#39;s Blog</li><li><a class="u-email" href="mailto:peilipingplp@gmail.com">peilipingplp@gmail.com</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/peiliping"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#github"></use></svg> <span class="username">peiliping</span></a></li><li><a href="https://www.twitter.com/plp_rapper"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">plp_rapper</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

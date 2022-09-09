@@ -1,0 +1,439 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://peiliping.github.io/blog/" rel="alternate" type="text/html" /><updated>2022-09-10T07:21:20+08:00</updated><id>http://peiliping.github.io/blog/feed.xml</id><title type="html">Pei LiPing’s Blog</title><subtitle>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</subtitle><entry><title type="html">Linear</title><link href="http://peiliping.github.io/blog/2021/12/29/linear.html" rel="alternate" type="text/html" title="Linear" /><published>2021-12-29T10:00:00+08:00</published><updated>2021-12-29T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2021/12/29/linear</id><content type="html" xml:base="http://peiliping.github.io/blog/2021/12/29/linear.html"><![CDATA[<p>经常看到一些人的K线图上花了很多辅助线，有压力支撑，也有涨跌趋势。</p>
+
+<p>今天介绍一种自动化斜线的方法，平行斜线通道。</p>
+
+<h3 id="中轴线">中轴线</h3>
+
+<p>最近N个K线点，有一个趋势方向，由这些点的分布决定，比如震荡向上，</p>
+
+<p>这是我们在头脑中抽象的画面，需要将他们具体化。</p>
+
+<p>在二维坐标系中，已知一些点，如何判断他们内在隐含的趋势呢？</p>
+
+<p>这个问题在数学中非常简单，那就是一次方程(y=ax+b)的拟合过程。</p>
+
+<p>如果这部分知识已经还给老师的话，先复习一下最小二乘法吧。</p>
+
+<p>计算完成后，我们将得到方程的参数slope和intercept。</p>
+
+<h3 id="平行线">平行线</h3>
+
+<p>将我们得到的中轴线进行平移，使绝大多数点都在线的上方（或者下方），</p>
+
+<p>就会得到一组平行于中轴线的通道了。</p>
+
+<p>那么这个平移的过程如何计算呢？可以参考Bolling指标的计算方法，</p>
+
+<p>我们先求所有散点与中轴线的标准差，然后将中轴线的方程向上（或向下）</p>
+
+<p>移动2个标准差的距离，就得到了一组平行于中轴线的平行通道了。</p>
+
+<p>就是保持slope不变，intercept加（或者减）2×标准差。</p>
+
+<h3 id="周期">周期</h3>
+
+<p>搞定了计算逻辑后，最后一个问题就是周期问题了，选择多少个点呢？</p>
+
+<p>没有哪一个周期是绝对有效的，按照自己的操作周期来决定吧。</p>
+
+<p>和使用均线等技术指标差不多，可以同时看长短两个周期的数据，一个定方向，一个找机会。</p>
+
+<h3 id="最后">最后</h3>
+
+<p>自动化线并不能指导你盈利，但可以减少盯盘时间，如果是自动化交易作为增减仓方案是不错的。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[经常看到一些人的K线图上花了很多辅助线，有压力支撑，也有涨跌趋势。]]></summary></entry><entry><title type="html">Pine</title><link href="http://peiliping.github.io/blog/2021/11/20/pine.html" rel="alternate" type="text/html" title="Pine" /><published>2021-11-20T10:00:00+08:00</published><updated>2021-11-20T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2021/11/20/pine</id><content type="html" xml:base="http://peiliping.github.io/blog/2021/11/20/pine.html"><![CDATA[<p>最近看到Tradingview的Pine脚本，感觉很有意思，打算尝试一下。</p>
+
+<h2 id="ma指标">MA指标</h2>
+
+<p>TV上的指标都可以看到源代码，我们就从最简单的MA指标看看吧。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+indicator(title="Moving Average", shorttitle="MA", overlay=true, timeframe="", timeframe_gaps=true)
+len = input.int(9, minval=1, title="Length")
+src = input(close, title="Source")
+offset = input.int(title="Offset", defval=0, minval=-500, maxval=500)
+out = ta.sma(src, len)
+plot(out, color=color.blue, title="MA", offset=offset)
+
+</code></pre></div></div>
+
+<p>简单注释一下：</p>
+
+<p>input代表从图形化界面的设置中可以填写变更的，close指k线的收盘价。</p>
+
+<p>ta.sma就是MA指标的计算公式，plot函数我们就理解为渲染好了,plot有很多参数可调，</p>
+
+<p>比如控制线的粗细、颜色。</p>
+
+<h2 id="照葫芦画瓢-mac指标">照葫芦画瓢 MAC指标</h2>
+
+<p>第一次体验我们就不挑战难度了，弄一个MA指标的组合指标，一般使用MA的人都会用一个短周期的和一个长周期的。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+indicator(title="Moving Average Couple", shorttitle="MAC", overlay=true, timeframe="", timeframe_gaps=true)
+
+len1 = input.int(30, minval=1, title="Length")
+len2 = input.int(59, minval=1, title="Length")
+
+out1 = ta.sma(close, len1)
+out2 = ta.sma(close, len2)
+
+plot(out1, color=color.green, linewidth=2, title="MAC1", offset=0)
+plot(out2, color=color.blue, linewidth=2, title="MAC2", offset=0)
+
+</code></pre></div></div>
+
+<p>只是简单的加了一条线，然后控制了一下线的颜色和粗细。</p>
+
+<p>免费版TV限制了同时使用的Indicator数量，可以把多个指标的代码合并到一起，绕过限制吧。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[最近看到Tradingview的Pine脚本，感觉很有意思，打算尝试一下。]]></summary></entry><entry><title type="html">Baby</title><link href="http://peiliping.github.io/blog/2021/10/10/birthday.html" rel="alternate" type="text/html" title="Baby" /><published>2021-10-10T10:00:00+08:00</published><updated>2021-10-10T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2021/10/10/birthday</id><content type="html" xml:base="http://peiliping.github.io/blog/2021/10/10/birthday.html"><![CDATA[<p>前几天我们家的宝宝出生了，真的是一波三折。</p>
+
+<p>希望小豌豆健康成长，本月停更，学习换尿布去了。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[前几天我们家的宝宝出生了，真的是一波三折。]]></summary></entry><entry><title type="html">Wyckoff2</title><link href="http://peiliping.github.io/blog/2021/09/11/wyckoff2.html" rel="alternate" type="text/html" title="Wyckoff2" /><published>2021-09-11T10:00:00+08:00</published><updated>2021-09-11T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2021/09/11/wyckoff2</id><content type="html" xml:base="http://peiliping.github.io/blog/2021/09/11/wyckoff2.html"><![CDATA[<p>上一篇讲了点有关威科夫的量价理论，这里继续说一说。</p>
+
+<h2 id="趋势与画辅助线">趋势与画辅助线</h2>
+
+<p>无论是何门何派，画辅助线都是必须的，但是辅助线经常是主观的。</p>
+
+<p>K线与辅助线交织在一起，经常无法做出决策。看历史怎么都对，实战中一卖就涨。</p>
+
+<p>如果等辅助线和K线的关系明确了，那么大部分利润也就没有了。</p>
+
+<p>威科夫理论中经常画横线作为支撑和压力线，这个方法我觉得还是比较可取的，</p>
+
+<p>但画横线不是单纯的基于价格和图形，也是要基于成交量的。</p>
+
+<h2 id="关于成交量">关于成交量</h2>
+
+<p>在威科夫的理论中成交量是非常的关键，但是所有人都知道主力自己可以创造无效成交量。</p>
+
+<p>所以一个充分博弈的标的，他的成交量才失真最小，可靠性最大。</p>
+
+<p>至于什么主力动向数据、大单买入卖出，更是扯淡。</p>
+
+<p>去看看操盘软件里如何买卖就知道了，这种方法根本判断不出来。</p>
+
+<p>大单成交方向不一定代表主力方向，但是小单成交一定包含散户的趋势。</p>
+
+<p>如果大单连续主动买入时，只与深度中的大单成交而不与散单成交，基本上就是主力在自成交。</p>
+
+<p>大单如果想隐秘买入行为的话，一般是连下两单。第一单是LimitBuy，并且数量远超过深度中的量。</p>
+
+<p>此单成交后会把价格拉升到LimitBuy的目标价，并且买一位置有一个很大的买单。</p>
+
+<p>第二单为IOC Sell，价格与LimitBuy的价格相同。IOC的意思是立即成交，余下的取消。</p>
+
+<p>这样买一的大单就被吃掉了，如果Sell的Amout大于买一的Amount，成交后余下的会被自动取消。</p>
+
+<p>如果有人统计这一分钟里的大单的主动买入和卖出，会发现主动买入100个，主动卖出500个，</p>
+
+<p>统计结果为主动卖出400个。而实际情况是只主动买了100个。</p>
+
+<h2 id="压力与支撑">压力与支撑</h2>
+
+<p>通过成交量来判断支撑与压力，我觉得也不是很合理，当然绝大部分交易者只能用成交量来判断。</p>
+
+<p>压力与支撑本质上有两个数据组成，一个是盘口数据（也就是买卖盘深度），一个是成交明细。</p>
+
+<p>分别举个例子：</p>
+
+<p>1、如果有人在买一挂了一个无比巨大的买单，无形中就是一个支撑，愿意卖的人就少了。</p>
+
+<p>2、关注已成交订单中被成交的方向，当前1h下跌2%，看似十分凶猛，但是却不继续下跌了。</p>
+
+<p>有可能某些主力资金在这里连续的挂PostOnly单子悄悄的收货，利用恐慌的抛盘完成收货目的。</p>
+
+<p>这种把抛盘密集消化掉的行为才是最有效的支撑，但统计却都是主动卖出行为。</p>
+
+<p>大多数人对压力和支撑的判断基本上是意识流，我还是建议把他数值化，可以参考加权跳动量的计算方式。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[上一篇讲了点有关威科夫的量价理论，这里继续说一说。]]></summary></entry><entry><title type="html">Wyckoff</title><link href="http://peiliping.github.io/blog/2021/08/19/wyckoff.html" rel="alternate" type="text/html" title="Wyckoff" /><published>2021-08-19T10:00:00+08:00</published><updated>2021-08-19T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2021/08/19/wyckoff</id><content type="html" xml:base="http://peiliping.github.io/blog/2021/08/19/wyckoff.html"><![CDATA[<p>最近在和一个做二级市场投资的朋友聊天时，听说了威科夫的量价理论。</p>
+
+<p>在了解了大致的思想之后，我觉得当中的量价关系十分有趣，花了一些时间探索了一下。</p>
+
+<h2 id="量价理论">量价理论</h2>
+
+<p>K线图有两个核心元素：价格（开高低收）和成交量，价格的趋势和成交量的情况相互验证。</p>
+
+<p>量价理论并不是一个指标，而是一种对抗的思维。市场中存在少数派盈利的主力和盲从的韭菜，</p>
+
+<p>在一个大的涨跌周期中，反复对抗博弈，量与价就在表达这个对抗博弈的过程。</p>
+
+<h2 id="关于指标">关于指标</h2>
+
+<p>市面上绝大多数交易策略都是以XX指标组合为基础，比如均线、MACD、KDJ等。</p>
+
+<p>我之前也写过两期关于ta4j的blog，还实现了一个指标基础函数库。</p>
+
+<p>对比量价理论后，我把基于指标的策略称为静态策略，就好像诸葛亮给的三个锦囊。</p>
+
+<p>这种神话故事根本就不具备实操性，你可能会觉得在某个时期这个策略能挣钱，但长期一定无法盈利。</p>
+
+<p>有的人做了大量的回测来提高他策略的有效性，我觉得通过回测来调整参数，可以直接定义为过拟合。</p>
+
+<p>其实绝大多数指标和图形理论都和量价有联系，比如头肩图形、波浪理论等等。</p>
+
+<p>将复杂的对抗归纳成一些可被识别的图形，方便教学传播、办班收费。</p>
+
+<p>而且指标基本上都只用价格信息，不用成交量，因为成交量随机性太强，很难被指标化。</p>
+
+<h2 id="充分博弈市场">充分博弈市场</h2>
+
+<p>如果你想践行量价理论，我个人觉得一定要找一个充分博弈的标的。</p>
+
+<p>成交量巨大、参与人数众多、还有很多自以为是的量化策略在跑。</p>
+
+<p>在这种标的下，专业机构盈利是需要极其复杂的操盘手法的，趋势惯性和量价博弈也才有意义。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[最近在和一个做二级市场投资的朋友聊天时，听说了威科夫的量价理论。]]></summary></entry><entry><title type="html">write file</title><link href="http://peiliping.github.io/blog/2021/07/28/writefile.html" rel="alternate" type="text/html" title="write file" /><published>2021-07-28T10:00:00+08:00</published><updated>2021-07-28T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2021/07/28/writefile</id><content type="html" xml:base="http://peiliping.github.io/blog/2021/07/28/writefile.html"><![CDATA[<p>最近在优化一些shell脚本任务，涉及到对文件的读写过程，这里聊聊我碰到的一些问题。</p>
+
+<p>我的脚本主要是对数据进行统计和计算，数据具有时序性，每分钟会有一行结果存在结果文件中。</p>
+
+<p>脚本每分钟执行一次，每次计算上一分钟和当前分钟的结果。保存结果数据时，会涉及到删除结果文件的最后一行，因为最后一分钟会被修正。</p>
+
+<h2 id="如何衔接两次任务的时间">如何衔接两次任务的时间</h2>
+
+<p>数据结果的文件每一行都对应一分钟的数据，每行开头都记录对应的时间戳。</p>
+
+<p>每次任务开始时，都读取结果文件的末尾，计算合理的数据时间。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+thishourday=`date "+%Y-%m-%d"`
+startTime=`date -d "${thishourday}" +%s`
+
+if [ -f "$rfile" ]; then
+  startTime=`tail -n 1 $rfile | awk '{print $1}'`
+else
+  touch $rfile
+fi
+
+</code></pre></div></div>
+
+<h2 id="原始数据文件有dailyrolling">原始数据文件有DailyRolling</h2>
+
+<p>这就意味着每天00:00处理数据时，需要读取前一天的文件和当天文件。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+starthourday=`date --date=@${startTime} "+%Y-%m-%d"`
+
+if [ $starthourday = $thishourday  ];then
+  dfile=$dfile
+else
+  dfile=$dfile"-"$starthourday" "$dfile
+fi
+
+</code></pre></div></div>
+
+<h2 id="保存计算结果">保存计算结果</h2>
+
+<p>每次计算任务完成后，都先将数据写入临时文件tfile中，接下来我们删除结果文件的最后一行。</p>
+
+<p>删除我们用了一个简单的命令</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+sed -i '$ d' $rfile
+
+</code></pre></div></div>
+
+<p>最后我们将临时文件Merge到结果文件的末尾，删除临时文件。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+cat $tfile &gt;&gt; $rfile
+rm -rf $tfile
+
+</code></pre></div></div>
+
+<h2 id="性能问题">性能问题</h2>
+
+<p>如果结果文件越来越大，这个任务会越来越慢，主要的性能问题在删除文件最后一行这一步。</p>
+
+<p>sed删除最后一行这样的方式，几乎等于把整个文件重写了一遍。有兴趣的朋友可以看看这篇<a href="https://www.codenong.com/4881930/">Blog</a>。</p>
+
+<p>我觉得出现这个问题本身就代表了设计问题，临时数据（最后一行）是否要直接写入结果文件？</p>
+
+<p>可以借鉴Compaction那样的思路，将不确定的临时数据写入临时文件，当可以确定时写入正式的结果文件中,规避性能问题。</p>
+
+<p>最好还是把这些数据存入数据库吧，时序数据库千千万。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[最近在优化一些shell脚本任务，涉及到对文件的读写过程，这里聊聊我碰到的一些问题。]]></summary></entry><entry><title type="html">flock</title><link href="http://peiliping.github.io/blog/2021/06/13/flock.html" rel="alternate" type="text/html" title="flock" /><published>2021-06-13T10:00:00+08:00</published><updated>2021-06-13T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2021/06/13/flock</id><content type="html" xml:base="http://peiliping.github.io/blog/2021/06/13/flock.html"><![CDATA[<p>最近购买了一台腾讯云的服务器跑一些小程序，在整理crontab时发现了一个腾讯云的定时任务，</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>*/5 * * * * flock -xn /tmp/stargate.lock -c '/usr/local/qcloud/stargate/admin/start.sh &gt; /dev/null 2&gt;&amp;1 &amp;'
+</code></pre></div></div>
+
+<p>脚本是为了保证腾讯云agent存活的，这个不是我们关注的重点，重点是flock这个命令。</p>
+
+<p>虽然经常与服务器打交道，但是flock这个命令还是比较陌生的。</p>
+
+<h2 id="flock">flock</h2>
+
+<p>以下内容摘抄自cnblogs。</p>
+
+<p>如果两个进程同时启动了某个脚本，那么很容易导致数据的混乱，这个时候需要锁来协调解决。</p>
+
+<p>flock是建议性锁，不具备强制性。一个进程使用flock将文件锁住，另一个进程也可以直接操作正在被锁的文件，修改文件中的数据。</p>
+
+<p>flock只是用于检测文件是否被加锁，针对文件已经被加锁，另一个进程写入数据的情况，内核不会阻止这个进程的写入操作。</p>
+
+<p>flock主要三种操作类型：</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>LOCK_SH，共享锁，多个进程可以使用同一把锁，常被用作读共享锁；
+LOCK_EX，排他锁，同时只允许一个进程使用，常被用作写锁；
+LOCK_UN，释放锁；
+</code></pre></div></div>
+
+<h2 id="参数">参数</h2>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>-s,--shared：获取一个共享锁，在定向为某文件的FD上设置共享锁而未释放锁的时间内，其他进程试图在定向为此文件的FD上设置独占锁的请求失败，而其他进程试图在定向为此文件的FD上设置共享锁的请求会成功。
+-x，-e，--exclusive：获取一个排它锁，或者称为写入锁，为默认项
+-u，--unlock：手动释放锁，一般情况不必须，当FD关闭时，系统会自动解锁，此参数用于脚本命令一部分需要异步执行，一部分可以同步执行的情况。
+-n，--nb, --nonblock：非阻塞模式，当获取锁失败时，返回1而不是等待
+-w, --wait, --timeout seconds：设置阻塞超时，当超过设置的秒数时，退出阻塞模式，返回1，并继续执行后面的语句
+-o, --close：表示当执行command前关闭设置锁的FD，以使command的子进程不保持锁。
+-c, --command command：在shell中执行其后的语句
+</code></pre></div></div>
+
+<h2 id="最后">最后</h2>
+
+<p>flock可以让很多脚本程序变得更规范，比如我有一些增量计算数据的脚本，如果不小心并发执行了就会导致数据错乱。</p>
+
+<p>以前不知道这个命令，都是用一个lock文件来替代，在脚本中判断文件是否存在，非常的繁琐，也不是很严谨。</p>
+
+<p>你是更喜欢把flock放在脚本外部，还是写在脚本里呢？</p>]]></content><author><name></name></author><summary type="html"><![CDATA[最近购买了一台腾讯云的服务器跑一些小程序，在整理crontab时发现了一个腾讯云的定时任务，]]></summary></entry><entry><title type="html">CMD</title><link href="http://peiliping.github.io/blog/2021/05/20/CMD.html" rel="alternate" type="text/html" title="CMD" /><published>2021-05-20T10:00:00+08:00</published><updated>2021-05-20T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2021/05/20/CMD</id><content type="html" xml:base="http://peiliping.github.io/blog/2021/05/20/CMD.html"><![CDATA[<p>使用linux的命令时，经常会用man来查询可选参数及其含义。偶尔我们也会开发自己的小工具。</p>
+
+<p>如何给小工具快速添加可选参数呢？</p>
+
+<h2 id="java">java</h2>
+
+<p>java的开发者应该是更喜欢使用配置文件的方式来与程序交互，无论是property还是yml。</p>
+
+<p>在参数不是特别多时，cmd的params也是不错的选择。提到给java传参数，大多数人一定是会</p>
+
+<p>想到main函数的args数组，这是基础，但不太方便。</p>
+
+<p>推荐使用commons-cli，能够设定长短参数(-i 或 –interval)，还能添加注解。</p>
+
+<p>具体的方法我就不展开讲了，网上能搜到很多。</p>
+
+<h2 id="getopts">getopt(s)</h2>
+
+<p>shell中最普遍的解决办法就是getopt，配合while case处理输入的参数。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>while getopts 'h:j:m:u' OPT;do
+    case $OPTin
+        j) S_DIR="$OPTARG";;
+        m) D_DIR="$OPTARG";;
+        u) upload="true";;
+        h) func;;
+        ?) func;;
+    esac
+done
+</code></pre></div></div>
+
+<p>如何你想实现tab自动提示的话，可以了解一下_get_comp_words_by_ref。</p>
+
+<h2 id="shell默认的参数处理">shell默认的参数处理</h2>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+$0 : 脚本名
+$N : 第N个参数.
+$# : 参数的个数，不包括命令本身.
+$@ : 参数本身的列表，也不包括命令本身，如上例为 -v -f -out /test.log –prefix=/home
+$* : 参数本身的列表，也不包括命令本身，但”$*” 和”\$@”(加引号)并不同，”$*“将所有的参数解释成一个字符串，而”$@”是一个参数数组。
+
+</code></pre></div></div>
+
+<p>这种处理方法没有getopt简洁，一般还是推荐使用getopt。但是下面这个特殊用法需要注意一下。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+"${@:2}"  从第二参数开始往后的所有参数
+
+</code></pre></div></div>]]></content><author><name></name></author><summary type="html"><![CDATA[使用linux的命令时，经常会用man来查询可选参数及其含义。偶尔我们也会开发自己的小工具。]]></summary></entry><entry><title type="html">UniswapOracle</title><link href="http://peiliping.github.io/blog/2021/04/27/UniswapOracle.html" rel="alternate" type="text/html" title="UniswapOracle" /><published>2021-04-27T10:00:00+08:00</published><updated>2021-04-27T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2021/04/27/UniswapOracle</id><content type="html" xml:base="http://peiliping.github.io/blog/2021/04/27/UniswapOracle.html"><![CDATA[<p>这次聊聊Uniswap的预言机，上次我们介绍的Chainlink属于通用预言机。</p>
+
+<p>在Uniswap项目中，内置了一个预言机功能，算是专用吧，具有一定的特殊性。</p>
+
+<h2 id="uniswap">Uniswap</h2>
+
+<p>Uniswap最近一年非常的火热，算是Defi的基石项目了。随着其V3版本的发布，</p>
+
+<p>会吸引越来越多的做市商。这里介绍一个<a href="https://liaoph.com/">Blog</a>。可以作为Uniswap的入门资料。</p>
+
+<h2 id="uniswap的oracle">Uniswap的Oracle</h2>
+
+<p>之前讲的Chainlink的预言机，使用者大多关注当前价格，少量场景也需要历史价格。</p>
+
+<p>Uniswap的Oracle是提供时间加权平均价，并且可以随意指定周期。设计出这样的Oracle，</p>
+
+<p>主要是为了抵御价格操纵闪电贷之类的攻击。在目前的Defi项目中，这类需求还是比较普遍的。</p>
+
+<p>我个人觉得Uniswap的Oracle时间加权思路是不错的，但不适合普及使用。比如标的非常有限、</p>
+
+<p>存储数据的精度问题等等。但是提供的按照时间二分查找的功能是Chainlink所缺少的。</p>
+
+<h2 id="通用化ema指标预言机">通用化EMA指标预言机</h2>
+
+<p>在清算类的业务中，一般使用指数类的价格，比如MA、EMA。期货合约的清算逻辑，</p>
+
+<p>用来计算是否强制平仓的价格，就不会使用现货的当前价格，一般是EMA(5min)之类的。</p>
+
+<p>主要是为了削弱价格剧烈波动导致的连锁爆仓反应。</p>
+
+<p>如果提供一种类似EMA计算的指标价格预言机，我相信会对清算类的业务非常友好。</p>
+
+<p>可以沿用现有预言机的大部分接口，没有数据精度问题，可轻松获取历史轨迹，作为独立</p>
+
+<p>计算存储的合约，不与其他项目绑定，可重复利用现有“共识”预言机的结果，保证准确。</p>
+
+<p>当然这样的方案相对Uniswap的Oracle会缺少一个周期的灵活性，但我个人认为这个不是</p>
+
+<p>十分重要，大多数项目需要的周期都是可以协调的，而且固定。</p>
+
+<h2 id="最后">最后</h2>
+
+<p>预言机的话题就告一段落，这个领域也算是刚刚起步，Chainlink也在快速发展中，希望能够</p>
+
+<p>有更开放的社区，可以有更多的协作模式，让开发者参与共建。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[这次聊聊Uniswap的预言机，上次我们介绍的Chainlink属于通用预言机。]]></summary></entry><entry><title type="html">Chainlink</title><link href="http://peiliping.github.io/blog/2021/03/16/chainlink.html" rel="alternate" type="text/html" title="Chainlink" /><published>2021-03-16T10:00:00+08:00</published><updated>2021-03-16T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2021/03/16/chainlink</id><content type="html" xml:base="http://peiliping.github.io/blog/2021/03/16/chainlink.html"><![CDATA[<p>Chainlink目前已经是预言机领域里的顶流项目，无论是经济模型还是架构设计</p>
+
+<p>都非常值得学习的。</p>
+
+<h2 id="预言机oracle">预言机Oracle</h2>
+
+<p>因为以太坊区块链上无法发起对外部世界的请求，也就是无法直接获取外部数据，</p>
+
+<p>极大的限制了智能合约的使用范围。将外部数据引入区块链世界，就是预言机的职能，</p>
+
+<p>将拉取数据变为推送数据，保存在合约里。这一点与流计算中的恰好一次，其实是</p>
+
+<p>非常相似的问题。如果你想让流计算可以反复执行，且结果是恰好一次的，那需要</p>
+
+<p>严格控制堆外的依赖，比如Redis的计数器、外部系统的实时数据接口等。</p>
+
+<p>解决外部依赖问题时，经常是将外部数据写入流中（或join）、在流引擎内保存状态。</p>
+
+<h2 id="成本问题">成本问题</h2>
+
+<p>改为推送数据模式后，面临极大的成本问题。如果数据频繁发生变化，那就需要不断调用</p>
+
+<p>合约的更新方法。但链上业务使用数据并不一定那么频繁。或者是某些数据使用不太频繁。</p>
+
+<p>这个成本问题就极大的制约了预言机服务的范围，目前看几个主流预言机项目提供的数据</p>
+
+<p>总共也不超过100种。而且更新频率都不是很高，一般10分钟左右。</p>
+
+<p>除了写入成本以外，还有共识成本。比如早期的Chainlink所有节点都会把数据上报到合约中，</p>
+
+<p>最后算一个中位数。每一轮都会有20个左右的节点参与。相当于把写入成本放大了20倍。</p>
+
+<p>当然现在的Chainlink OCR已经把这个问题解决了，思路就是把共识环节放在低成本链去实现。</p>
+
+<h2 id="共识问题">共识问题</h2>
+
+<p>预言机的数据真的可以依靠共识来解决么？这是个非常值得讨论的话题，虽然共识是区块链</p>
+
+<p>类型的项目惯用的手法。但很多都是生搬硬套来的，并不是很恰当。API3项目的思路也不错，</p>
+
+<p>预言机的数据由可信的权威机构来提供，绕过了关于数据正确的证明过程，只解决可用性问题。</p>
+
+<p>Chainlink是依靠质押处罚、门限签名等手段来防止数据错误，再最新的计划里还将引入一些</p>
+
+<p>博弈论的思路，比如囚徒困境等，增加被攻击的难度。显然这些手段都是有一定积极效果的，</p>
+
+<p>但是为此付出的成本也是极大的，我个人并不看好这种发展思路。Chainlink未来的计划还是</p>
+
+<p>很值得期待的，主要是在零知识证明方向上，可信计算和验证等技术。</p>
+
+<h2 id="服务模式">服务模式</h2>
+
+<p>Chainlink采用的技术以去中心化为主，但是运用模式还是一个典型的中心化模式。</p>
+
+<p>毕竟当前还是处于发展的早期阶段，希望未来的Chainlink可以越来越自由化。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[Chainlink目前已经是预言机领域里的顶流项目，无论是经济模型还是架构设计]]></summary></entry></feed>

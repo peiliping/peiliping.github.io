@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>DB2DB | Pei LiPing’s Blog</title>
+<meta name="generator" content="Jekyll v4.2.2" />
+<meta property="og:title" content="DB2DB" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="几年前写过一个叫meepo的小项目，用来解决一些临时导表的需求。" />
+<meta property="og:description" content="几年前写过一个叫meepo的小项目，用来解决一些临时导表的需求。" />
+<link rel="canonical" href="http://peiliping.github.io/blog/2020/04/28/DB2DB.html" />
+<meta property="og:url" content="http://peiliping.github.io/blog/2020/04/28/DB2DB.html" />
+<meta property="og:site_name" content="Pei LiPing’s Blog" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2020-04-28T10:00:00+08:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="DB2DB" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2020-04-28T10:00:00+08:00","datePublished":"2020-04-28T10:00:00+08:00","description":"几年前写过一个叫meepo的小项目，用来解决一些临时导表的需求。","headline":"DB2DB","mainEntityOfPage":{"@type":"WebPage","@id":"http://peiliping.github.io/blog/2020/04/28/DB2DB.html"},"url":"http://peiliping.github.io/blog/2020/04/28/DB2DB.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/blog/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://peiliping.github.io/blog/feed.xml" title="Pei LiPing&apos;s Blog" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/blog/">Pei LiPing&#39;s Blog</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/blog/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">DB2DB</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2020-04-28T10:00:00+08:00" itemprop="datePublished">Apr 28, 2020
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>几年前写过一个叫meepo的小项目，用来解决一些临时导表的需求。</p>
+
+<p>很意外居然还有网友在git上提issue，看来需求还是很广泛的。</p>
+
+<p>meepo整体设计有很多问题，而且bug也比较多，不建议使用。</p>
+
+<h2 id="改版重构">改版重构</h2>
+
+<p>最近又碰到了类似的需求，从mysql的一种表抽取部分字段写到另外一张表。</p>
+
+<p>因为是定时数据处理，而且需要全量数据的导出，所以基于JDBC是最简单的方案。</p>
+
+<p>在数据摄取和分发部分，沿用了fevernova框架，这也比meepo更佳成熟稳定。</p>
+
+<h2 id="流批一体">流批一体</h2>
+
+<p>这两年有一个特别火的概念叫流批一体，flink社区也在努力统一数据底层模型。</p>
+
+<p>fevernova是一个类似flink的流式数据处理框架，之前也没试过做批处理。</p>
+
+<p>这次为了实现批处理的需求，为source增加了jobfinished的指令。</p>
+
+<p>当source完成预定处理，会等待一个checkpoint的周期，就结束任务了。</p>
+
+<h2 id="rdb">RDB</h2>
+
+<p>这次还需要支持postgre，虽然JDBC是通用的，但是Datasource和Sql拼装，</p>
+
+<p>都有很大的差别，需要重新设计扩展。</p>
+
+<p>举几个例子，table的scheme在mysql和postgre是不同的，在解决upsert场景的时候，</p>
+
+<p>mysql可以用replace，pg则要写on conflict子句。</p>
+
+<h2 id="性能">性能</h2>
+
+<p>这次性能优化并没有meepo那么激进，尽量做通用的优化，减少对依赖的侵入性修改。</p>
+
+<p>Postgre有一个unlogged类型的table，可以极大的提高写入速度，</p>
+
+<p>大家可以根据自己的需求酌情使用。</p>
+
+<h2 id="规范">规范</h2>
+
+<p>使用JDBC做增量数据导出，有一些需要注意的地方，比如：</p>
+
+<p>1、不能使用delete</p>
+
+<p>2、insert和update操作要更新updatetime字段</p>
+
+<p>3、需要对updatetime做索引</p>
+
+<p>4、有long型的自增主键，方便遍历</p>
+
+  </div><a class="u-url" href="/blog/2020/04/28/DB2DB.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/blog/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Pei LiPing&#39;s Blog</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Pei LiPing&#39;s Blog</li><li><a class="u-email" href="mailto:peilipingplp@gmail.com">peilipingplp@gmail.com</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/peiliping"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#github"></use></svg> <span class="username">peiliping</span></a></li><li><a href="https://www.twitter.com/plp_rapper"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">plp_rapper</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

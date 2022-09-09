@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>618备战 | Pei LiPing’s Blog</title>
+<meta name="generator" content="Jekyll v4.2.2" />
+<meta property="og:title" content="618备战" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="在JD第一次参加了大促的备战工作，我所负责的系统也要应对618当天的流量洪峰。" />
+<meta property="og:description" content="在JD第一次参加了大促的备战工作，我所负责的系统也要应对618当天的流量洪峰。" />
+<link rel="canonical" href="http://peiliping.github.io/blog/2018/06/19/618.html" />
+<meta property="og:url" content="http://peiliping.github.io/blog/2018/06/19/618.html" />
+<meta property="og:site_name" content="Pei LiPing’s Blog" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2018-06-19T10:00:00+08:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="618备战" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2018-06-19T10:00:00+08:00","datePublished":"2018-06-19T10:00:00+08:00","description":"在JD第一次参加了大促的备战工作，我所负责的系统也要应对618当天的流量洪峰。","headline":"618备战","mainEntityOfPage":{"@type":"WebPage","@id":"http://peiliping.github.io/blog/2018/06/19/618.html"},"url":"http://peiliping.github.io/blog/2018/06/19/618.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/blog/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://peiliping.github.io/blog/feed.xml" title="Pei LiPing&apos;s Blog" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/blog/">Pei LiPing&#39;s Blog</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/blog/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">618备战</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2018-06-19T10:00:00+08:00" itemprop="datePublished">Jun 19, 2018
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>在JD第一次参加了大促的备战工作，我所负责的系统也要应对618当天的流量洪峰。</p>
+
+<p>这半年开发的三个实时相关的工具都上线了，binlog采集、准实时hive表数据、日志分发。</p>
+
+<p>在618备战期间，我对这半年的开发有很多的思考，主要是平台运营、工具特性，性能与监控等方面。</p>
+
+<h2 id="平台型和工具型">平台型和工具型</h2>
+
+<p>作为一个工具，你可以只关心功能，关心配置的灵活度，水平扩展能力和性能的极限。</p>
+
+<p>但是作为一个平台型的东西，这些是远远不够的。</p>
+
+<p>比如平台上的任务一定是绝大多数任务压力很小，有少数任务流量压力很大。</p>
+
+<p>业务上也会出现，某些任务只在一些特定的时间流量压力大，而其他时间流量很低。</p>
+
+<p>数据的表现上有条数多，或者单条体积大。甚至还要考虑有一些任务所使用的网络比其他任务要差一些。</p>
+
+<p>单从工具的角度来说，我们的三个tool的表现都非常优异，每种任务都可以使用3-4个性能档位配置，</p>
+
+<p>工具的配置非常灵活，暴露的可调节的参数也非常多，核心逻辑采用状态机等设计模式，</p>
+
+<p>非常好的兼容能力。性能上也做了诸多优化，binlog采集的性能甚至超过了正常从库同步的性能。</p>
+
+<h2 id="临时解决问题">临时解决问题</h2>
+
+<p>在任务上线的初期，经历了两周的阵痛，每天都有很多细碎的问题，比如某些任务延迟了，</p>
+
+<p>某些任务长时间无流量，某些任务经常报错等等。经过两周对监控的调整，大大降低了告警的次数，</p>
+
+<p>并且摸索出一套简单的运营办法，可以解决绝大多数问题。但是偶尔还是会有特例，</p>
+
+<p>在备战618的过程中，还是需要花非常多的时间去梳理核心任务和数据量大的任务，提前进行扩容。</p>
+
+<p>甚至在618前的一两个小时里，我们还在梳理增长迅猛的任务，并适当的扩容。</p>
+
+<p>这种工作无论你花多少时间，多么有耐心，还是会有遗漏的情况，因为这些都是实时数据或者</p>
+
+<p>准实时数据，临时人工处理一定已经晚了。</p>
+
+<h2 id="基础准备">基础准备</h2>
+
+<p>因为现实业务上的复杂性，所以我们的任务本身需要做一些基础的准备。</p>
+
+<p>第一、做好水平扩展能力，可以通过增加一个docker副本来实现性能的水平扩展。</p>
+
+<p>第二、当不能通过水平扩展提升能力时，可以通过增加资源来提供能力，比如cpu、mem。</p>
+
+<p>其实很多业务系统经常是增加了资源并不能提升处理能力，或者说不满足预期。</p>
+
+<p>第三、Job本身能够估算出自己的余量，这一点非常重要，能做到这一点的少之又少。</p>
+
+<p>第四、能够借助像docker、k8s等方式对运行时环境进行管理。</p>
+
+<h2 id="未来">未来</h2>
+
+<p>在产品端开发和运行时任务之间应该有一个运营质量管理系统，将监控和伸缩容量等结合起来，</p>
+
+<p>通过规则集或者AI相关技术，来解决需要大量人力时间的工作。</p>
+
+<p>在docker盛行的年代，传统运维方式发生了变化，监控也随之发生了变化，</p>
+
+<p>同样运营方法也在产生着巨大的变化，接来下几个月我会投入Flink相关的开发工作中，</p>
+
+<p>建设一个实时计算的平台，运营的实时化问题，会被我当成一个业务场景来对待，</p>
+
+<p>希望今年年底前能够彻底拜托人工运营的现状。</p>
+
+  </div><a class="u-url" href="/blog/2018/06/19/618.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/blog/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Pei LiPing&#39;s Blog</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Pei LiPing&#39;s Blog</li><li><a class="u-email" href="mailto:peilipingplp@gmail.com">peilipingplp@gmail.com</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/peiliping"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#github"></use></svg> <span class="username">peiliping</span></a></li><li><a href="https://www.twitter.com/plp_rapper"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">plp_rapper</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

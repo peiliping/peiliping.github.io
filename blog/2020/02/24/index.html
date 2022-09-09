@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>时序索引 | Pei LiPing’s Blog</title>
+<meta name="generator" content="Jekyll v4.2.2" />
+<meta property="og:title" content="时序索引" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="这次讲一个索引设计的例子，数据具有时序特征，比如，监控数据、股票k线数据等等。" />
+<meta property="og:description" content="这次讲一个索引设计的例子，数据具有时序特征，比如，监控数据、股票k线数据等等。" />
+<link rel="canonical" href="http://peiliping.github.io/blog/2020/02/24/" />
+<meta property="og:url" content="http://peiliping.github.io/blog/2020/02/24/" />
+<meta property="og:site_name" content="Pei LiPing’s Blog" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2020-02-24T10:00:00+08:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="时序索引" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2020-02-24T10:00:00+08:00","datePublished":"2020-02-24T10:00:00+08:00","description":"这次讲一个索引设计的例子，数据具有时序特征，比如，监控数据、股票k线数据等等。","headline":"时序索引","mainEntityOfPage":{"@type":"WebPage","@id":"http://peiliping.github.io/blog/2020/02/24/"},"url":"http://peiliping.github.io/blog/2020/02/24/"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/blog/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://peiliping.github.io/blog/feed.xml" title="Pei LiPing&apos;s Blog" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/blog/">Pei LiPing&#39;s Blog</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/blog/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">时序索引</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2020-02-24T10:00:00+08:00" itemprop="datePublished">Feb 24, 2020
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>这次讲一个索引设计的例子，数据具有时序特征，比如，监控数据、股票k线数据等等。</p>
+
+<p>如果时序数据同时还具备多维度，那就需要druid、clickhouse来完成。</p>
+
+<p>像股票k线这样的数据，就没有太多的维度，按照股票的ID和K线的类型进行过滤即可。</p>
+
+<p>下面介绍一个股票K线数据索引的设计思路。</p>
+
+<h2 id="时间戳">时间戳</h2>
+
+<p>要做时序数据首先要定义时间字段，最简单的unixtime，精度到秒，比如1583769600。</p>
+
+<p>用4字节的int来存储unixtime，现在是可以存下的，未来还可以使用十几年，如果还不放心，</p>
+
+<p>可以考虑用无符号整形，足够用到退休了。</p>
+
+<h2 id="k线的类型">k线的类型</h2>
+
+<p>股票的K线主要是按照时间区分的，1min、3min、5min….一共十几种，1个字节就够了。</p>
+
+<h2 id="股票的id">股票的ID</h2>
+
+<p>short对应的是两个字节的整形，最大可以到32768，无符号可以到65536。</p>
+
+<p>国内的A股也就四五千只股票的规模，考虑到可能退市等因素，2个字节也足够了。</p>
+
+<h2 id="合并">合并</h2>
+
+<p>为这三个字段建联合唯一索引，肯定是可以满足需求的，但是这样很铺张浪费。</p>
+
+<p>我的目标是用一个long型字段，来满足需求。long是8个字节，三个字段加起来是7个字节，</p>
+
+<p>还可以留下一个byte作为扩展。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+ ((long) this.symbolId &lt;&lt; 40) | ((long) this.type.value &lt;&lt; 32) | (long) this.timeSeq
+
+</code></pre></div></div>
+
+<p>合并成一个long型的字段，可以节省索引空间，高效的使用btree来处理Between，使用bitmap优化也没问题。</p>
+
+<h2 id="query">Query</h2>
+
+<p>在检索的时候，股票ID是确定的，k线类型也是确定的，时间是一个范围查询。</p>
+
+<p>将时间范围的起点和终点，通过上面的合并方法进行处理，可以得到两个long值，</p>
+
+<p>Between就可以搞定了。</p>
+
+  </div><a class="u-url" href="/blog/2020/02/24/index.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/blog/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Pei LiPing&#39;s Blog</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Pei LiPing&#39;s Blog</li><li><a class="u-email" href="mailto:peilipingplp@gmail.com">peilipingplp@gmail.com</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/peiliping"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#github"></use></svg> <span class="username">peiliping</span></a></li><li><a href="https://www.twitter.com/plp_rapper"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">plp_rapper</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>
