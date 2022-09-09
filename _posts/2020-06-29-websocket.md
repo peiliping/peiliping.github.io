@@ -2,8 +2,6 @@
 layout: post
 title:  "websocket"
 date:   "2020-06-29 10:00:00"
-categories: "websocket netty"
-permalink: /archivers/2020-06-29-websocket
 ---
 
 

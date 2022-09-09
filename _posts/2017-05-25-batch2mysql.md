@@ -1,9 +1,7 @@
 ---
 layout: post
 title:  "批量写入Mysql"
-date:   "2017-05-25 16:00:00"
-categories: "java mysql batch ringbuffer jdbc"
-permalink: /archivers/2017-05-25-batch2mysql
+date:   "2017-05-25 10:00:00"
 ---
 
 Mysql是最常用的一种关系型数据库，随着各种ORM框架的演进，操作数据库也变得越来越简单。

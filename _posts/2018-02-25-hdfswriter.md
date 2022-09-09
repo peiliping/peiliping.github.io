@@ -1,9 +1,7 @@
 ---
 layout: post
 title:  "分发log数据到HDFS"
-date:   "2018-02-25 13:00:00"
-categories: "hdfs log flume"
-permalink: /archivers/2018-02-25-hdfswriter
+date:   "2018-02-25 10:00:00"
 ---
 
 将Kafka中的数据分发到HDFS上，提到这个需求首先想到的就是Flume。

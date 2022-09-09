@@ -2,8 +2,6 @@
 layout: post
 title:  "自动伸缩"
 date:   "2019-02-25 10:00:00"
-categories: "scale auto fregata"
-permalink: /archivers/2019-02-25-scale
 ---
 
 这次讲一下Fregata重构中的一个重要内容-自动伸缩，主要是解决两个方向的问题：

@@ -2,8 +2,6 @@
 layout: post
 title:  "write file"
 date:   "2021-07-28 10:00:00"
-categories: "shell file"
-permalink: /archivers/2021-07-28-writefile
 ---
 
 

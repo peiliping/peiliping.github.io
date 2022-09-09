@@ -11,8 +11,6 @@ public: true
 
 ### 简要工作经历 ###
 
-> 裴立平  plp_rapper#twitter  peilipingplp#gmail.com 
-
 > 2010年6月			毕业于大连理工大学管理学院 
 
 > 2010年8月			入职阿里巴巴-淘宝-技术研发部-交易中心
@@ -23,7 +21,7 @@ public: true
 
 > 2012年6月  ~ 2012年12月	转岗至AndroidAppStore团队，参与开发了淘宝官方AndroidApp淘应用
 
-> 2013年1月  ~ 2013年8月	回到交易中心参与核心系统优化和异地双活项目
+> 2013年1月  ~ 2013年8月	回到交易中心参与核心系统性能优化和异地双活项目
 
 > 2013年8月			退隐江湖
 
@@ -41,7 +39,7 @@ public: true
 
 > 2017年11月 ~ 2018年7月	启动Fregata项目，支撑binlog采集、kafka消息分发HDFS等实时数据处理业务，部署规模1.5WDocker
 
-> 2018年7月  ~ 2019年6月	基于社区Flink1.5进行制定，完成了JD的FlinkOnK8s的研发工作，并持续迭代
+> 2018年7月  ~ 2019年6月	基于社区Flink1.5，完成了JD的FlinkOnK8s的研发工作，并持续迭代
 
 > 2019年1月  ~ 2019年7月	Fregata框架2.0重构，成为单机版的流式数据处理框架
 
@@ -65,4 +63,4 @@ public: true
 
 > FlinkOnK8s，增强了预览拓扑和运行时拓扑，重新封装了BatchSink、AsyncFunction等核心组件，重新设计了背压预警告警体系。
 
-> 维护一个单机流处理框架[【Fevernova】](https://github.com/fevernova-jakiro/fevernova)
+> 维护一个单机流处理框架[【Fevernova】](https://github.com/peiliping/fevernova)

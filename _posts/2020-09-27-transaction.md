@@ -2,8 +2,6 @@
 layout: post
 title:  "transaction"
 date:   "2020-09-27 10:00:00"
-categories: "transaction"
-permalink: /archivers/2020-09-27-transaction
 ---
 
 

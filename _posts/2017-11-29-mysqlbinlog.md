@@ -2,8 +2,6 @@
 layout: post
 title:  "关于Mysql的Binlog抽取"
 date:   "2017-11-29 10:00:00"
-categories: "mysql binlog"
-permalink: /archivers/2017-11-29-mysqlbinlog
 ---
 
 这个月换了工作，双十一之前入职了京东大数据平台——实时数据组。

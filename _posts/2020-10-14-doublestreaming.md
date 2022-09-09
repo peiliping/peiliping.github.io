@@ -2,8 +2,6 @@
 layout: post
 title:  "double streaming"
 date:   "2020-10-14 10:00:00"
-categories: "streaming"
-permalink: /archivers/2020-10-14-doublestreaming
 ---
 
 
