@@ -53,9 +53,9 @@ public: true
 
 ### 近期参与的开发项目 ###
 
-> 数据迁移工具[【Meepo】](https://github.com/peiliping/meepo)，写了两篇Blog来介绍，[【简介】](http://peiliping.github.io/blog/archivers/2017-04-18-meepo)和[【性能优化】](http://peiliping.github.io/blog/archivers/2017-05-25-batch2mysql)
+> 数据迁移工具[【Meepo】](https://github.com/peiliping/meepo)，写了两篇Blog来介绍，[【简介】](https://peiliping.github.io/blog/2017/04/18/meepo.html)和[【性能优化】](https://peiliping.github.io/blog/2017/05/25/batch2mysql.html)
 
-> 高性能日志采集工具[【Logwatch】](https://github.com/peiliping/logwatch)和[【正则在日志解析中的使用】](http://peiliping.github.io/blog/archivers/2017-06-15-regex)
+> 高性能日志采集工具[【Logwatch】](https://github.com/peiliping/logwatch)和[【正则在日志解析中的使用】](https://peiliping.github.io/blog/2017/06/15/regex.html)
 
 > 监控Jvm的PerfData指标数据和Flags，存储选择Vertica，日增量8KW行以上，方便Jvm问题的排查和性能优化。
 
