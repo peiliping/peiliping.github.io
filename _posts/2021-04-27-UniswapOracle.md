@@ -2,8 +2,6 @@
 layout: post
 title:  "UniswapOracle"
 date:   "2021-04-27 10:00:00"
-categories: "Uniswap Oracle"
-permalink: /archivers/2021-04-27-UniswapOracle
 ---
 
 

@@ -2,8 +2,6 @@
 layout: post
 title:  "类型转换"
 date:   "2018-01-20 10:00:00"
-categories: "type convert parser"
-permalink: /archivers/2018-01-20-typeconvert
 ---
 
 之前几个月一直在忙一个binlog抽取的项目，将mysqlbinlog拉出来，写入kafka，

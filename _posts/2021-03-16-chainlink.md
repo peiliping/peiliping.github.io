@@ -2,8 +2,6 @@
 layout: post
 title:  "Chainlink"
 date:   "2021-03-16 10:00:00"
-categories: "chainlink"
-permalink: /archivers/2021-03-16-chainlink
 ---
 
 

@@ -1,9 +1,7 @@
 ---
 layout: post
 title:  "MysqlBinlog中的事务"
-date:   "2018-03-22 13:00:00"
-categories: "mysqlbinlog transaction"
-permalink: /archivers/2018-03-22-binlogtransaction
+date:   "2018-03-22 10:00:00"
 ---
 
 binlog抽取的项目测试了一段时间，一直都很顺利，最近扩大了测试的规模，发现了一些细节问题。
