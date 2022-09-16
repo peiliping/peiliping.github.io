@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://peiliping.github.io/blog/" rel="alternate" type="text/html" /><updated>2022-09-10T09:41:15+08:00</updated><id>http://peiliping.github.io/blog/feed.xml</id><title type="html">Pei LiPing’s Blog</title><subtitle>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</subtitle><entry><title type="html">Awk Json Parser</title><link href="http://peiliping.github.io/blog/2022/09/02/jsonparser.html" rel="alternate" type="text/html" title="Awk Json Parser" /><published>2022-09-02T10:00:00+08:00</published><updated>2022-09-02T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/09/02/jsonparser</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/09/02/jsonparser.html"><![CDATA[<p>Awk主要是用于文本数据处理的，而且主要是CSV格式。如果你碰到要处理Json数据，</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://peiliping.github.io/blog/" rel="alternate" type="text/html" /><updated>2022-09-16T17:14:35+08:00</updated><id>http://peiliping.github.io/blog/feed.xml</id><title type="html">Pei LiPing’s Blog</title><subtitle>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</subtitle><entry><title type="html">Awk Json Parser</title><link href="http://peiliping.github.io/blog/2022/09/02/jsonparser.html" rel="alternate" type="text/html" title="Awk Json Parser" /><published>2022-09-02T10:00:00+08:00</published><updated>2022-09-02T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/09/02/jsonparser</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/09/02/jsonparser.html"><![CDATA[<p>Awk主要是用于文本数据处理的，而且主要是CSV格式。如果你碰到要处理Json数据，</p>
 
 <p>就会比较麻烦。Awk原生没有提供Json的解析方法，可以加一个rapidjson的exlib。</p>
 
@@ -148,7 +148,56 @@ BEGIN{JSON_STRING = ""; IDX = 1; result["_type_"] = "object";}
   dispatch(result, "_root_");
 } 
 
-</code></pre></div></div>]]></content><author><name></name></author><summary type="html"><![CDATA[Awk主要是用于文本数据处理的，而且主要是CSV格式。如果你碰到要处理Json数据，]]></summary></entry><entry><title type="html">Linear</title><link href="http://peiliping.github.io/blog/2021/12/29/linear.html" rel="alternate" type="text/html" title="Linear" /><published>2021-12-29T10:00:00+08:00</published><updated>2021-12-29T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2021/12/29/linear</id><content type="html" xml:base="http://peiliping.github.io/blog/2021/12/29/linear.html"><![CDATA[<p>经常看到一些人的K线图上花了很多辅助线，有压力支撑，也有涨跌趋势。</p>
+</code></pre></div></div>]]></content><author><name></name></author><summary type="html"><![CDATA[Awk主要是用于文本数据处理的，而且主要是CSV格式。如果你碰到要处理Json数据，]]></summary></entry><entry><title type="html">Awk Linear</title><link href="http://peiliping.github.io/blog/2022/01/11/awklinear.html" rel="alternate" type="text/html" title="Awk Linear" /><published>2022-01-11T10:00:00+08:00</published><updated>2022-01-11T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/01/11/awklinear</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/01/11/awklinear.html"><![CDATA[<p>上期讲到了Linear的概念，这次我们就用Awk来实现一个Linear吧。</p>
+
+<h3 id="代码">代码</h3>
+
+<p>下面这段代码是从TradingView的LR脚本中翻译过来的，也是我找到的比较简洁的一个版本。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+function lr(_source, _result, _i){
+  _result["len"] = length(_source);
+  for(_i = 1; _i &lt;= _result["len"]; _i++){
+    _result["sumx"]+=_i;
+    _result["sumy"]+=_source[_i];
+    _result["sumxx"]+=(_i * _i);
+    _result["sumxy"]+=(_i * _source[_i]);
+  }
+  _result["slope"] = (_result["len"] * _result["sumxy"] - _result["sumx"] * _result["sumy"]) / (_result["len"] * _result["sumxx"] - _result["sumx"] * _result["sumx"]);
+  _result["intercept"] = _result["sumy"] / _result["len"] - _result["slope"] * _result["sumx"] / _result["len"] + _result["slope"];
+ 
+  for(_i = 1; _i &lt;= _result["len"]; _i++){
+    _result["stdDevAcc"]+=((_i * _result["slope"] + _result["intercept"] - _source[_i]) * (_i * _result["slope"] + _result["intercept"] - _source[_i]));
+  }
+  _result["stdDev"] = sqrt(_result["stdDevAcc"] / (_result["len"] - 1));
+  _result["M"] = _result["len"] * _result["slope"] + _result["intercept"];
+  _result["U"] = _result["M"] + 2 * _result["stdDev"];
+  _result["D"] = _result["M"] - 2 * _result["stdDev"];
+}
+
+</code></pre></div></div>
+
+<p>返回结果一般主要是获取slope、intercept、stdDev，还有U、M、D。</p>
+
+<h3 id="关于awk加载functions的问题">关于awk加载functions的问题</h3>
+
+<p>如果你写了一个完整的awk脚本可以通过参数 -f 来执行script，例如： <code class="language-plaintext highlighter-rouge">awk -f xxx.awkscript</code></p>
+
+<p>如果你只是向上面LR一样实现了一个函数，希望能够被复用的话，可以这样：</p>
+
+<p><code class="language-plaintext highlighter-rouge">awk -i lib.awkscript  '{ lr(source, result); print result["M"];}'</code></p>
+
+<p>如果你有多个lib文件的话，可以多次使用 -i  <code class="language-plaintext highlighter-rouge">-i a.awk -i b.awk -i c.awk</code></p>
+
+<p>还可以再script文件里使用 @include 进行文件或者目录的加载，有点像模板加载宏。</p>
+
+<h3 id="关于awk中array的赋值问题">关于awk中Array的赋值问题</h3>
+
+<p>awk的Array和Lua的Table特性非常相似，但是Awk没有提供像ipairs这样的迭代工具。</p>
+
+<p>Array也无法成为Awk函数的返回值，只能在参数中传递进来，参考awk中split的用法。</p>
+
+<p>如果map[“key”]也是Array的话，无法直接进行变量的赋值，比如：val = map[“key”]。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[上期讲到了Linear的概念，这次我们就用Awk来实现一个Linear吧。]]></summary></entry><entry><title type="html">Linear</title><link href="http://peiliping.github.io/blog/2021/12/29/linear.html" rel="alternate" type="text/html" title="Linear" /><published>2021-12-29T10:00:00+08:00</published><updated>2021-12-29T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2021/12/29/linear</id><content type="html" xml:base="http://peiliping.github.io/blog/2021/12/29/linear.html"><![CDATA[<p>经常看到一些人的K线图上花了很多辅助线，有压力支撑，也有涨跌趋势。</p>
 
 <p>今天介绍一种自动化斜线的方法，平行斜线通道。</p>
 
@@ -488,48 +537,4 @@ $* : 参数本身的列表，也不包括命令本身，但”$*” 和”\$@”
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
 "${@:2}"  从第二参数开始往后的所有参数
 
-</code></pre></div></div>]]></content><author><name></name></author><summary type="html"><![CDATA[使用linux的命令时，经常会用man来查询可选参数及其含义。偶尔我们也会开发自己的小工具。]]></summary></entry><entry><title type="html">UniswapOracle</title><link href="http://peiliping.github.io/blog/2021/04/27/UniswapOracle.html" rel="alternate" type="text/html" title="UniswapOracle" /><published>2021-04-27T10:00:00+08:00</published><updated>2021-04-27T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2021/04/27/UniswapOracle</id><content type="html" xml:base="http://peiliping.github.io/blog/2021/04/27/UniswapOracle.html"><![CDATA[<p>这次聊聊Uniswap的预言机，上次我们介绍的Chainlink属于通用预言机。</p>
-
-<p>在Uniswap项目中，内置了一个预言机功能，算是专用吧，具有一定的特殊性。</p>
-
-<h2 id="uniswap">Uniswap</h2>
-
-<p>Uniswap最近一年非常的火热，算是Defi的基石项目了。随着其V3版本的发布，</p>
-
-<p>会吸引越来越多的做市商。这里介绍一个<a href="https://liaoph.com/">Blog</a>。可以作为Uniswap的入门资料。</p>
-
-<h2 id="uniswap的oracle">Uniswap的Oracle</h2>
-
-<p>之前讲的Chainlink的预言机，使用者大多关注当前价格，少量场景也需要历史价格。</p>
-
-<p>Uniswap的Oracle是提供时间加权平均价，并且可以随意指定周期。设计出这样的Oracle，</p>
-
-<p>主要是为了抵御价格操纵闪电贷之类的攻击。在目前的Defi项目中，这类需求还是比较普遍的。</p>
-
-<p>我个人觉得Uniswap的Oracle时间加权思路是不错的，但不适合普及使用。比如标的非常有限、</p>
-
-<p>存储数据的精度问题等等。但是提供的按照时间二分查找的功能是Chainlink所缺少的。</p>
-
-<h2 id="通用化ema指标预言机">通用化EMA指标预言机</h2>
-
-<p>在清算类的业务中，一般使用指数类的价格，比如MA、EMA。期货合约的清算逻辑，</p>
-
-<p>用来计算是否强制平仓的价格，就不会使用现货的当前价格，一般是EMA(5min)之类的。</p>
-
-<p>主要是为了削弱价格剧烈波动导致的连锁爆仓反应。</p>
-
-<p>如果提供一种类似EMA计算的指标价格预言机，我相信会对清算类的业务非常友好。</p>
-
-<p>可以沿用现有预言机的大部分接口，没有数据精度问题，可轻松获取历史轨迹，作为独立</p>
-
-<p>计算存储的合约，不与其他项目绑定，可重复利用现有“共识”预言机的结果，保证准确。</p>
-
-<p>当然这样的方案相对Uniswap的Oracle会缺少一个周期的灵活性，但我个人认为这个不是</p>
-
-<p>十分重要，大多数项目需要的周期都是可以协调的，而且固定。</p>
-
-<h2 id="最后">最后</h2>
-
-<p>预言机的话题就告一段落，这个领域也算是刚刚起步，Chainlink也在快速发展中，希望能够</p>
-
-<p>有更开放的社区，可以有更多的协作模式，让开发者参与共建。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[这次聊聊Uniswap的预言机，上次我们介绍的Chainlink属于通用预言机。]]></summary></entry></feed>
+</code></pre></div></div>]]></content><author><name></name></author><summary type="html"><![CDATA[使用linux的命令时，经常会用man来查询可选参数及其含义。偶尔我们也会开发自己的小工具。]]></summary></entry></feed>
