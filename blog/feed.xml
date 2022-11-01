@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://peiliping.github.io/blog/" rel="alternate" type="text/html" /><updated>2022-09-16T17:14:35+08:00</updated><id>http://peiliping.github.io/blog/feed.xml</id><title type="html">Pei LiPing’s Blog</title><subtitle>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</subtitle><entry><title type="html">Awk Json Parser</title><link href="http://peiliping.github.io/blog/2022/09/02/jsonparser.html" rel="alternate" type="text/html" title="Awk Json Parser" /><published>2022-09-02T10:00:00+08:00</published><updated>2022-09-02T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/09/02/jsonparser</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/09/02/jsonparser.html"><![CDATA[<p>Awk主要是用于文本数据处理的，而且主要是CSV格式。如果你碰到要处理Json数据，</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://peiliping.github.io/blog/" rel="alternate" type="text/html" /><updated>2022-11-01T14:28:09+08:00</updated><id>http://peiliping.github.io/blog/feed.xml</id><title type="html">Pei LiPing’s Blog</title><subtitle>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</subtitle><entry><title type="html">Awk Json Parser</title><link href="http://peiliping.github.io/blog/2022/09/02/jsonparser.html" rel="alternate" type="text/html" title="Awk Json Parser" /><published>2022-09-02T10:00:00+08:00</published><updated>2022-09-02T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/09/02/jsonparser</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/09/02/jsonparser.html"><![CDATA[<p>Awk主要是用于文本数据处理的，而且主要是CSV格式。如果你碰到要处理Json数据，</p>
 
 <p>就会比较麻烦。Awk原生没有提供Json的解析方法，可以加一个rapidjson的exlib。</p>
 
@@ -130,9 +130,17 @@ function jtype(_sp){
 function dispatch(_json, _key, _sp){
   _sp = jtype(get(1));
   if(_sp == "array"){
-    _json[_key]["_type_"] = "array";  step(1); arrfc(_json[_key]);
+    if(_key == ""){
+      _json["_type_"] = "array";  step(1); arrfc(_json);
+    }else{
+      _json[_key]["_type_"] = "array";  step(1); arrfc(_json[_key]);
+    }
   }else if(_sp == "object"){
-    _json[_key]["_type_"] = "object"; step(1); objfc(_json[_key]);
+    if(_key == ""){
+      _json["_type_"] = "object"; step(1); objfc(_json);
+    }else{
+      _json[_key]["_type_"] = "object"; step(1); objfc(_json[_key]);
+    }
   }else if(_sp == "string"){
     step(1); strfc(_json, _key);
   }else if(_sp == "number"){
@@ -141,14 +149,108 @@ function dispatch(_json, _key, _sp){
     boolfc(_json, _key);
   }
 }
-BEGIN{JSON_STRING = ""; IDX = 1; result["_type_"] = "object";}
-{ 
-  JSON_STRING = $0; skipSpace();
-  rootType = jtype(get(1)); if(rootType != "array" &amp;&amp; rootType != "object"){ fatal("not json"); }
-  dispatch(result, "_root_");
-} 
+function parserJson(_str, _json){
+ JSON_STRING = _str; IDX = 1; skipSpace();
+ rootType = jtype(get(1)); if(rootType != "array" &amp;&amp; rootType != "object"){ fatal("not json"); }
+ dispatch(_json);
+}
 
-</code></pre></div></div>]]></content><author><name></name></author><summary type="html"><![CDATA[Awk主要是用于文本数据处理的，而且主要是CSV格式。如果你碰到要处理Json数据，]]></summary></entry><entry><title type="html">Awk Linear</title><link href="http://peiliping.github.io/blog/2022/01/11/awklinear.html" rel="alternate" type="text/html" title="Awk Linear" /><published>2022-01-11T10:00:00+08:00</published><updated>2022-01-11T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/01/11/awklinear</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/01/11/awklinear.html"><![CDATA[<p>上期讲到了Linear的概念，这次我们就用Awk来实现一个Linear吧。</p>
+</code></pre></div></div>]]></content><author><name></name></author><summary type="html"><![CDATA[Awk主要是用于文本数据处理的，而且主要是CSV格式。如果你碰到要处理Json数据，]]></summary></entry><entry><title type="html">Cmd Binance Client</title><link href="http://peiliping.github.io/blog/2022/02/19/CmdBinanceClient.html" rel="alternate" type="text/html" title="Cmd Binance Client" /><published>2022-02-19T10:00:00+08:00</published><updated>2022-02-19T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/02/19/CmdBinanceClient</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/02/19/CmdBinanceClient.html"><![CDATA[<p>无意间在Binance的ApiDoc中看到了基于Curl的示例代码，于是便想封装一个基于Curl的</p>
+
+<p>命令行客户端 。获取一般行情的Api接口直接使用Curl就可以，难题主要是获取个人数据</p>
+
+<p>和交易行为接口,需要对参数进行签名。</p>
+
+<h3 id="client">Client</h3>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+ApiKey="zzzzzzzzzzzzzzzzzzzz"
+SecretKey="xxxxxxxxxxxxxxxxx"
+
+HttpCode=""
+HttpResult=""
+
+## 对参数数据进行签名
+signature(){
+  echo -n "$1" | openssl dgst -sha256 -hmac "${SecretKey}" | awk '{print "signature="$2}'
+}
+
+## 添加时间校对参数
+addTimeParams(){
+  local tsParams="recvWindow=10000&amp;timestamp="`date +%s`"000"
+  if [ -z "$1" ] ;then
+    echo $tsParams
+  else
+    echo $1"&amp;"$tsParams
+  fi
+}
+
+## 发送带签名的请求
+sendRequest(){
+  HttpCode=""
+  HttpResult=""
+  local method=$1
+  local host=$2
+  local path=$3
+  local params=$4
+  params=`addTimeParams ${params}`
+  local sig=`signature ${params}`
+  params=$params"&amp;"$sig
+  local result=`curl -s -w "\t%{http_code}" -H "X-MBX-APIKEY: ${ApiKey}" -X ${method} $host""$path"?"$params`
+  HttpCode=`echo $result | awk '{ print $NF}'`
+  HttpResult=`echo $result | awk '{ print substr($0,1,length($0)-4); }'`
+  if [ $HttpCode -eq 200 ];then
+    return 0
+  else
+    echo $HttpResult
+    return 1
+  fi
+}
+
+</code></pre></div></div>
+
+<p>签名的方法其实很简单，需要注意的是echo的参数-n，是不换行输出的意思。</p>
+
+<p>如果不加这个参数，那么签名数据就无法通过Server端的校验了。</p>
+
+<p>时间校对参数这里只是简单的用了当前时间，如果是谨慎设计的话，应该使用业务时间。</p>
+
+<p>比如获取行情信息后下单，那么下单的校对时间应该是获取行情的时间。</p>
+
+<p>如何获得Http的Code？curl默认是返回Http Response Body的，通过-w参数，</p>
+
+<p>可以获取httpcode，会输出到最后，通过awk将其切分成Code和Result变量。</p>
+
+<p>根据HttpCode来确定函数sendRequest的return值(0/1)。</p>
+
+<p>我们来调用一下这个Client。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+  local host="https://xxxxx.com"
+  local path="/sapi/v3/asset/getUserAsset"
+  sendRequest "POST" $host $path
+  [[ $? -gt  0 ]] &amp;&amp; return 1
+  echo $HttpResult
+
+</code></pre></div></div>
+
+<p>判断sendRequest的return值，如果大于0，则是请求失败，程序终止。</p>
+
+<p>[[ $? -gt  0 ]] &amp;&amp; return 1 是一种if语句的简洁写法。</p>
+
+<h3 id="shell中如何识别number类型">Shell中如何识别Number类型</h3>
+
+<p>网上可以搜到很多种，我比如喜欢下面的这个方法</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+  expr $1 "+" 1 &amp;&gt; /dev/null
+  if [ $? -eq 0 ];then
+    echo "orderId"
+  else
+    echo "origClientOrderId"
+  fi
+
+</code></pre></div></div>]]></content><author><name></name></author><summary type="html"><![CDATA[无意间在Binance的ApiDoc中看到了基于Curl的示例代码，于是便想封装一个基于Curl的]]></summary></entry><entry><title type="html">Awk Linear</title><link href="http://peiliping.github.io/blog/2022/01/11/awklinear.html" rel="alternate" type="text/html" title="Awk Linear" /><published>2022-01-11T10:00:00+08:00</published><updated>2022-01-11T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/01/11/awklinear</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/01/11/awklinear.html"><![CDATA[<p>上期讲到了Linear的概念，这次我们就用Awk来实现一个Linear吧。</p>
 
 <h3 id="代码">代码</h3>
 
@@ -488,53 +590,4 @@ LOCK_UN，释放锁；
 
 <p>以前不知道这个命令，都是用一个lock文件来替代，在脚本中判断文件是否存在，非常的繁琐，也不是很严谨。</p>
 
-<p>你是更喜欢把flock放在脚本外部，还是写在脚本里呢？</p>]]></content><author><name></name></author><summary type="html"><![CDATA[最近购买了一台腾讯云的服务器跑一些小程序，在整理crontab时发现了一个腾讯云的定时任务，]]></summary></entry><entry><title type="html">CMD</title><link href="http://peiliping.github.io/blog/2021/05/20/CMD.html" rel="alternate" type="text/html" title="CMD" /><published>2021-05-20T10:00:00+08:00</published><updated>2021-05-20T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2021/05/20/CMD</id><content type="html" xml:base="http://peiliping.github.io/blog/2021/05/20/CMD.html"><![CDATA[<p>使用linux的命令时，经常会用man来查询可选参数及其含义。偶尔我们也会开发自己的小工具。</p>
-
-<p>如何给小工具快速添加可选参数呢？</p>
-
-<h2 id="java">java</h2>
-
-<p>java的开发者应该是更喜欢使用配置文件的方式来与程序交互，无论是property还是yml。</p>
-
-<p>在参数不是特别多时，cmd的params也是不错的选择。提到给java传参数，大多数人一定是会</p>
-
-<p>想到main函数的args数组，这是基础，但不太方便。</p>
-
-<p>推荐使用commons-cli，能够设定长短参数(-i 或 –interval)，还能添加注解。</p>
-
-<p>具体的方法我就不展开讲了，网上能搜到很多。</p>
-
-<h2 id="getopts">getopt(s)</h2>
-
-<p>shell中最普遍的解决办法就是getopt，配合while case处理输入的参数。</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>while getopts 'h:j:m:u' OPT;do
-    case $OPTin
-        j) S_DIR="$OPTARG";;
-        m) D_DIR="$OPTARG";;
-        u) upload="true";;
-        h) func;;
-        ?) func;;
-    esac
-done
-</code></pre></div></div>
-
-<p>如何你想实现tab自动提示的话，可以了解一下_get_comp_words_by_ref。</p>
-
-<h2 id="shell默认的参数处理">shell默认的参数处理</h2>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
-$0 : 脚本名
-$N : 第N个参数.
-$# : 参数的个数，不包括命令本身.
-$@ : 参数本身的列表，也不包括命令本身，如上例为 -v -f -out /test.log –prefix=/home
-$* : 参数本身的列表，也不包括命令本身，但”$*” 和”\$@”(加引号)并不同，”$*“将所有的参数解释成一个字符串，而”$@”是一个参数数组。
-
-</code></pre></div></div>
-
-<p>这种处理方法没有getopt简洁，一般还是推荐使用getopt。但是下面这个特殊用法需要注意一下。</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
-"${@:2}"  从第二参数开始往后的所有参数
-
-</code></pre></div></div>]]></content><author><name></name></author><summary type="html"><![CDATA[使用linux的命令时，经常会用man来查询可选参数及其含义。偶尔我们也会开发自己的小工具。]]></summary></entry></feed>
+<p>你是更喜欢把flock放在脚本外部，还是写在脚本里呢？</p>]]></content><author><name></name></author><summary type="html"><![CDATA[最近购买了一台腾讯云的服务器跑一些小程序，在整理crontab时发现了一个腾讯云的定时任务，]]></summary></entry></feed>

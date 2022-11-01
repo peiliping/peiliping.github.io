@@ -131,9 +131,17 @@ function jtype(_sp){
 function dispatch(_json, _key, _sp){
   _sp = jtype(get(1));
   if(_sp == "array"){
-    _json[_key]["_type_"] = "array";  step(1); arrfc(_json[_key]);
+    if(_key == ""){
+      _json["_type_"] = "array";  step(1); arrfc(_json);
+    }else{
+      _json[_key]["_type_"] = "array";  step(1); arrfc(_json[_key]);
+    }
   }else if(_sp == "object"){
-    _json[_key]["_type_"] = "object"; step(1); objfc(_json[_key]);
+    if(_key == ""){
+      _json["_type_"] = "object"; step(1); objfc(_json);
+    }else{
+      _json[_key]["_type_"] = "object"; step(1); objfc(_json[_key]);
+    }
   }else if(_sp == "string"){
     step(1); strfc(_json, _key);
   }else if(_sp == "number"){
@@ -142,11 +150,10 @@ function dispatch(_json, _key, _sp){
     boolfc(_json, _key);
   }
 }
-BEGIN{JSON_STRING = ""; IDX = 1; result["_type_"] = "object";}
-{ 
-  JSON_STRING = $0; skipSpace();
-  rootType = jtype(get(1)); if(rootType != "array" && rootType != "object"){ fatal("not json"); }
-  dispatch(result, "_root_");
-} 
+function parserJson(_str, _json){
+ JSON_STRING = _str; IDX = 1; skipSpace();
+ rootType = jtype(get(1)); if(rootType != "array" && rootType != "object"){ fatal("not json"); }
+ dispatch(_json);
+}
 
 ```
