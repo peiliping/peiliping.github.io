@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://peiliping.github.io/blog/" rel="alternate" type="text/html" /><updated>2022-11-01T14:28:09+08:00</updated><id>http://peiliping.github.io/blog/feed.xml</id><title type="html">Pei LiPing’s Blog</title><subtitle>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</subtitle><entry><title type="html">Awk Json Parser</title><link href="http://peiliping.github.io/blog/2022/09/02/jsonparser.html" rel="alternate" type="text/html" title="Awk Json Parser" /><published>2022-09-02T10:00:00+08:00</published><updated>2022-09-02T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/09/02/jsonparser</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/09/02/jsonparser.html"><![CDATA[<p>Awk主要是用于文本数据处理的，而且主要是CSV格式。如果你碰到要处理Json数据，</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://peiliping.github.io/blog/" rel="alternate" type="text/html" /><updated>2022-11-05T17:09:14+08:00</updated><id>http://peiliping.github.io/blog/feed.xml</id><title type="html">Pei LiPing’s Blog</title><subtitle>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</subtitle><entry><title type="html">Awk Json Parser</title><link href="http://peiliping.github.io/blog/2022/09/02/jsonparser.html" rel="alternate" type="text/html" title="Awk Json Parser" /><published>2022-09-02T10:00:00+08:00</published><updated>2022-09-02T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/09/02/jsonparser</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/09/02/jsonparser.html"><![CDATA[<p>Awk主要是用于文本数据处理的，而且主要是CSV格式。如果你碰到要处理Json数据，</p>
 
 <p>就会比较麻烦。Awk原生没有提供Json的解析方法，可以加一个rapidjson的exlib。</p>
 
@@ -250,7 +250,81 @@ sendRequest(){
     echo "origClientOrderId"
   fi
 
-</code></pre></div></div>]]></content><author><name></name></author><summary type="html"><![CDATA[无意间在Binance的ApiDoc中看到了基于Curl的示例代码，于是便想封装一个基于Curl的]]></summary></entry><entry><title type="html">Awk Linear</title><link href="http://peiliping.github.io/blog/2022/01/11/awklinear.html" rel="alternate" type="text/html" title="Awk Linear" /><published>2022-01-11T10:00:00+08:00</published><updated>2022-01-11T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/01/11/awklinear</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/01/11/awklinear.html"><![CDATA[<p>上期讲到了Linear的概念，这次我们就用Awk来实现一个Linear吧。</p>
+</code></pre></div></div>]]></content><author><name></name></author><summary type="html"><![CDATA[无意间在Binance的ApiDoc中看到了基于Curl的示例代码，于是便想封装一个基于Curl的]]></summary></entry><entry><title type="html">Binance Spot Client</title><link href="http://peiliping.github.io/blog/2022/02/19/BinanceSpotClient.html" rel="alternate" type="text/html" title="Binance Spot Client" /><published>2022-02-19T10:00:00+08:00</published><updated>2022-02-19T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/02/19/BinanceSpotClient</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/02/19/BinanceSpotClient.html"><![CDATA[<p>上期我们把BinanceApi的请求签名进行了封装，接下来我们就在这个基础上，实现核心功能。</p>
+
+<h3 id="client">Client</h3>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+getAssets(){
+  local path="/sapi/v3/asset/getUserAsset"
+  sendRequest "POST" $Host $path
+  [[ $? -gt  0 ]] &amp;&amp; return 1
+  echo $HttpResult | awk -i ${AwkLib}/json.awk '
+  {
+    parserJson($0, json);
+    for(i=0; i&lt;length(json)-1; i++){
+      print json[i]["asset"]"\t"json[i]["free"]"\t"json[i]["locked"];
+    }
+  }' | sort -k2nr
+}
+
+getOpenOrders(){
+  local path="/api/v3/openOrders"
+  sendRequest "GET" $Host $path
+  [[ $? -gt  0 ]] &amp;&amp; return 1
+  echo $HttpResult | awk -i ${AwkLib}/json.awk '{parserJson($0, json);printJson(json);}'
+}
+
+getOrder(){
+  local path="/api/v3/order"
+  local symbol=`echo $1 | tr a-z A-Z`
+  local key=`getOrderIdType $2`
+  local value=$2
+  local params="symbol=${symbol}&amp;${key}=${value}"
+  sendRequest "GET" $Host $path $params
+  [[ $? -gt  0 ]] &amp;&amp; return 1
+  echo $HttpResult | awk -i ${AwkLib}/json.awk '{parserJson($0, json);printJson(json);}'
+}
+
+cancelOpenOrder(){
+  local path="/api/v3/order"
+  local symbol=`echo $1 | tr a-z A-Z`
+  local key=`getOrderIdType $2`
+  local value=$2
+  local params="symbol=${symbol}&amp;${key}=${value}"
+  sendRequest "DELETE" $Host $path $params
+  [[ $? -gt  0 ]] &amp;&amp; return 1
+  echo $HttpResult | awk -i ${AwkLib}/json.awk '{parserJson($0, json);printJson(json);}'
+}
+
+marketTrade(){
+  local path="/api/v3/order"
+  local symbol=`echo $1 | tr a-z A-Z`
+  local side=$2
+  local quantity=$3
+  local params="symbol=${symbol}&amp;side=${side}&amp;type=MARKET&amp;quantity=${quantity}"
+  sendRequest "POST" $Host $path $params
+  [[ $? -gt  0 ]] &amp;&amp; return 1
+  echo $HttpResult | awk -i ${AwkLib}/json.awk '{parserJson($0, json);printJson(json);}'
+}
+
+limitTrade(){
+  local path="/api/v3/order"
+  local symbol=`echo $1 | tr a-z A-Z`
+  local side=$2
+  local price=$3
+  local quantity=$4
+  local params="symbol=${symbol}&amp;side=${side}&amp;type=LIMIT&amp;timeInForce=GTC&amp;price=${price}&amp;quantity=${quantity}"
+  sendRequest "POST" $Host $path $params
+  [[ $? -gt  0 ]] &amp;&amp; return 1
+  echo $HttpResult | awk -i ${AwkLib}/json.awk '{parserJson($0, json);printJson(json);}'
+}
+
+</code></pre></div></div>
+
+<p>总的来说还是比较简单的，预处理一下参数，解析一下返回结果的json，按照一定的格式输出。</p>
+
+<p>U本位合约的Api也是差不多的情况，逻辑基本相同。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[上期我们把BinanceApi的请求签名进行了封装，接下来我们就在这个基础上，实现核心功能。]]></summary></entry><entry><title type="html">Awk Linear</title><link href="http://peiliping.github.io/blog/2022/01/11/awklinear.html" rel="alternate" type="text/html" title="Awk Linear" /><published>2022-01-11T10:00:00+08:00</published><updated>2022-01-11T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/01/11/awklinear</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/01/11/awklinear.html"><![CDATA[<p>上期讲到了Linear的概念，这次我们就用Awk来实现一个Linear吧。</p>
 
 <h3 id="代码">代码</h3>
 
@@ -547,47 +621,4 @@ rm -rf $tfile
 
 <p>可以借鉴Compaction那样的思路，将不确定的临时数据写入临时文件，当可以确定时写入正式的结果文件中,规避性能问题。</p>
 
-<p>最好还是把这些数据存入数据库吧，时序数据库千千万。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[最近在优化一些shell脚本任务，涉及到对文件的读写过程，这里聊聊我碰到的一些问题。]]></summary></entry><entry><title type="html">flock</title><link href="http://peiliping.github.io/blog/2021/06/13/flock.html" rel="alternate" type="text/html" title="flock" /><published>2021-06-13T10:00:00+08:00</published><updated>2021-06-13T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2021/06/13/flock</id><content type="html" xml:base="http://peiliping.github.io/blog/2021/06/13/flock.html"><![CDATA[<p>最近购买了一台腾讯云的服务器跑一些小程序，在整理crontab时发现了一个腾讯云的定时任务，</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>*/5 * * * * flock -xn /tmp/stargate.lock -c '/usr/local/qcloud/stargate/admin/start.sh &gt; /dev/null 2&gt;&amp;1 &amp;'
-</code></pre></div></div>
-
-<p>脚本是为了保证腾讯云agent存活的，这个不是我们关注的重点，重点是flock这个命令。</p>
-
-<p>虽然经常与服务器打交道，但是flock这个命令还是比较陌生的。</p>
-
-<h2 id="flock">flock</h2>
-
-<p>以下内容摘抄自cnblogs。</p>
-
-<p>如果两个进程同时启动了某个脚本，那么很容易导致数据的混乱，这个时候需要锁来协调解决。</p>
-
-<p>flock是建议性锁，不具备强制性。一个进程使用flock将文件锁住，另一个进程也可以直接操作正在被锁的文件，修改文件中的数据。</p>
-
-<p>flock只是用于检测文件是否被加锁，针对文件已经被加锁，另一个进程写入数据的情况，内核不会阻止这个进程的写入操作。</p>
-
-<p>flock主要三种操作类型：</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>LOCK_SH，共享锁，多个进程可以使用同一把锁，常被用作读共享锁；
-LOCK_EX，排他锁，同时只允许一个进程使用，常被用作写锁；
-LOCK_UN，释放锁；
-</code></pre></div></div>
-
-<h2 id="参数">参数</h2>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>-s,--shared：获取一个共享锁，在定向为某文件的FD上设置共享锁而未释放锁的时间内，其他进程试图在定向为此文件的FD上设置独占锁的请求失败，而其他进程试图在定向为此文件的FD上设置共享锁的请求会成功。
--x，-e，--exclusive：获取一个排它锁，或者称为写入锁，为默认项
--u，--unlock：手动释放锁，一般情况不必须，当FD关闭时，系统会自动解锁，此参数用于脚本命令一部分需要异步执行，一部分可以同步执行的情况。
--n，--nb, --nonblock：非阻塞模式，当获取锁失败时，返回1而不是等待
--w, --wait, --timeout seconds：设置阻塞超时，当超过设置的秒数时，退出阻塞模式，返回1，并继续执行后面的语句
--o, --close：表示当执行command前关闭设置锁的FD，以使command的子进程不保持锁。
--c, --command command：在shell中执行其后的语句
-</code></pre></div></div>
-
-<h2 id="最后">最后</h2>
-
-<p>flock可以让很多脚本程序变得更规范，比如我有一些增量计算数据的脚本，如果不小心并发执行了就会导致数据错乱。</p>
-
-<p>以前不知道这个命令，都是用一个lock文件来替代，在脚本中判断文件是否存在，非常的繁琐，也不是很严谨。</p>
-
-<p>你是更喜欢把flock放在脚本外部，还是写在脚本里呢？</p>]]></content><author><name></name></author><summary type="html"><![CDATA[最近购买了一台腾讯云的服务器跑一些小程序，在整理crontab时发现了一个腾讯云的定时任务，]]></summary></entry></feed>
+<p>最好还是把这些数据存入数据库吧，时序数据库千千万。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[最近在优化一些shell脚本任务，涉及到对文件的读写过程，这里聊聊我碰到的一些问题。]]></summary></entry></feed>
