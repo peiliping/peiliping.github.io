@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://peiliping.github.io/blog/" rel="alternate" type="text/html" /><updated>2022-11-05T17:09:14+08:00</updated><id>http://peiliping.github.io/blog/feed.xml</id><title type="html">Pei LiPing’s Blog</title><subtitle>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</subtitle><entry><title type="html">Awk Json Parser</title><link href="http://peiliping.github.io/blog/2022/09/02/jsonparser.html" rel="alternate" type="text/html" title="Awk Json Parser" /><published>2022-09-02T10:00:00+08:00</published><updated>2022-09-02T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/09/02/jsonparser</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/09/02/jsonparser.html"><![CDATA[<p>Awk主要是用于文本数据处理的，而且主要是CSV格式。如果你碰到要处理Json数据，</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://peiliping.github.io/blog/" rel="alternate" type="text/html" /><updated>2022-11-18T20:48:06+08:00</updated><id>http://peiliping.github.io/blog/feed.xml</id><title type="html">Pei LiPing’s Blog</title><subtitle>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</subtitle><entry><title type="html">Awk Json Parser</title><link href="http://peiliping.github.io/blog/2022/09/02/jsonparser.html" rel="alternate" type="text/html" title="Awk Json Parser" /><published>2022-09-02T10:00:00+08:00</published><updated>2022-09-02T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/09/02/jsonparser</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/09/02/jsonparser.html"><![CDATA[<p>Awk主要是用于文本数据处理的，而且主要是CSV格式。如果你碰到要处理Json数据，</p>
 
 <p>就会比较麻烦。Awk原生没有提供Json的解析方法，可以加一个rapidjson的exlib。</p>
 
@@ -155,7 +155,129 @@ function parserJson(_str, _json){
  dispatch(_json);
 }
 
-</code></pre></div></div>]]></content><author><name></name></author><summary type="html"><![CDATA[Awk主要是用于文本数据处理的，而且主要是CSV格式。如果你碰到要处理Json数据，]]></summary></entry><entry><title type="html">Cmd Binance Client</title><link href="http://peiliping.github.io/blog/2022/02/19/CmdBinanceClient.html" rel="alternate" type="text/html" title="Cmd Binance Client" /><published>2022-02-19T10:00:00+08:00</published><updated>2022-02-19T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/02/19/CmdBinanceClient</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/02/19/CmdBinanceClient.html"><![CDATA[<p>无意间在Binance的ApiDoc中看到了基于Curl的示例代码，于是便想封装一个基于Curl的</p>
+</code></pre></div></div>]]></content><author><name></name></author><summary type="html"><![CDATA[Awk主要是用于文本数据处理的，而且主要是CSV格式。如果你碰到要处理Json数据，]]></summary></entry><entry><title type="html">Awk Functions</title><link href="http://peiliping.github.io/blog/2022/04/22/awklib.html" rel="alternate" type="text/html" title="Awk Functions" /><published>2022-04-22T10:00:00+08:00</published><updated>2022-04-22T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/04/22/awklib</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/04/22/awklib.html"><![CDATA[<p>最近写Awk比较多，所以写了一些便于自己使用的函数。</p>
+
+<h3 id="print">Print</h3>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+function printX(o, _indent, _x){
+  if(typeof(o) != "array"){ print o; return; }
+  for(_x in o){
+    if(typeof(o[_x]) != "array"){
+      print _indent, _x, ":", o[_x];
+    }else{
+      print _indent, _x, ":";
+      printX(o[_x], _indent"  ");
+    }
+  }
+}
+
+</code></pre></div></div>
+
+<p>打印嵌套结构的Awk Array，方便调试查看。</p>
+
+<h3 id="clone">Clone</h3>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+function clone(ma, mb, _key, _x){
+  for(_x in ma){
+    if(typeof(ma[_x]) != "array"){
+      if(_key == ""){
+        mb[_x] = ma[_x];
+      }else{
+        mb[_key][_x] = ma[_x];
+      }
+    }else{
+       if(_key == ""){
+         clone(ma[_x], mb, _x);
+       }else{
+         clone(ma[_x], mb[_key], _x);
+       }
+    }
+  }
+}
+
+</code></pre></div></div>
+
+<p>Clone就是一个递归函数，没有什么特别的。为什么要给Awk实现一个Clone函数呢？</p>
+
+<p>因为Awk无法做这样的赋值操作,当map[a]是Array时，b = map[a]会报错,</p>
+
+<p>错误提示为：试图在标量环境中使用数组“map[a]”。这时候我们可以用clone(map[a],b)来替代。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[最近写Awk比较多，所以写了一些便于自己使用的函数。]]></summary></entry><entry><title type="html">Binance Spot Client</title><link href="http://peiliping.github.io/blog/2022/03/11/BinanceSpotClient.html" rel="alternate" type="text/html" title="Binance Spot Client" /><published>2022-03-11T10:00:00+08:00</published><updated>2022-03-11T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/03/11/BinanceSpotClient</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/03/11/BinanceSpotClient.html"><![CDATA[<p>上期我们把BinanceApi的请求签名进行了封装，接下来我们就在这个基础上，实现核心功能。</p>
+
+<h3 id="client">Client</h3>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+getAssets(){
+  local path="/sapi/v3/asset/getUserAsset"
+  sendRequest "POST" $Host $path
+  [[ $? -gt  0 ]] &amp;&amp; return 1
+  echo $HttpResult | awk -i ${AwkLib}/json.awk '
+  {
+    parserJson($0, json);
+    for(i=0; i&lt;length(json)-1; i++){
+      print json[i]["asset"]"\t"json[i]["free"]"\t"json[i]["locked"];
+    }
+  }' | sort -k2nr
+}
+
+getOpenOrders(){
+  local path="/api/v3/openOrders"
+  sendRequest "GET" $Host $path
+  [[ $? -gt  0 ]] &amp;&amp; return 1
+  echo $HttpResult | awk -i ${AwkLib}/json.awk '{parserJson($0, json);printJson(json);}'
+}
+
+getOrder(){
+  local path="/api/v3/order"
+  local symbol=`echo $1 | tr a-z A-Z`
+  local key=`getOrderIdType $2`
+  local value=$2
+  local params="symbol=${symbol}&amp;${key}=${value}"
+  sendRequest "GET" $Host $path $params
+  [[ $? -gt  0 ]] &amp;&amp; return 1
+  echo $HttpResult | awk -i ${AwkLib}/json.awk '{parserJson($0, json);printJson(json);}'
+}
+
+cancelOpenOrder(){
+  local path="/api/v3/order"
+  local symbol=`echo $1 | tr a-z A-Z`
+  local key=`getOrderIdType $2`
+  local value=$2
+  local params="symbol=${symbol}&amp;${key}=${value}"
+  sendRequest "DELETE" $Host $path $params
+  [[ $? -gt  0 ]] &amp;&amp; return 1
+  echo $HttpResult | awk -i ${AwkLib}/json.awk '{parserJson($0, json);printJson(json);}'
+}
+
+marketTrade(){
+  local path="/api/v3/order"
+  local symbol=`echo $1 | tr a-z A-Z`
+  local side=$2
+  local quantity=$3
+  local params="symbol=${symbol}&amp;side=${side}&amp;type=MARKET&amp;quantity=${quantity}"
+  sendRequest "POST" $Host $path $params
+  [[ $? -gt  0 ]] &amp;&amp; return 1
+  echo $HttpResult | awk -i ${AwkLib}/json.awk '{parserJson($0, json);printJson(json);}'
+}
+
+limitTrade(){
+  local path="/api/v3/order"
+  local symbol=`echo $1 | tr a-z A-Z`
+  local side=$2
+  local price=$3
+  local quantity=$4
+  local params="symbol=${symbol}&amp;side=${side}&amp;type=LIMIT&amp;timeInForce=GTC&amp;price=${price}&amp;quantity=${quantity}"
+  sendRequest "POST" $Host $path $params
+  [[ $? -gt  0 ]] &amp;&amp; return 1
+  echo $HttpResult | awk -i ${AwkLib}/json.awk '{parserJson($0, json);printJson(json);}'
+}
+
+</code></pre></div></div>
+
+<p>总的来说还是比较简单的，预处理一下参数，解析一下返回结果的json，按照一定的格式输出。</p>
+
+<p>U本位合约的Api也是差不多的情况，逻辑基本相同。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[上期我们把BinanceApi的请求签名进行了封装，接下来我们就在这个基础上，实现核心功能。]]></summary></entry><entry><title type="html">Cmd Binance Client</title><link href="http://peiliping.github.io/blog/2022/02/19/CmdBinanceClient.html" rel="alternate" type="text/html" title="Cmd Binance Client" /><published>2022-02-19T10:00:00+08:00</published><updated>2022-02-19T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/02/19/CmdBinanceClient</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/02/19/CmdBinanceClient.html"><![CDATA[<p>无意间在Binance的ApiDoc中看到了基于Curl的示例代码，于是便想封装一个基于Curl的</p>
 
 <p>命令行客户端 。获取一般行情的Api接口直接使用Curl就可以，难题主要是获取个人数据</p>
 
@@ -250,81 +372,7 @@ sendRequest(){
     echo "origClientOrderId"
   fi
 
-</code></pre></div></div>]]></content><author><name></name></author><summary type="html"><![CDATA[无意间在Binance的ApiDoc中看到了基于Curl的示例代码，于是便想封装一个基于Curl的]]></summary></entry><entry><title type="html">Binance Spot Client</title><link href="http://peiliping.github.io/blog/2022/02/19/BinanceSpotClient.html" rel="alternate" type="text/html" title="Binance Spot Client" /><published>2022-02-19T10:00:00+08:00</published><updated>2022-02-19T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/02/19/BinanceSpotClient</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/02/19/BinanceSpotClient.html"><![CDATA[<p>上期我们把BinanceApi的请求签名进行了封装，接下来我们就在这个基础上，实现核心功能。</p>
-
-<h3 id="client">Client</h3>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
-getAssets(){
-  local path="/sapi/v3/asset/getUserAsset"
-  sendRequest "POST" $Host $path
-  [[ $? -gt  0 ]] &amp;&amp; return 1
-  echo $HttpResult | awk -i ${AwkLib}/json.awk '
-  {
-    parserJson($0, json);
-    for(i=0; i&lt;length(json)-1; i++){
-      print json[i]["asset"]"\t"json[i]["free"]"\t"json[i]["locked"];
-    }
-  }' | sort -k2nr
-}
-
-getOpenOrders(){
-  local path="/api/v3/openOrders"
-  sendRequest "GET" $Host $path
-  [[ $? -gt  0 ]] &amp;&amp; return 1
-  echo $HttpResult | awk -i ${AwkLib}/json.awk '{parserJson($0, json);printJson(json);}'
-}
-
-getOrder(){
-  local path="/api/v3/order"
-  local symbol=`echo $1 | tr a-z A-Z`
-  local key=`getOrderIdType $2`
-  local value=$2
-  local params="symbol=${symbol}&amp;${key}=${value}"
-  sendRequest "GET" $Host $path $params
-  [[ $? -gt  0 ]] &amp;&amp; return 1
-  echo $HttpResult | awk -i ${AwkLib}/json.awk '{parserJson($0, json);printJson(json);}'
-}
-
-cancelOpenOrder(){
-  local path="/api/v3/order"
-  local symbol=`echo $1 | tr a-z A-Z`
-  local key=`getOrderIdType $2`
-  local value=$2
-  local params="symbol=${symbol}&amp;${key}=${value}"
-  sendRequest "DELETE" $Host $path $params
-  [[ $? -gt  0 ]] &amp;&amp; return 1
-  echo $HttpResult | awk -i ${AwkLib}/json.awk '{parserJson($0, json);printJson(json);}'
-}
-
-marketTrade(){
-  local path="/api/v3/order"
-  local symbol=`echo $1 | tr a-z A-Z`
-  local side=$2
-  local quantity=$3
-  local params="symbol=${symbol}&amp;side=${side}&amp;type=MARKET&amp;quantity=${quantity}"
-  sendRequest "POST" $Host $path $params
-  [[ $? -gt  0 ]] &amp;&amp; return 1
-  echo $HttpResult | awk -i ${AwkLib}/json.awk '{parserJson($0, json);printJson(json);}'
-}
-
-limitTrade(){
-  local path="/api/v3/order"
-  local symbol=`echo $1 | tr a-z A-Z`
-  local side=$2
-  local price=$3
-  local quantity=$4
-  local params="symbol=${symbol}&amp;side=${side}&amp;type=LIMIT&amp;timeInForce=GTC&amp;price=${price}&amp;quantity=${quantity}"
-  sendRequest "POST" $Host $path $params
-  [[ $? -gt  0 ]] &amp;&amp; return 1
-  echo $HttpResult | awk -i ${AwkLib}/json.awk '{parserJson($0, json);printJson(json);}'
-}
-
-</code></pre></div></div>
-
-<p>总的来说还是比较简单的，预处理一下参数，解析一下返回结果的json，按照一定的格式输出。</p>
-
-<p>U本位合约的Api也是差不多的情况，逻辑基本相同。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[上期我们把BinanceApi的请求签名进行了封装，接下来我们就在这个基础上，实现核心功能。]]></summary></entry><entry><title type="html">Awk Linear</title><link href="http://peiliping.github.io/blog/2022/01/11/awklinear.html" rel="alternate" type="text/html" title="Awk Linear" /><published>2022-01-11T10:00:00+08:00</published><updated>2022-01-11T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/01/11/awklinear</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/01/11/awklinear.html"><![CDATA[<p>上期讲到了Linear的概念，这次我们就用Awk来实现一个Linear吧。</p>
+</code></pre></div></div>]]></content><author><name></name></author><summary type="html"><![CDATA[无意间在Binance的ApiDoc中看到了基于Curl的示例代码，于是便想封装一个基于Curl的]]></summary></entry><entry><title type="html">Awk Linear</title><link href="http://peiliping.github.io/blog/2022/01/11/awklinear.html" rel="alternate" type="text/html" title="Awk Linear" /><published>2022-01-11T10:00:00+08:00</published><updated>2022-01-11T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/01/11/awklinear</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/01/11/awklinear.html"><![CDATA[<p>上期讲到了Linear的概念，这次我们就用Awk来实现一个Linear吧。</p>
 
 <h3 id="代码">代码</h3>
 
@@ -553,72 +601,4 @@ plot(out2, color=color.blue, linewidth=2, title="MAC2", offset=0)
 
 <p>成交量巨大、参与人数众多、还有很多自以为是的量化策略在跑。</p>
 
-<p>在这种标的下，专业机构盈利是需要极其复杂的操盘手法的，趋势惯性和量价博弈也才有意义。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[最近在和一个做二级市场投资的朋友聊天时，听说了威科夫的量价理论。]]></summary></entry><entry><title type="html">write file</title><link href="http://peiliping.github.io/blog/2021/07/28/writefile.html" rel="alternate" type="text/html" title="write file" /><published>2021-07-28T10:00:00+08:00</published><updated>2021-07-28T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2021/07/28/writefile</id><content type="html" xml:base="http://peiliping.github.io/blog/2021/07/28/writefile.html"><![CDATA[<p>最近在优化一些shell脚本任务，涉及到对文件的读写过程，这里聊聊我碰到的一些问题。</p>
-
-<p>我的脚本主要是对数据进行统计和计算，数据具有时序性，每分钟会有一行结果存在结果文件中。</p>
-
-<p>脚本每分钟执行一次，每次计算上一分钟和当前分钟的结果。保存结果数据时，会涉及到删除结果文件的最后一行，因为最后一分钟会被修正。</p>
-
-<h2 id="如何衔接两次任务的时间">如何衔接两次任务的时间</h2>
-
-<p>数据结果的文件每一行都对应一分钟的数据，每行开头都记录对应的时间戳。</p>
-
-<p>每次任务开始时，都读取结果文件的末尾，计算合理的数据时间。</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
-thishourday=`date "+%Y-%m-%d"`
-startTime=`date -d "${thishourday}" +%s`
-
-if [ -f "$rfile" ]; then
-  startTime=`tail -n 1 $rfile | awk '{print $1}'`
-else
-  touch $rfile
-fi
-
-</code></pre></div></div>
-
-<h2 id="原始数据文件有dailyrolling">原始数据文件有DailyRolling</h2>
-
-<p>这就意味着每天00:00处理数据时，需要读取前一天的文件和当天文件。</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
-starthourday=`date --date=@${startTime} "+%Y-%m-%d"`
-
-if [ $starthourday = $thishourday  ];then
-  dfile=$dfile
-else
-  dfile=$dfile"-"$starthourday" "$dfile
-fi
-
-</code></pre></div></div>
-
-<h2 id="保存计算结果">保存计算结果</h2>
-
-<p>每次计算任务完成后，都先将数据写入临时文件tfile中，接下来我们删除结果文件的最后一行。</p>
-
-<p>删除我们用了一个简单的命令</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
-sed -i '$ d' $rfile
-
-</code></pre></div></div>
-
-<p>最后我们将临时文件Merge到结果文件的末尾，删除临时文件。</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
-cat $tfile &gt;&gt; $rfile
-rm -rf $tfile
-
-</code></pre></div></div>
-
-<h2 id="性能问题">性能问题</h2>
-
-<p>如果结果文件越来越大，这个任务会越来越慢，主要的性能问题在删除文件最后一行这一步。</p>
-
-<p>sed删除最后一行这样的方式，几乎等于把整个文件重写了一遍。有兴趣的朋友可以看看这篇<a href="https://www.codenong.com/4881930/">Blog</a>。</p>
-
-<p>我觉得出现这个问题本身就代表了设计问题，临时数据（最后一行）是否要直接写入结果文件？</p>
-
-<p>可以借鉴Compaction那样的思路，将不确定的临时数据写入临时文件，当可以确定时写入正式的结果文件中,规避性能问题。</p>
-
-<p>最好还是把这些数据存入数据库吧，时序数据库千千万。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[最近在优化一些shell脚本任务，涉及到对文件的读写过程，这里聊聊我碰到的一些问题。]]></summary></entry></feed>
+<p>在这种标的下，专业机构盈利是需要极其复杂的操盘手法的，趋势惯性和量价博弈也才有意义。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[最近在和一个做二级市场投资的朋友聊天时，听说了威科夫的量价理论。]]></summary></entry></feed>
