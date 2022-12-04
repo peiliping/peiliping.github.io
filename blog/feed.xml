@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://peiliping.github.io/blog/" rel="alternate" type="text/html" /><updated>2022-11-18T20:48:06+08:00</updated><id>http://peiliping.github.io/blog/feed.xml</id><title type="html">Pei LiPing’s Blog</title><subtitle>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</subtitle><entry><title type="html">Awk Json Parser</title><link href="http://peiliping.github.io/blog/2022/09/02/jsonparser.html" rel="alternate" type="text/html" title="Awk Json Parser" /><published>2022-09-02T10:00:00+08:00</published><updated>2022-09-02T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/09/02/jsonparser</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/09/02/jsonparser.html"><![CDATA[<p>Awk主要是用于文本数据处理的，而且主要是CSV格式。如果你碰到要处理Json数据，</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://peiliping.github.io/blog/" rel="alternate" type="text/html" /><updated>2022-12-04T09:58:27+08:00</updated><id>http://peiliping.github.io/blog/feed.xml</id><title type="html">Pei LiPing’s Blog</title><subtitle>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</subtitle><entry><title type="html">Awk Json Parser</title><link href="http://peiliping.github.io/blog/2022/09/02/jsonparser.html" rel="alternate" type="text/html" title="Awk Json Parser" /><published>2022-09-02T10:00:00+08:00</published><updated>2022-09-02T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/09/02/jsonparser</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/09/02/jsonparser.html"><![CDATA[<p>Awk主要是用于文本数据处理的，而且主要是CSV格式。如果你碰到要处理Json数据，</p>
 
 <p>就会比较麻烦。Awk原生没有提供Json的解析方法，可以加一个rapidjson的exlib。</p>
 
@@ -155,7 +155,61 @@ function parserJson(_str, _json){
  dispatch(_json);
 }
 
-</code></pre></div></div>]]></content><author><name></name></author><summary type="html"><![CDATA[Awk主要是用于文本数据处理的，而且主要是CSV格式。如果你碰到要处理Json数据，]]></summary></entry><entry><title type="html">Awk Functions</title><link href="http://peiliping.github.io/blog/2022/04/22/awklib.html" rel="alternate" type="text/html" title="Awk Functions" /><published>2022-04-22T10:00:00+08:00</published><updated>2022-04-22T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/04/22/awklib</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/04/22/awklib.html"><![CDATA[<p>最近写Awk比较多，所以写了一些便于自己使用的函数。</p>
+</code></pre></div></div>]]></content><author><name></name></author><summary type="html"><![CDATA[Awk主要是用于文本数据处理的，而且主要是CSV格式。如果你碰到要处理Json数据，]]></summary></entry><entry><title type="html">Expect SSH</title><link href="http://peiliping.github.io/blog/2022/05/12/expectssh.html" rel="alternate" type="text/html" title="Expect SSH" /><published>2022-05-12T10:00:00+08:00</published><updated>2022-05-12T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/05/12/expectssh</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/05/12/expectssh.html"><![CDATA[<p>提到自动登录ssh的时候，最好还是使用秘钥登录，当然也可以使用expect。</p>
+
+<p>下面介绍几个expect和ssh的例子。</p>
+
+<h3 id="login">login</h3>
+
+<p>-p是指定远程的端口。</p>
+
+<p>interact执行完成后保持交互状态，把控制权交给控制台，这个时候就可以手工操作了。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+spawn ssh -o ServerAliveInterval=60 -p 11111 username@ip
+expect "*password:"
+send "Password\r"
+interact
+
+</code></pre></div></div>
+
+<h3 id="proxy">proxy</h3>
+
+<p>当需要使用ssh做socket代理的写法，在本地开一个10001的端口。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+spawn ssh -N -g -o ServerAliveInterval=60 -D 10001 -p 11111 username@ip
+expect "*password:"
+send "Password\r"
+interact
+
+</code></pre></div></div>
+
+<h3 id="login-by-proxy">login by proxy</h3>
+
+<p>通过一个本地的代理端口10000来登录ssh。</p>
+
+<p>nc的-X 5是指定Socks V5，-x 是指定代理地址。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+spawn ssh -o ServerAliveInterval=60 -o "ProxyCommand=nc -X 5 -x 127.0.0.1:10000 %h %p" -p 11111 username@ip
+expect "*password:"
+send "Password\r"
+interact
+
+</code></pre></div></div>
+
+<h3 id="proxy-by-proxy">proxy by proxy</h3>
+
+<p>将上面的命令组合一下就好了。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+spawn ssh -N -g -o ServerAliveInterval=60 -o "ProxyCommand=nc -X 5 -x 127.0.0.1:10000 %h %p" -D 10001 -p 11111 username@ip
+expect "*password:"
+send "Password\r"
+interact
+
+</code></pre></div></div>]]></content><author><name></name></author><summary type="html"><![CDATA[提到自动登录ssh的时候，最好还是使用秘钥登录，当然也可以使用expect。]]></summary></entry><entry><title type="html">Awk Functions</title><link href="http://peiliping.github.io/blog/2022/04/22/awklib.html" rel="alternate" type="text/html" title="Awk Functions" /><published>2022-04-22T10:00:00+08:00</published><updated>2022-04-22T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/04/22/awklib</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/04/22/awklib.html"><![CDATA[<p>最近写Awk比较多，所以写了一些便于自己使用的函数。</p>
 
 <h3 id="print">Print</h3>
 
@@ -565,40 +619,4 @@ plot(out2, color=color.blue, linewidth=2, title="MAC2", offset=0)
 
 <p>这种把抛盘密集消化掉的行为才是最有效的支撑，但统计却都是主动卖出行为。</p>
 
-<p>大多数人对压力和支撑的判断基本上是意识流，我还是建议把他数值化，可以参考加权跳动量的计算方式。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[上一篇讲了点有关威科夫的量价理论，这里继续说一说。]]></summary></entry><entry><title type="html">Wyckoff</title><link href="http://peiliping.github.io/blog/2021/08/19/wyckoff.html" rel="alternate" type="text/html" title="Wyckoff" /><published>2021-08-19T10:00:00+08:00</published><updated>2021-08-19T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2021/08/19/wyckoff</id><content type="html" xml:base="http://peiliping.github.io/blog/2021/08/19/wyckoff.html"><![CDATA[<p>最近在和一个做二级市场投资的朋友聊天时，听说了威科夫的量价理论。</p>
-
-<p>在了解了大致的思想之后，我觉得当中的量价关系十分有趣，花了一些时间探索了一下。</p>
-
-<h2 id="量价理论">量价理论</h2>
-
-<p>K线图有两个核心元素：价格（开高低收）和成交量，价格的趋势和成交量的情况相互验证。</p>
-
-<p>量价理论并不是一个指标，而是一种对抗的思维。市场中存在少数派盈利的主力和盲从的韭菜，</p>
-
-<p>在一个大的涨跌周期中，反复对抗博弈，量与价就在表达这个对抗博弈的过程。</p>
-
-<h2 id="关于指标">关于指标</h2>
-
-<p>市面上绝大多数交易策略都是以XX指标组合为基础，比如均线、MACD、KDJ等。</p>
-
-<p>我之前也写过两期关于ta4j的blog，还实现了一个指标基础函数库。</p>
-
-<p>对比量价理论后，我把基于指标的策略称为静态策略，就好像诸葛亮给的三个锦囊。</p>
-
-<p>这种神话故事根本就不具备实操性，你可能会觉得在某个时期这个策略能挣钱，但长期一定无法盈利。</p>
-
-<p>有的人做了大量的回测来提高他策略的有效性，我觉得通过回测来调整参数，可以直接定义为过拟合。</p>
-
-<p>其实绝大多数指标和图形理论都和量价有联系，比如头肩图形、波浪理论等等。</p>
-
-<p>将复杂的对抗归纳成一些可被识别的图形，方便教学传播、办班收费。</p>
-
-<p>而且指标基本上都只用价格信息，不用成交量，因为成交量随机性太强，很难被指标化。</p>
-
-<h2 id="充分博弈市场">充分博弈市场</h2>
-
-<p>如果你想践行量价理论，我个人觉得一定要找一个充分博弈的标的。</p>
-
-<p>成交量巨大、参与人数众多、还有很多自以为是的量化策略在跑。</p>
-
-<p>在这种标的下，专业机构盈利是需要极其复杂的操盘手法的，趋势惯性和量价博弈也才有意义。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[最近在和一个做二级市场投资的朋友聊天时，听说了威科夫的量价理论。]]></summary></entry></feed>
+<p>大多数人对压力和支撑的判断基本上是意识流，我还是建议把他数值化，可以参考加权跳动量的计算方式。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[上一篇讲了点有关威科夫的量价理论，这里继续说一说。]]></summary></entry></feed>
