@@ -1,4 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://peiliping.github.io/blog/" rel="alternate" type="text/html" /><updated>2023-01-26T17:53:23+08:00</updated><id>http://peiliping.github.io/blog/feed.xml</id><title type="html">Pei LiPing’s Blog</title><subtitle>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</subtitle><entry><title type="html">Awk Json Parser</title><link href="http://peiliping.github.io/blog/2022/09/02/jsonparser.html" rel="alternate" type="text/html" title="Awk Json Parser" /><published>2022-09-02T10:00:00+08:00</published><updated>2022-09-02T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/09/02/jsonparser</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/09/02/jsonparser.html"><![CDATA[<p>Awk主要是用于文本数据处理的，而且主要是CSV格式。如果你碰到要处理Json数据，</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://peiliping.github.io/blog/" rel="alternate" type="text/html" /><updated>2023-01-26T20:29:49+08:00</updated><id>http://peiliping.github.io/blog/feed.xml</id><title type="html">Pei LiPing’s Blog</title><subtitle>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</subtitle><entry><title type="html">Birthday</title><link href="http://peiliping.github.io/blog/2022/10/03/birthday.html" rel="alternate" type="text/html" title="Birthday" /><published>2022-10-03T10:00:00+08:00</published><updated>2022-10-03T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/10/03/birthday</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/10/03/birthday.html"><![CDATA[<p>时间真快，一转眼宝宝已经周岁了。</p>
+
+<p>这一年真的非常不容易，祝宝宝卓壮成长。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[时间真快，一转眼宝宝已经周岁了。]]></summary></entry><entry><title type="html">Awk Json Parser</title><link href="http://peiliping.github.io/blog/2022/09/02/jsonparser.html" rel="alternate" type="text/html" title="Awk Json Parser" /><published>2022-09-02T10:00:00+08:00</published><updated>2022-09-02T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/09/02/jsonparser</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/09/02/jsonparser.html"><![CDATA[<p>Awk主要是用于文本数据处理的，而且主要是CSV格式。如果你碰到要处理Json数据，</p>
 
 <p>就会比较麻烦。Awk原生没有提供Json的解析方法，可以加一个rapidjson的exlib。</p>
 
@@ -263,7 +265,43 @@ function parserJson(_str, _json){
 
 <p>这种方案几乎把全部的资金都用在当前价了，资金利用率比较高。</p>
 
-<p>将资金拆成多份有利于灵活控制补撤订单，提高资金的流转速度。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[这次讲一个特殊类型的网格交易思路，基于深度的网格交易。]]></summary></entry><entry><title type="html">Expect SSH</title><link href="http://peiliping.github.io/blog/2022/05/12/expectssh.html" rel="alternate" type="text/html" title="Expect SSH" /><published>2022-05-12T10:00:00+08:00</published><updated>2022-05-12T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/05/12/expectssh</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/05/12/expectssh.html"><![CDATA[<p>提到自动登录ssh的时候，最好还是使用秘钥登录，当然也可以使用expect。</p>
+<p>将资金拆成多份有利于灵活控制补撤订单，提高资金的流转速度。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[这次讲一个特殊类型的网格交易思路，基于深度的网格交易。]]></summary></entry><entry><title type="html">Dynamic Grid</title><link href="http://peiliping.github.io/blog/2022/06/11/grid2.html" rel="alternate" type="text/html" title="Dynamic Grid" /><published>2022-06-11T10:00:00+08:00</published><updated>2022-06-11T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/06/11/grid2</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/06/11/grid2.html"><![CDATA[<p>再介绍一种有趣的网格交易玩法。</p>
+
+<h3 id="动态区间">动态区间</h3>
+
+<p>上期说了网格交易的资金利用率很低，主要原因就是需要覆盖很大的价格范围。</p>
+
+<p>那么有没有什么办法可以把这个区间缩小一点呢，这样就可以提高利用率和收益率了。</p>
+
+<p>回忆一下去年提到的Linear相关的知识，通过数学的方法对价格的波动区间进行评估。</p>
+
+<p>轨道的上轨和下轨就是网格的最大价格和最小价格了，这个值也是动态的。</p>
+
+<h3 id="原则">原则</h3>
+
+<p>选取网格交易的方向（多、空）并不是直接判断未来的涨跌，而是一个逆向的思路。</p>
+
+<p>当前趋势不可能大跌，则开正向的网格，如果当前趋势是不可能大涨，那么就是开反向的。</p>
+
+<p>任何单边的行情里使用网格程序进行交易管理，都是会错过大部分利润的，在漫长的</p>
+
+<p>底部整齐期间或者是顶部震荡出货期间，使用更为恰当。</p>
+
+<p>可以适当在上轨或者下轨附近，甚至超出轨道时开始网格交易，这样整体的成本足够低。</p>
+
+<h3 id="工具">工具</h3>
+
+<p>这种网格并不能像传统普通网格那样长期无人值守，其实更像一种辅助交易工具。</p>
+
+<p>将受益曲线做的更加平滑，减少人工盯盘的时间。当然你也可以为这种网格设置一些条件。</p>
+
+<p>比如多空比超过多少就终止long方向的买入，只卖出，甚至是直接清仓。</p>
+
+<p>Linear是一种概率评估，虽然有效性很好，但是并不能作为方向决策的依据。</p>
+
+<p>当你确定好交易的方向时，可以通过Linear寻找一个好的买入卖出价格。</p>
+
+<p>在预测回调力度、震荡区间范围等方面都有很好的效果。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[再介绍一种有趣的网格交易玩法。]]></summary></entry><entry><title type="html">Expect SSH</title><link href="http://peiliping.github.io/blog/2022/05/12/expectssh.html" rel="alternate" type="text/html" title="Expect SSH" /><published>2022-05-12T10:00:00+08:00</published><updated>2022-05-12T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/05/12/expectssh</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/05/12/expectssh.html"><![CDATA[<p>提到自动登录ssh的时候，最好还是使用秘钥登录，当然也可以使用expect。</p>
 
 <p>下面介绍几个expect和ssh的例子。</p>
 
@@ -583,90 +621,4 @@ function lr(_source, _result, _i){
 
 <p>Array也无法成为Awk函数的返回值，只能在参数中传递进来，参考awk中split的用法。</p>
 
-<p>如果map[“key”]也是Array的话，无法直接进行变量的赋值，比如：val = map[“key”]。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[上期讲到了Linear的概念，这次我们就用Awk来实现一个Linear吧。]]></summary></entry><entry><title type="html">Linear</title><link href="http://peiliping.github.io/blog/2021/12/29/linear.html" rel="alternate" type="text/html" title="Linear" /><published>2021-12-29T10:00:00+08:00</published><updated>2021-12-29T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2021/12/29/linear</id><content type="html" xml:base="http://peiliping.github.io/blog/2021/12/29/linear.html"><![CDATA[<p>经常看到一些人的K线图上花了很多辅助线，有压力支撑，也有涨跌趋势。</p>
-
-<p>今天介绍一种自动化斜线的方法，平行斜线通道。</p>
-
-<h3 id="中轴线">中轴线</h3>
-
-<p>最近N个K线点，有一个趋势方向，由这些点的分布决定，比如震荡向上，</p>
-
-<p>这是我们在头脑中抽象的画面，需要将他们具体化。</p>
-
-<p>在二维坐标系中，已知一些点，如何判断他们内在隐含的趋势呢？</p>
-
-<p>这个问题在数学中非常简单，那就是一次方程(y=ax+b)的拟合过程。</p>
-
-<p>如果这部分知识已经还给老师的话，先复习一下最小二乘法吧。</p>
-
-<p>计算完成后，我们将得到方程的参数slope和intercept。</p>
-
-<h3 id="平行线">平行线</h3>
-
-<p>将我们得到的中轴线进行平移，使绝大多数点都在线的上方（或者下方），</p>
-
-<p>就会得到一组平行于中轴线的通道了。</p>
-
-<p>那么这个平移的过程如何计算呢？可以参考Bolling指标的计算方法，</p>
-
-<p>我们先求所有散点与中轴线的标准差，然后将中轴线的方程向上（或向下）</p>
-
-<p>移动2个标准差的距离，就得到了一组平行于中轴线的平行通道了。</p>
-
-<p>就是保持slope不变，intercept加（或者减）2×标准差。</p>
-
-<h3 id="周期">周期</h3>
-
-<p>搞定了计算逻辑后，最后一个问题就是周期问题了，选择多少个点呢？</p>
-
-<p>没有哪一个周期是绝对有效的，按照自己的操作周期来决定吧。</p>
-
-<p>和使用均线等技术指标差不多，可以同时看长短两个周期的数据，一个定方向，一个找机会。</p>
-
-<h3 id="最后">最后</h3>
-
-<p>自动化线并不能指导你盈利，但可以减少盯盘时间，如果是自动化交易作为增减仓方案是不错的。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[经常看到一些人的K线图上花了很多辅助线，有压力支撑，也有涨跌趋势。]]></summary></entry><entry><title type="html">Pine</title><link href="http://peiliping.github.io/blog/2021/11/20/pine.html" rel="alternate" type="text/html" title="Pine" /><published>2021-11-20T10:00:00+08:00</published><updated>2021-11-20T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2021/11/20/pine</id><content type="html" xml:base="http://peiliping.github.io/blog/2021/11/20/pine.html"><![CDATA[<p>最近看到Tradingview的Pine脚本，感觉很有意思，打算尝试一下。</p>
-
-<h2 id="ma指标">MA指标</h2>
-
-<p>TV上的指标都可以看到源代码，我们就从最简单的MA指标看看吧。</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
-indicator(title="Moving Average", shorttitle="MA", overlay=true, timeframe="", timeframe_gaps=true)
-len = input.int(9, minval=1, title="Length")
-src = input(close, title="Source")
-offset = input.int(title="Offset", defval=0, minval=-500, maxval=500)
-out = ta.sma(src, len)
-plot(out, color=color.blue, title="MA", offset=offset)
-
-</code></pre></div></div>
-
-<p>简单注释一下：</p>
-
-<p>input代表从图形化界面的设置中可以填写变更的，close指k线的收盘价。</p>
-
-<p>ta.sma就是MA指标的计算公式，plot函数我们就理解为渲染好了,plot有很多参数可调，</p>
-
-<p>比如控制线的粗细、颜色。</p>
-
-<h2 id="照葫芦画瓢-mac指标">照葫芦画瓢 MAC指标</h2>
-
-<p>第一次体验我们就不挑战难度了，弄一个MA指标的组合指标，一般使用MA的人都会用一个短周期的和一个长周期的。</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
-indicator(title="Moving Average Couple", shorttitle="MAC", overlay=true, timeframe="", timeframe_gaps=true)
-
-len1 = input.int(30, minval=1, title="Length")
-len2 = input.int(59, minval=1, title="Length")
-
-out1 = ta.sma(close, len1)
-out2 = ta.sma(close, len2)
-
-plot(out1, color=color.green, linewidth=2, title="MAC1", offset=0)
-plot(out2, color=color.blue, linewidth=2, title="MAC2", offset=0)
-
-</code></pre></div></div>
-
-<p>只是简单的加了一条线，然后控制了一下线的颜色和粗细。</p>
-
-<p>免费版TV限制了同时使用的Indicator数量，可以把多个指标的代码合并到一起，绕过限制吧。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[最近看到Tradingview的Pine脚本，感觉很有意思，打算尝试一下。]]></summary></entry></feed>
+<p>如果map[“key”]也是Array的话，无法直接进行变量的赋值，比如：val = map[“key”]。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[上期讲到了Linear的概念，这次我们就用Awk来实现一个Linear吧。]]></summary></entry></feed>
