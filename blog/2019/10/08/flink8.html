@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>FlinkJob双十一前备战注意事项 | Pei LiPing’s Blog</title>
+<meta name="generator" content="Jekyll v4.2.2" />
+<meta property="og:title" content="FlinkJob双十一前备战注意事项" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="1、确定双十一期间的数据特征 1.1、一般为数据条数倍增 1.2、也有一些业务是单条数据体积增大 1.2.1、考虑在消息中间件的messagesize的限制 1.2.2、对序列化、反序列化的性能影响" />
+<meta property="og:description" content="1、确定双十一期间的数据特征 1.1、一般为数据条数倍增 1.2、也有一些业务是单条数据体积增大 1.2.1、考虑在消息中间件的messagesize的限制 1.2.2、对序列化、反序列化的性能影响" />
+<link rel="canonical" href="http://peiliping.github.io/blog/2019/10/08/flink8.html" />
+<meta property="og:url" content="http://peiliping.github.io/blog/2019/10/08/flink8.html" />
+<meta property="og:site_name" content="Pei LiPing’s Blog" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2019-10-08T10:00:00+08:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="FlinkJob双十一前备战注意事项" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2019-10-08T10:00:00+08:00","datePublished":"2019-10-08T10:00:00+08:00","description":"1、确定双十一期间的数据特征 1.1、一般为数据条数倍增 1.2、也有一些业务是单条数据体积增大 1.2.1、考虑在消息中间件的messagesize的限制 1.2.2、对序列化、反序列化的性能影响","headline":"FlinkJob双十一前备战注意事项","mainEntityOfPage":{"@type":"WebPage","@id":"http://peiliping.github.io/blog/2019/10/08/flink8.html"},"url":"http://peiliping.github.io/blog/2019/10/08/flink8.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/blog/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://peiliping.github.io/blog/feed.xml" title="Pei LiPing&apos;s Blog" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/blog/">Pei LiPing&#39;s Blog</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/blog/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">FlinkJob双十一前备战注意事项</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2019-10-08T10:00:00+08:00" itemprop="datePublished">Oct 8, 2019
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <h3 id="1确定双十一期间的数据特征">1、确定双十一期间的数据特征</h3>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>	1.1、一般为数据条数倍增
+	1.2、也有一些业务是单条数据体积增大
+		1.2.1、考虑在消息中间件的messagesize的限制
+		1.2.2、对序列化、反序列化的性能影响
+</code></pre></div></div>
+
+<h3 id="2准备压测数据">2、准备压测数据</h3>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>	2.1、根据业务逻辑随机生成数据
+	2.2、通过kafka等消息中间件将多天的数据一次性消费完
+</code></pre></div></div>
+
+<h3 id="3数据源检查">3、数据源检查</h3>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>	3.1、kafka的流控阈值是否合理
+	3.2、kafka的pt数是否够用
+		3.2.1、临时扩容kafka的pt只对新数据有帮助，历史数据积压无法快速消除
+		3.2.2、确定数据在源头没有严重的数据倾斜问题，防止大量数据集中于某一个特定的pt上
+		3.2.3、kafkasource的parallelism应为pt数的1/2或1/4，预留临时扩大parallelism的空间
+	3.3、增加高效的数据质量校验，检查job逻辑，适当的增加try-catch，注意catch发生时对性能的影响
+	3.4、配置好监控
+</code></pre></div></div>
+
+<h3 id="4时间窗口逻辑">4、时间窗口逻辑</h3>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>	4.1、如果job存在时间窗口逻辑，要考虑模拟数据的正确性，简单的通过2.2进行性能测试大多无效
+	4.2、不单单指flink的window操作，一些job逻辑中也可能包含时间窗口概念（比如：积攒10s的数据再批量输出，统计单位时间的uv等）
+	4.3、乱序数据的问题也可能更为严重，合理指定latency或者watermarket逻辑
+</code></pre></div></div>
+
+<h3 id="5检查job的外部io依赖">5、检查job的外部io依赖</h3>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>	5.1、一般job都依赖redis、hbase等存储，在数据处理过程中对数据进行加工
+		5.1.1、外部依赖的资源是否够用（存储、性能等）
+		5.1.2、配置监控，有容灾方案
+	5.2、适当使用asyncIO来提升性能
+		5.2.1、不建议将有外部IO依赖的Operator的parallelism设置的非常大，一般都可以通过asyncIO来解决，更利于chaining-strate	gy的优化
+		5.2.2、不要一味的提升asyncIO的thread数，适当做batch效果更佳，可参照sdk中的async-batch模型
+</code></pre></div></div>
+
+<h3 id="6关于sink输出">6、关于Sink输出</h3>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>	6.1、kafkasink的parallelism不要与pt数绑死，防止pt扩容无效，也不要过大的parallelism
+	6.2、如果序列化逻辑过于耗时，建议单独写在一个Operator里
+	6.3、尽量不要单条数据sink输出，会对外部造成很大的压力
+	6.4、batchsink时注意flush与checkpoint之间的关系
+	6.5、batchsink时谨慎处理batchsize和lingertime
+	6.6、在sink中实现重试逻辑，尽量不要将exception交给flink，效率太低，代价太大
+</code></pre></div></div>
+
+<h3 id="7checkpoint设置">7、Checkpoint设置</h3>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>	7.1、合理设置checkpoint的频率，不要过于频繁
+	7.2、慎重使用exactly-once，能不用尽量不用
+	7.3、检查任务对于State的依赖程度，配合Savepoint启停任务
+</code></pre></div></div>
+
+<h3 id="8日志">8、日志</h3>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>	8.1、净化日志打印内容
+	8.2、避免system.out.println或者e.printstacktrace()等
+</code></pre></div></div>
+
+<h3 id="9内存使用情况">9、内存使用情况</h3>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>	9.1、关注ygc、fgc的频率和耗时
+	9.2、堆外空间的使用情况
+	9.3、networkbuffer的分配比例
+</code></pre></div></div>
+
+<h3 id="10背压">10、背压</h3>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>	10.1、在性能测试时可以使用原生背压探测方式分析背压情况
+	10.2、我们定制的背压监控是更为准确的量化指标，无需开启就可实现全天候的监控，不但可以定位，还能分析趋势
+</code></pre></div></div>
+
+<h3 id="11jobgraph">11、jobgraph</h3>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>	11.1、核心Operator设置uid或uidhash
+	11.2、使用预览拓扑功能提交job
+	11.3、谨慎控制chaining-strategy，尤其是cpu开销高的Operator尽量分散
+	11.4、尽量离散同类slot，控制slot在taskmanager的分配策略
+</code></pre></div></div>
+
+  </div><a class="u-url" href="/blog/2019/10/08/flink8.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/blog/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Pei LiPing&#39;s Blog</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Pei LiPing&#39;s Blog</li><li><a class="u-email" href="mailto:peilipingplp@gmail.com">peilipingplp@gmail.com</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/peiliping"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#github"></use></svg> <span class="username">peiliping</span></a></li><li><a href="https://www.twitter.com/plp_rapper"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">plp_rapper</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

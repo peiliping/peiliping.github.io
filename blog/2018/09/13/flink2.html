@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>初识flink2 | Pei LiPing’s Blog</title>
+<meta name="generator" content="Jekyll v4.2.2" />
+<meta property="og:title" content="初识flink2" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="续上一篇Blog，我们从网上下载二进制的Flink包，在其外围进行一些脚本改造，" />
+<meta property="og:description" content="续上一篇Blog，我们从网上下载二进制的Flink包，在其外围进行一些脚本改造，" />
+<link rel="canonical" href="http://peiliping.github.io/blog/2018/09/13/flink2.html" />
+<meta property="og:url" content="http://peiliping.github.io/blog/2018/09/13/flink2.html" />
+<meta property="og:site_name" content="Pei LiPing’s Blog" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2018-09-13T10:00:00+08:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="初识flink2" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2018-09-13T10:00:00+08:00","datePublished":"2018-09-13T10:00:00+08:00","description":"续上一篇Blog，我们从网上下载二进制的Flink包，在其外围进行一些脚本改造，","headline":"初识flink2","mainEntityOfPage":{"@type":"WebPage","@id":"http://peiliping.github.io/blog/2018/09/13/flink2.html"},"url":"http://peiliping.github.io/blog/2018/09/13/flink2.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/blog/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://peiliping.github.io/blog/feed.xml" title="Pei LiPing&apos;s Blog" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/blog/">Pei LiPing&#39;s Blog</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/blog/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">初识flink2</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2018-09-13T10:00:00+08:00" itemprop="datePublished">Sep 13, 2018
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>续上一篇Blog，我们从网上下载二进制的Flink包，在其外围进行一些脚本改造，</p>
+
+<p>docker镜像的开发，可以让我们把Flink在K8s上跑起来了，接下来就是要接触Flink的源码了。</p>
+
+<p>说道源码还是挺头大的一个事，目前apache下面的跟大数据相关的项目你下载下来就会发现</p>
+
+<p>子项目子模块非常多，maven编译一下少说十几分钟，hadoop这种级别的项目编译1个小时都正常。</p>
+
+<h2 id="flink分支">Flink分支</h2>
+
+<p>将Flink从Git上clone下来，选择一个你中意的分支或者tag，注意Flink的分支和tag的命名规则。</p>
+
+<p>因为我们后面要持续对Flink进行开发，而且要不断合并社区的更新，这里需要一些git的技巧。</p>
+
+<p>我们主要是在1.5.X这个系列上进行开发，所以将Flink项目的1.5分支同步到我们自己的仓库里，</p>
+
+<p>如果后面Flink发布了1.5.4的小版本，也会合并到1.5的分支上，我们只需要同步这些更新到我们</p>
+
+<p>的仓库即可。</p>
+
+<h2 id="打包">打包</h2>
+
+<p>Flink官网给了一个打包的命令，在我和同事的笔记本上执行了一下，大概20分钟左右。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mvn package -DskipTests -Dhadoop.version=2.7.X
+
+</code></pre></div></div>
+
+<p>因为初步接触Flink，我们打包非常频繁，调试一些问题增加日志之类的需求，所以这个打包</p>
+
+<p>的速度是无法接受的，大概分析了一下他的打包过程，于是修改了一下打包的命令。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>mvn package -DskipTests -Dcheckstyle.skip=true -Dhadoop.version=2.7.X
+</code></pre></div></div>
+
+<p>增加了忽略checkstyple过程，速度提升了一倍，十分钟左右可以打包完成。</p>
+
+<p>如果你还想继续加速打包，可以考虑对pom进行裁剪，比如你不用mesos、yarn这些模块，</p>
+
+<p>或者你不需要各种connect，也是可以忽略的。但是注意maven的依赖，忽略的子项目有可能</p>
+
+<p>包含了Flink必须的一些依赖包，而且Flink的pom中大量的使用了shade，处理起来非常麻烦。</p>
+
+<p>注意，如果你在主POM里裁剪掉了部分的module，一定要记得在dist子项目中也去掉相关的</p>
+
+<p>dependency，要不然它会从maven仓库再下载一份。</p>
+
+<h2 id="类冲突">类冲突</h2>
+
+<p>测试自定义版Flink的时候，我们与类冲突搏斗了三四天，主要的报错是noclassdeffounderror。</p>
+
+<p>网上搜索相关错误，会告诉你与此类的static部分有关系，我们碰到的问题大多是hadoop有关的，</p>
+
+<p>每次处理hadoop的依赖都是一万个XXX。因为公司的现状，我们需要使用定制化的hadoop。</p>
+
+<p>最终我们在原版打包的基础上，通过控制classpath里jar的顺序，将公司的hdfs替换上去了。</p>
+
+  </div><a class="u-url" href="/blog/2018/09/13/flink2.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/blog/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Pei LiPing&#39;s Blog</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Pei LiPing&#39;s Blog</li><li><a class="u-email" href="mailto:peilipingplp@gmail.com">peilipingplp@gmail.com</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/peiliping"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#github"></use></svg> <span class="username">peiliping</span></a></li><li><a href="https://www.twitter.com/plp_rapper"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">plp_rapper</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

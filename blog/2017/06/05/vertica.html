@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Vertica优化之Encode | Pei LiPing’s Blog</title>
+<meta name="generator" content="Jekyll v4.2.2" />
+<meta property="og:title" content="Vertica优化之Encode" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Vertica是一个成熟的商用列式数据库，也提供免费版本（限制数据规模小于1T，集群规模小于3台）。" />
+<meta property="og:description" content="Vertica是一个成熟的商用列式数据库，也提供免费版本（限制数据规模小于1T，集群规模小于3台）。" />
+<link rel="canonical" href="http://peiliping.github.io/blog/2017/06/05/vertica.html" />
+<meta property="og:url" content="http://peiliping.github.io/blog/2017/06/05/vertica.html" />
+<meta property="og:site_name" content="Pei LiPing’s Blog" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2017-06-05T10:00:00+08:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Vertica优化之Encode" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2017-06-05T10:00:00+08:00","datePublished":"2017-06-05T10:00:00+08:00","description":"Vertica是一个成熟的商用列式数据库，也提供免费版本（限制数据规模小于1T，集群规模小于3台）。","headline":"Vertica优化之Encode","mainEntityOfPage":{"@type":"WebPage","@id":"http://peiliping.github.io/blog/2017/06/05/vertica.html"},"url":"http://peiliping.github.io/blog/2017/06/05/vertica.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/blog/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://peiliping.github.io/blog/feed.xml" title="Pei LiPing&apos;s Blog" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/blog/">Pei LiPing&#39;s Blog</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/blog/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Vertica优化之Encode</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2017-06-05T10:00:00+08:00" itemprop="datePublished">Jun 5, 2017
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>Vertica是一个成熟的商用列式数据库，也提供免费版本（限制数据规模小于1T，集群规模小于3台）。</p>
+
+<p>2015年尝试使用Vertica来存储时序类型的数据，主要应用在内部的JVM监控数据上。</p>
+
+<p>每天增量在8千万行，保留最近2个月左右的数据，按时间对数据进行分区，保留总量在50亿行左右。</p>
+
+<p>查询的SQL以sum avg count where group by order by这些关键词为主，简单的数值统计需求。</p>
+
+<h3 id="时序数据的表有哪些字段">时序数据的表有哪些字段</h3>
+
+<p>谈到时序数据就会想到监控，常见的开源项目有OpenTSDB、Graphite、Druid、Influxdb等等。</p>
+
+<p>年初Facebook开源的Beringer也掀起了一波浪潮，在规律的数据场景下，如何压缩存储数据呢？</p>
+
+<p>时序数据表中一般会有如下几种类型的列：</p>
+
+<p>1、时间戳，可能有不同精度的时间戳（ms、s、min、hour、day等）</p>
+
+<p>2、metricid、typeid，用来定义数据的类别</p>
+
+<p>3、dimensionid，数字化的维度信息，比如国家地区编码、性别、年龄、操作系统等等</p>
+
+<p>4、tag，跟维度类似，但是由于不方便定义成id，就以原始的字符串存下来了</p>
+
+<p>5、value，数值型用来存储最主要的信息</p>
+
+<h3 id="如何选择vertica的encode">如何选择Vertica的Encode</h3>
+
+<p>1、经过测试时间戳类型的字段用COMMONDELTA_COMP存储空间占用最小，比BLOCK_DICT好很多。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>This compression scheme builds a dictionary of all deltas in the block and 
+then stores indexes into the delta dictionary using entropy coding.
+This scheme is ideal for sorted FLOAT and INTEGER-based
+(DATE/TIME/TIMESTAMP/INTERVAL) data columns with predictable sequences and
+only occasional sequence breaks, such as timestamps recorded at periodic 
+intervals or primary keys. For example, the following sequence compresses 
+well: 300, 600, 900,1200, 1500, 600, 1200, 1800, 2400. The following sequence 
+does not compress well: 1,3, 6, 10, 15, 21, 28, 36, 45, 55.
+If delta distribution is excellent, columns can be stored in less than one bit 
+per row. However, this scheme is very CPU intensive. If you use this scheme on 
+data with arbitrary deltas, it can cause significant data expansion.
+</code></pre></div></div>
+
+<p>2、MetricId和DimId之类的，一般来说value的变化比较少，比较适合BLOCK_DICT。</p>
+
+<p>3、tag类型字段选择了RLE（Run Length Encoding），效果还可以。</p>
+
+<p>4、Value的选择是最难的，前面提到的字段一般都是经过排序的，规律性很强。</p>
+
+<p>value的变化范围比较大，还有可能是小数，又没经过排序。经过一系列测试在性能和存储空间</p>
+
+<p>开销上权衡，最理想的encode方案是GCDDELTA</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>For INTEGER and DATE/TIME/TIMESTAMP/INTERVAL columns, and NUMERIC
+columns with 18 or fewer digits, data is recorded as the difference from the 
+smallest value in the data block divided by the greatest common divisor (GCD) of 
+all entries in the block. This encoding has no effect on other data types.
+ENCODING GCDDELTA is best used for many-valued, unsorted, integer columns or
+integer-based columns, when the values are a multiple of a common factor. For
+example, timestamps are stored internally in microseconds, so data that is only 
+precise to the millisecond are all multiples of 1000. The CPU requirements for 
+decoding GCDDELTA encoding are minimal, and the data never expands, but GCDDELTA 
+may take more encoding time than DELTAVAL.
+</code></pre></div></div>
+
+<h3 id="建表sql">建表SQL</h3>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>CREATE PROJECTION public.jvm_metrics_tmp
+(
+ parent_id ENCODING BLOCK_DICT,
+ metric_id ENCODING BLOCK_DICT,
+ dim1 ENCODING BLOCK_DICT,
+ dim2 ENCODING BLOCK_DICT,
+ dim3 ENCODING BLOCK_DICT,
+ dim4 ENCODING BLOCK_DICT,
+ mtc1 ENCODING GCDDELTA,
+ mtc2 ENCODING GCDDELTA,
+ mtc3 ENCODING GCDDELTA,
+ mtc4 ENCODING GCDDELTA,
+ mtc5 ENCODING GCDDELTA,
+ mtc6 ENCODING GCDDELTA,
+ mtc7 ENCODING GCDDELTA,
+ mtc8 ENCODING GCDDELTA,
+ tag1 ENCODING RLE,
+ tag2 ENCODING RLE,
+ tag3 ENCODING RLE,
+ tag4 ENCODING RLE,
+ timestamps ENCODING COMMONDELTA_COMP,
+ timestamps_1d ENCODING COMMONDELTA_COMP,
+ timestamps_1h ENCODING COMMONDELTA_COMP,
+ timestamps_10m ENCODING COMMONDELTA_COMP,
+ timestamps_1m ENCODING COMMONDELTA_COMP,
+ partition ENCODING COMMONDELTA_COMP
+)
+AS
+ SELECT jvm_metrics.parent_id,
+        jvm_metrics.metric_id,
+        jvm_metrics.dim1,
+        jvm_metrics.dim2,
+        jvm_metrics.dim3,
+        jvm_metrics.dim4,
+        jvm_metrics.mtc1,
+        jvm_metrics.mtc2,
+        jvm_metrics.mtc3,
+        jvm_metrics.mtc4,
+        jvm_metrics.mtc5,
+        jvm_metrics.mtc6,
+        jvm_metrics.mtc7,
+        jvm_metrics.mtc8,
+        jvm_metrics.tag1,
+        jvm_metrics.tag2,
+        jvm_metrics.tag3,
+        jvm_metrics.tag4,
+        jvm_metrics.timestamps,
+        jvm_metrics.timestamps_1d,
+        jvm_metrics.timestamps_1h,
+        jvm_metrics.timestamps_10m,
+        jvm_metrics.timestamps_1m,
+        jvm_metrics.partition
+ FROM public.jvm_metrics
+ ORDER BY jvm_metrics.dim1,
+          jvm_metrics.parent_id,
+          jvm_metrics.metric_id,
+          jvm_metrics.dim2,
+          jvm_metrics.dim3,
+          jvm_metrics.dim4,
+          jvm_metrics.tag1,
+          jvm_metrics.tag2,
+          jvm_metrics.tag3,
+          jvm_metrics.tag4,
+          jvm_metrics.timestamps
+UNSEGMENTED ALL NODES;
+</code></pre></div></div>
+
+  </div><a class="u-url" href="/blog/2017/06/05/vertica.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/blog/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Pei LiPing&#39;s Blog</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Pei LiPing&#39;s Blog</li><li><a class="u-email" href="mailto:peilipingplp@gmail.com">peilipingplp@gmail.com</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/peiliping"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#github"></use></svg> <span class="username">peiliping</span></a></li><li><a href="https://www.twitter.com/plp_rapper"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">plp_rapper</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

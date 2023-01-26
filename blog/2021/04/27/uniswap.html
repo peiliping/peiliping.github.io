@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>UniswapOracle | Pei LiPing’s Blog</title>
+<meta name="generator" content="Jekyll v4.2.2" />
+<meta property="og:title" content="UniswapOracle" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="这次聊聊Uniswap的预言机，上次我们介绍的Chainlink属于通用预言机。" />
+<meta property="og:description" content="这次聊聊Uniswap的预言机，上次我们介绍的Chainlink属于通用预言机。" />
+<link rel="canonical" href="http://peiliping.github.io/blog/2021/04/27/uniswap.html" />
+<meta property="og:url" content="http://peiliping.github.io/blog/2021/04/27/uniswap.html" />
+<meta property="og:site_name" content="Pei LiPing’s Blog" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2021-04-27T10:00:00+08:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="UniswapOracle" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2021-04-27T10:00:00+08:00","datePublished":"2021-04-27T10:00:00+08:00","description":"这次聊聊Uniswap的预言机，上次我们介绍的Chainlink属于通用预言机。","headline":"UniswapOracle","mainEntityOfPage":{"@type":"WebPage","@id":"http://peiliping.github.io/blog/2021/04/27/uniswap.html"},"url":"http://peiliping.github.io/blog/2021/04/27/uniswap.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/blog/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://peiliping.github.io/blog/feed.xml" title="Pei LiPing&apos;s Blog" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/blog/">Pei LiPing&#39;s Blog</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/blog/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">UniswapOracle</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2021-04-27T10:00:00+08:00" itemprop="datePublished">Apr 27, 2021
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>这次聊聊Uniswap的预言机，上次我们介绍的Chainlink属于通用预言机。</p>
+
+<p>在Uniswap项目中，内置了一个预言机功能，算是专用吧，具有一定的特殊性。</p>
+
+<h2 id="uniswap">Uniswap</h2>
+
+<p>Uniswap最近一年非常的火热，算是Defi的基石项目了。随着其V3版本的发布，</p>
+
+<p>会吸引越来越多的做市商。这里介绍一个<a href="https://liaoph.com/">Blog</a>。可以作为Uniswap的入门资料。</p>
+
+<h2 id="uniswap的oracle">Uniswap的Oracle</h2>
+
+<p>之前讲的Chainlink的预言机，使用者大多关注当前价格，少量场景也需要历史价格。</p>
+
+<p>Uniswap的Oracle是提供时间加权平均价，并且可以随意指定周期。设计出这样的Oracle，</p>
+
+<p>主要是为了抵御价格操纵闪电贷之类的攻击。在目前的Defi项目中，这类需求还是比较普遍的。</p>
+
+<p>我个人觉得Uniswap的Oracle时间加权思路是不错的，但不适合普及使用。比如标的非常有限、</p>
+
+<p>存储数据的精度问题等等。但是提供的按照时间二分查找的功能是Chainlink所缺少的。</p>
+
+<h2 id="通用化ema指标预言机">通用化EMA指标预言机</h2>
+
+<p>在清算类的业务中，一般使用指数类的价格，比如MA、EMA。期货合约的清算逻辑，</p>
+
+<p>用来计算是否强制平仓的价格，就不会使用现货的当前价格，一般是EMA(5min)之类的。</p>
+
+<p>主要是为了削弱价格剧烈波动导致的连锁爆仓反应。</p>
+
+<p>如果提供一种类似EMA计算的指标价格预言机，我相信会对清算类的业务非常友好。</p>
+
+<p>可以沿用现有预言机的大部分接口，没有数据精度问题，可轻松获取历史轨迹，作为独立</p>
+
+<p>计算存储的合约，不与其他项目绑定，可重复利用现有“共识”预言机的结果，保证准确。</p>
+
+<p>当然这样的方案相对Uniswap的Oracle会缺少一个周期的灵活性，但我个人认为这个不是</p>
+
+<p>十分重要，大多数项目需要的周期都是可以协调的，而且固定。</p>
+
+<h2 id="最后">最后</h2>
+
+<p>预言机的话题就告一段落，这个领域也算是刚刚起步，Chainlink也在快速发展中，希望能够</p>
+
+<p>有更开放的社区，可以有更多的协作模式，让开发者参与共建。</p>
+
+  </div><a class="u-url" href="/blog/2021/04/27/uniswap.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/blog/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Pei LiPing&#39;s Blog</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Pei LiPing&#39;s Blog</li><li><a class="u-email" href="mailto:peilipingplp@gmail.com">peilipingplp@gmail.com</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/peiliping"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#github"></use></svg> <span class="username">peiliping</span></a></li><li><a href="https://www.twitter.com/plp_rapper"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">plp_rapper</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>关于Mysql的Binlog抽取 | Pei LiPing’s Blog</title>
+<meta name="generator" content="Jekyll v4.2.2" />
+<meta property="og:title" content="关于Mysql的Binlog抽取" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="这个月换了工作，双十一之前入职了京东大数据平台——实时数据组。" />
+<meta property="og:description" content="这个月换了工作，双十一之前入职了京东大数据平台——实时数据组。" />
+<link rel="canonical" href="http://peiliping.github.io/blog/2017/11/29/mysqlbinlog.html" />
+<meta property="og:url" content="http://peiliping.github.io/blog/2017/11/29/mysqlbinlog.html" />
+<meta property="og:site_name" content="Pei LiPing’s Blog" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2017-11-29T10:00:00+08:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="关于Mysql的Binlog抽取" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2017-11-29T10:00:00+08:00","datePublished":"2017-11-29T10:00:00+08:00","description":"这个月换了工作，双十一之前入职了京东大数据平台——实时数据组。","headline":"关于Mysql的Binlog抽取","mainEntityOfPage":{"@type":"WebPage","@id":"http://peiliping.github.io/blog/2017/11/29/mysqlbinlog.html"},"url":"http://peiliping.github.io/blog/2017/11/29/mysqlbinlog.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/blog/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://peiliping.github.io/blog/feed.xml" title="Pei LiPing&apos;s Blog" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/blog/">Pei LiPing&#39;s Blog</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/blog/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">关于Mysql的Binlog抽取</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2017-11-29T10:00:00+08:00" itemprop="datePublished">Nov 29, 2017
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>这个月换了工作，双十一之前入职了京东大数据平台——实时数据组。</p>
+
+<p>着手关于MysqlBinlog相关系统的重构工作，这次就讲讲Binlog吧。</p>
+
+<h2 id="binlog转实时数据流的开源动态">Binlog转实时数据流的开源动态</h2>
+
+<p>伪装MysqlSlave来获取MysqlBinlog的技术这几年已经非常普及了，很多中等规模的公司都有相关的</p>
+
+<p>基础技术组件，大多数是基于阿里几年前开源的Canal项目，在此基础上进行二次开发，将数据写入Kafka</p>
+
+<p>或者其他MQ系统中去，阿里云的RDS还提供类似的服务，也非常省心。</p>
+
+<p>17年年初的时候我也有意要做类似的项目，所以已经进行了最基础的技术选型和调研。</p>
+
+<p>Java系中最早的binlog开源项目有tungsten-replicator 、open-replicator等，后来都慢慢废弃了。</p>
+
+<p>之后Canal几乎统一了这个领域，但是阿里的这个开源项目最近几年的更新频率很一般。</p>
+
+<p>最近两年比较新的项目有mysql-time-machine，zendesk的maxwell都不错。</p>
+
+<p>shyiko的mysql-binlog-connector-java是一个BinlogClient的超精简内核，也被很多开源项目采用。</p>
+
+<h2 id="mysql的binlog">Mysql的Binlog</h2>
+
+<p>Mysql的Binlog协议和格式我就不多介绍了，网上可以搜到很多。</p>
+
+<p>值得注意的时候，Mysql一定要配置成Row模式的，而且image需要配置成Full模式的。</p>
+
+<p>我采用shyiko的mysql-binlog-connector-java的方案进行了一下性能测试，可以达到80M/s。</p>
+
+<h2 id="数据解析">数据解析</h2>
+
+<p>shyiko的mysql-binlog-connector-java已经将数据解析成Java类型了，接下来只需要针对公司的规范</p>
+
+<p>进行数据的清洗和整理即可，最后转成标准序列化格式，比如AVRO、Pb、Json等。</p>
+
+<p>这中间性能损耗最大的地方就是序列化的开销了，要考虑异步或者多线程流等方式解决。</p>
+
+<p>在开发解析逻辑时碰到了不少细节问题，用shyiko的mysql-binlog-connector-java解析的数据与canal</p>
+
+<p>有一些细小的差别，比如datetime和timestamp字段解析的结果不一样，有可能受时区的影响；</p>
+
+<p>还有像text类型的字段是byte数组，需要自己指定charset转为string；decimal也有差异，需要使用</p>
+
+<p>numberformat进行格式化，group设置为false，并且setMinimumFractionDigits(1)。</p>
+
+<h2 id="写kafka有序">写Kafka有序</h2>
+
+<p>将数据写到Kafka的速度是非常快的，但是因为Binlog的特殊性，需要一些设计，来保证数据的有序。</p>
+
+<p>Kafka的Client会把收到的数据根据meta进行进行重新组织，按照broker的使用情况进行分批发送。</p>
+
+<p>所以我们要根据业务情况指定Kafka的MessageKey，将相同业务含义的数据写到同一个Partition</p>
+
+<p>下，保证有序，乱序会导致最新值被老值覆盖。</p>
+
+<p>在写Kafka的过程中难免会有一些失败的情况发生，错误的重试机制由Kafka来保证，并且要强制设置</p>
+
+<p>ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION = 1，以防止重试时发生数据顺序错误。</p>
+
+<h2 id="task的结构">Task的结构</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: center">P1</th>
+      <th style="text-align: center"> </th>
+      <th style="text-align: center">B1</th>
+      <th style="text-align: center"> </th>
+      <th style="text-align: center">P2</th>
+      <th style="text-align: center"> </th>
+      <th style="text-align: center">B2</th>
+      <th style="text-align: center"> </th>
+      <th style="text-align: center">P3</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: center">单线程拉Binlog</td>
+      <td style="text-align: center">&gt;</td>
+      <td style="text-align: center">Ringbuffer</td>
+      <td style="text-align: center">&gt;</td>
+      <td style="text-align: center">单线程转化成AVRO对象</td>
+      <td style="text-align: center">&gt;</td>
+      <td style="text-align: center">Ringbuffer</td>
+      <td style="text-align: center">&gt;</td>
+      <td style="text-align: center">序列化并发送Kafka</td>
+    </tr>
+  </tbody>
+  <tbody>
+    <tr>
+      <td style="text-align: center"> </td>
+      <td style="text-align: center"> </td>
+      <td style="text-align: center"> </td>
+      <td style="text-align: center"> </td>
+      <td style="text-align: center"> </td>
+      <td style="text-align: center">&gt;</td>
+      <td style="text-align: center">Ringbuffer</td>
+      <td style="text-align: center">&gt;</td>
+      <td style="text-align: center">序列化并发送Kafka</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>注释：P一般对应一个线程，B对应一个Disrupter的Ringbuffer。</p>
+
+<p>P1和P2环节的性能都非常好，所以采用的是单线程，阶段并行模式。</p>
+
+<p>P3阶段采用并行模式，P2处理好的数据根据一些key进行选择，路由到N个B2中去，一般可以用库表名称。</p>
+
+<p>压测时，这个Task跑起来之后可以让负载达到400%，基本上把Cpu资源跑满了。</p>
+
+<h2 id="持久化位点信息">持久化位点信息</h2>
+
+<p>什么是位点信息？</p>
+
+<p>简单来说就是binlog的filename和offset，为了保证at least once，</p>
+
+<p>我们需要定期记录消费的位置，以便任务重启之后，继续消费，不丢数据（可有少量的重复）。</p>
+
+<p>如果P3阶段是单线程的，那么记录位点非常简单，提交kafka成功后，记录最后一条数据的offset，</p>
+
+<p>可以异步刷到远程存储中去，防止阻塞数据流。可是，现在P3阶段是多线程的，如何记录位点呢？</p>
+
+<p>定期让P2对所有的B2发送一条相同的含有位点信息的心跳包（位点值为P2最后处理的一条数据的位点）</p>
+
+<p>通过这种方式，将各个P3的信息进行更新，每次P3将数据成功发送到Kafka后就将其中的心跳包记录下来，</p>
+
+<p>作为一个可信的回退点，注意这个心跳包一定要在数据流中流转，起到挤压数据的作用，</p>
+
+<p>防止某些P3无数据的情况发生。相关代码参考我的sucker项目，这里就不介绍代码细节了。</p>
+
+<p>解决这个问题的思路源于Flink介绍文章中的一段话：</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Stream Barrier是Flink分布式Snapshotting中的核心元素，它会作为数据流的记录被同等看待，
+
+被插入到数据流中，将数据流中记录的进行分组，并沿着数据流的方向向前推进。每个Barrier会携带
+
+一个Snapshot ID，属于该Snapshot的记录会被推向该Barrier的前方。因为Barrier非常轻量，所以
+
+并不会中断数据流。带有Barrier的数据流。
+
+</code></pre></div></div>
+
+  </div><a class="u-url" href="/blog/2017/11/29/mysqlbinlog.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/blog/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Pei LiPing&#39;s Blog</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Pei LiPing&#39;s Blog</li><li><a class="u-email" href="mailto:peilipingplp@gmail.com">peilipingplp@gmail.com</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/peiliping"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#github"></use></svg> <span class="username">peiliping</span></a></li><li><a href="https://www.twitter.com/plp_rapper"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">plp_rapper</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

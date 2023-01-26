@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>如何查询Redis中的Bitmap数据 | Pei LiPing’s Blog</title>
+<meta name="generator" content="Jekyll v4.2.2" />
+<meta property="og:title" content="如何查询Redis中的Bitmap数据" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="书接上回，我们已经将日活的维度数据写入Redis的Bitmap结构中。" />
+<meta property="og:description" content="书接上回，我们已经将日活的维度数据写入Redis的Bitmap结构中。" />
+<link rel="canonical" href="http://peiliping.github.io/blog/2017/09/20/redis-bit2.html" />
+<meta property="og:url" content="http://peiliping.github.io/blog/2017/09/20/redis-bit2.html" />
+<meta property="og:site_name" content="Pei LiPing’s Blog" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2017-09-20T10:00:00+08:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="如何查询Redis中的Bitmap数据" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2017-09-20T10:00:00+08:00","datePublished":"2017-09-20T10:00:00+08:00","description":"书接上回，我们已经将日活的维度数据写入Redis的Bitmap结构中。","headline":"如何查询Redis中的Bitmap数据","mainEntityOfPage":{"@type":"WebPage","@id":"http://peiliping.github.io/blog/2017/09/20/redis-bit2.html"},"url":"http://peiliping.github.io/blog/2017/09/20/redis-bit2.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/blog/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://peiliping.github.io/blog/feed.xml" title="Pei LiPing&apos;s Blog" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/blog/">Pei LiPing&#39;s Blog</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/blog/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">如何查询Redis中的Bitmap数据</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2017-09-20T10:00:00+08:00" itemprop="datePublished">Sep 20, 2017
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>书接上回，我们已经将日活的维度数据写入Redis的Bitmap结构中。</p>
+
+<p>今天再设计一个简单的查询引擎，通过表达式转化为Redis的指令集，最终得到日活的结果。</p>
+
+<h2 id="设计一个简单的表达式">设计一个简单的表达式</h2>
+
+<p>最通用的表达式就是SQL了，Hive、Drill、Presto、Phoenix等开源项目都在做类似的事情。</p>
+
+<p>我们这个筛选维度求日活的功能，没有那么复杂，所以简单一些就好。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>(C1 = 3 &amp; C2 = 1) &amp; (C5 = 1 | C8 = 6)
+</code></pre></div></div>
+
+<p>其中C(N)代表选择第几个维度，等号后面代表维度的值，</p>
+
+<p>“&amp;”代表AND操作，“|”代表OR操作，括号表示结合顺序。</p>
+
+<p>这个表达式的含义我想很容易理解，跟四则混合运算差不多。</p>
+
+<h2 id="表达式的解释器">表达式的解释器</h2>
+
+<p>下面看看我们如何解析这个表达式，将表达式转化为Redis执行的指令。</p>
+
+<p>之前玩了一段时间的Lpeg，也做过一些小东西，这里还是用Lpeg来做，</p>
+
+<p>在四则混合运算的例子上加以改进即可。</p>
+
+<p>下面是对表达式的定义。</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>function Blk(p)
+  return p * V "Space"
+end
+
+local G = P{
+    V "Space" * V "Stmt" ;
+    Stmt      = Cf(V "Group" * Cg(V "LogicSig" * V "Group")^0 , operation) ,
+    Group     = V "Element" + V "Open" * V "Stmt" * V "Close" ,
+    Element   = Cg(Blk(V "ColNum") * Blk(V "EqSignal") * Blk(V "ColVal") / selector) ,
+    LogicSig  = Blk(C(S "&amp;|")),
+
+    ColNum    = P "C" * C(R "09"^1) ,
+    EqSignal  = C(P "=") ,
+    ColVal    = C((R "az" + R "AZ" + R "09")^1) ,
+
+    Open      = Blk(P "(") ,
+    Close     = Blk(P ")") ,
+    Space     = S(" \n\t")^0 ,
+}
+</code></pre></div></div>
+
+<p>在解析到 C1=1 类似的结构时用selector函数处理</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>function selector(colNum , op , colVal)
+  lastKey = {"b" , colNum .. '-' .. colVal}
+  return lastKey
+end
+</code></pre></div></div>
+
+<p>解析到 XXX &amp; YYY 或者 XXX | YYY 的结构时用operation函数处理</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>function operation(left , op , right)
+  local action = ""
+  if op == "&amp;" then 
+    action = "AND"
+  elseif op == "|" then
+    action = "OR"
+  end
+  local tmpKey = "__TMP-" .. tmpCount
+  lastKey = {"t" , tmpKey}
+  table.insert(recycle , tmpKey)
+  tmpCount = tmpCount + 1
+  table.insert(process , {"BITOP" , action , tmpKey , left[1] , left[2] , right[1] , right[2]})
+  return {"t" , tmpKey }
+end
+</code></pre></div></div>
+
+<p>因为在Bitmap运算过程中，我们会产生一些临时的Bitmap数据，以__TMP开头的Key，</p>
+
+<p>这些Key在运算执行结束后，需要清理掉，我们将这些Key都记录在recycle数据里。</p>
+
+<p>下面看一个表达式解析的过程：</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>(C1 = 3 &amp; C2 = 1) &amp; (C5 = 1 | C8 = 6)
+
+--------------------
+C1	=	3
+C2	=	1
+table: 0x41760200	&amp;	table: 0x417553e0
+C5	=	1
+C8	=	6
+table: 0x417600f0	|	table: 0x41760178
+table: 0x4175db68	&amp;	table: 0x4175da68
+
+</code></pre></div></div>
+
+<p>再看看解析的结果：</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>lastKey : {"t" , "__TMP-3"}
+process : [
+           ["BITOP","AND","__TMP-1","b","1-3","b","2-1"],
+           ["BITOP","OR","__TMP-2","b","5-1","b","8-6"],
+           ["BITOP","AND","__TMP-3","t","__TMP-1","t","__TMP-2"],
+           ["BITCOUNT",["t","__TMP-3"]]
+          ]
+recycle : ["__TMP-1","__TMP-2","__TMP-3"]
+</code></pre></div></div>
+
+<p>说明：其中的”t”代表是临时变量的key ， “b”代表的是需要结合Block块的序号的Key。</p>
+
+<p>如果完善一些的话，我们应该对逻辑表达式进行一下处理，也就是执行计划的优化。</p>
+
+<p>这里只是一个Demo，所以我们先跳过这一块，先把流程跑通。</p>
+
+<h2 id="将执行计划推送给redis">将执行计划推送给Redis</h2>
+
+<p>前一篇Blog，我们已经写了一个封装查询的LuaScript了，LuaScript会根据</p>
+
+<p>Nest结构中的数据，遍历所有的Block块，在每个Block块中进行，逻辑表达式的运算，</p>
+
+<p>最后把UV都SUM起来，就是返回的日活结果。</p>
+
+<p>这里我将process和recycle的数据都打包成了json(redis的lua可以使用cjson)。</p>
+
+<p>下面是重写的ReadScript</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>local scriptRead = redis:script("LOAD" , 
+[[
+  local result = 0
+  local tableName , dateTime = KEYS[1] , KEYS[2]
+  local process , recycle    = cjson.decode(ARGV[1]) , cjson.decode(ARGV[2])
+  local key4N = table.concat({tableName , "-" , dateTime , "-Nest"})
+
+  for index , value in ipairs(process) do
+    local params
+    if value[1] == "BITOP" then
+      params = {value[1] , value[2] , value[3]}
+      for seq = 4 , #value , 2 do
+        if value[seq] == "b" then
+          table.insert(params , {tableName , "-" , dateTime , "-" , value[seq + 1] , "-BMP-" , 7})
+        elseif value[seq] == "t" then
+          table.insert(params , value[seq + 1])
+        end
+      end
+    elseif value[1] == "BITCOUNT" then
+      params = {value[1]}
+      if value[2] == "b" then
+          table.insert(params , {tableName , "-" , dateTime , "-" , value[3] , "-BMP-" , 7})
+        elseif value[2] == "t" then
+          table.insert(params , value[3])
+        end
+    end
+    process[index] = params
+  end
+  
+  local bytepos = 0
+  local pos = redis.call("bitpos" , key4N , 1 , bytepos)
+  while (pos &gt;= 0)
+  do
+    for g = pos , pos + 7 - bit.band(pos , 7) do
+      local fill = redis.call("getbit" , key4N , g)
+      if fill == 1 then
+        for index , value in ipairs(process) do
+          local ps = {}
+          for id , item in ipairs(value) do
+            if type(item) == "table" then
+              item[7] = g
+              ps[id] = table.concat(item)
+            else
+              ps[id] = item
+            end
+          end
+          if ps[1] == "BITCOUNT" then
+            result = result + redis.call(unpack(ps))
+          else
+            redis.call(unpack(ps))
+          end
+        end
+      end
+    end
+    bytepos = bit.rshift(pos , 3) + 1 
+    pos = redis.call("bitpos" , key4N , 1 , bytepos)
+  end
+  if #recycle &gt; 0 then
+    redis.call("del" , unpack(recycle))
+  end
+  return result
+]]
+)
+
+scripts:set("ReadScript" , scriptRead)
+ngx.say("ReadScript : " .. scriptRead)
+</code></pre></div></div>
+
+<p>最后我们再改写一些Openresty对查询接口的封装</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>G:match(expression)
+table.insert(process , {"BITCOUNT" , unpack(lastKey)}) 
+
+local r = redis:evalsha(scripts:get("ReadScript") , 2 , tableName , dateTime , json.encode(process) , json.encode(recycle))
+ngx.say(r)
+</code></pre></div></div>
+
+  </div><a class="u-url" href="/blog/2017/09/20/redis-bit2.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/blog/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Pei LiPing&#39;s Blog</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Pei LiPing&#39;s Blog</li><li><a class="u-email" href="mailto:peilipingplp@gmail.com">peilipingplp@gmail.com</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/peiliping"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#github"></use></svg> <span class="username">peiliping</span></a></li><li><a href="https://www.twitter.com/plp_rapper"><svg class="svg-icon"><use xlink:href="/blog/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">plp_rapper</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>
