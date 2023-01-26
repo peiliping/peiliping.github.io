@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://peiliping.github.io/blog/" rel="alternate" type="text/html" /><updated>2023-01-26T20:29:49+08:00</updated><id>http://peiliping.github.io/blog/feed.xml</id><title type="html">Pei LiPing’s Blog</title><subtitle>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</subtitle><entry><title type="html">Birthday</title><link href="http://peiliping.github.io/blog/2022/10/03/birthday.html" rel="alternate" type="text/html" title="Birthday" /><published>2022-10-03T10:00:00+08:00</published><updated>2022-10-03T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/10/03/birthday</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/10/03/birthday.html"><![CDATA[<p>时间真快，一转眼宝宝已经周岁了。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://peiliping.github.io/blog/" rel="alternate" type="text/html" /><updated>2023-01-26T20:31:01+08:00</updated><id>http://peiliping.github.io/blog/feed.xml</id><title type="html">Pei LiPing’s Blog</title><subtitle>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</subtitle><entry><title type="html">Birthday</title><link href="http://peiliping.github.io/blog/2022/10/03/birthday.html" rel="alternate" type="text/html" title="Birthday" /><published>2022-10-03T10:00:00+08:00</published><updated>2022-10-03T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/10/03/birthday</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/10/03/birthday.html"><![CDATA[<p>时间真快，一转眼宝宝已经周岁了。</p>
 
 <p>这一年真的非常不容易，祝宝宝卓壮成长。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[时间真快，一转眼宝宝已经周岁了。]]></summary></entry><entry><title type="html">Awk Json Parser</title><link href="http://peiliping.github.io/blog/2022/09/02/jsonparser.html" rel="alternate" type="text/html" title="Awk Json Parser" /><published>2022-09-02T10:00:00+08:00</published><updated>2022-09-02T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/09/02/jsonparser</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/09/02/jsonparser.html"><![CDATA[<p>Awk主要是用于文本数据处理的，而且主要是CSV格式。如果你碰到要处理Json数据，</p>
 
@@ -157,7 +157,43 @@ function parserJson(_str, _json){
  dispatch(_json);
 }
 
-</code></pre></div></div>]]></content><author><name></name></author><summary type="html"><![CDATA[Awk主要是用于文本数据处理的，而且主要是CSV格式。如果你碰到要处理Json数据，]]></summary></entry><entry><title type="html">Estimate Depth</title><link href="http://peiliping.github.io/blog/2022/07/10/estimatedepth.html" rel="alternate" type="text/html" title="Estimate Depth" /><published>2022-07-10T10:00:00+08:00</published><updated>2022-07-10T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/07/10/estimatedepth</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/07/10/estimatedepth.html"><![CDATA[<p>上次讲了基于深度的网格交易，这里补充一个小技巧。</p>
+</code></pre></div></div>]]></content><author><name></name></author><summary type="html"><![CDATA[Awk主要是用于文本数据处理的，而且主要是CSV格式。如果你碰到要处理Json数据，]]></summary></entry><entry><title type="html">Dynamic Grid</title><link href="http://peiliping.github.io/blog/2022/08/19/grid2.html" rel="alternate" type="text/html" title="Dynamic Grid" /><published>2022-08-19T10:00:00+08:00</published><updated>2022-08-19T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/08/19/grid2</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/08/19/grid2.html"><![CDATA[<p>再介绍一种有趣的网格交易玩法。</p>
+
+<h3 id="动态区间">动态区间</h3>
+
+<p>上期说了网格交易的资金利用率很低，主要原因就是需要覆盖很大的价格范围。</p>
+
+<p>那么有没有什么办法可以把这个区间缩小一点呢，这样就可以提高利用率和收益率了。</p>
+
+<p>回忆一下去年提到的Linear相关的知识，通过数学的方法对价格的波动区间进行评估。</p>
+
+<p>轨道的上轨和下轨就是网格的最大价格和最小价格了，这个值也是动态的。</p>
+
+<h3 id="原则">原则</h3>
+
+<p>选取网格交易的方向（多、空）并不是直接判断未来的涨跌，而是一个逆向的思路。</p>
+
+<p>当前趋势不可能大跌，则开正向的网格，如果当前趋势是不可能大涨，那么就是开反向的。</p>
+
+<p>任何单边的行情里使用网格程序进行交易管理，都是会错过大部分利润的，在漫长的</p>
+
+<p>底部整齐期间或者是顶部震荡出货期间，使用更为恰当。</p>
+
+<p>可以适当在上轨或者下轨附近，甚至超出轨道时开始网格交易，这样整体的成本足够低。</p>
+
+<h3 id="工具">工具</h3>
+
+<p>这种网格并不能像传统普通网格那样长期无人值守，其实更像一种辅助交易工具。</p>
+
+<p>将受益曲线做的更加平滑，减少人工盯盘的时间。当然你也可以为这种网格设置一些条件。</p>
+
+<p>比如多空比超过多少就终止long方向的买入，只卖出，甚至是直接清仓。</p>
+
+<p>Linear是一种概率评估，虽然有效性很好，但是并不能作为方向决策的依据。</p>
+
+<p>当你确定好交易的方向时，可以通过Linear寻找一个好的买入卖出价格。</p>
+
+<p>在预测回调力度、震荡区间范围等方面都有很好的效果。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[再介绍一种有趣的网格交易玩法。]]></summary></entry><entry><title type="html">Estimate Depth</title><link href="http://peiliping.github.io/blog/2022/07/10/estimatedepth.html" rel="alternate" type="text/html" title="Estimate Depth" /><published>2022-07-10T10:00:00+08:00</published><updated>2022-07-10T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/07/10/estimatedepth</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/07/10/estimatedepth.html"><![CDATA[<p>上次讲了基于深度的网格交易，这里补充一个小技巧。</p>
 
 <p>如何评估自己的挂单，在深度中的位置，预计还要多久才能成交。</p>
 
@@ -265,43 +301,7 @@ function parserJson(_str, _json){
 
 <p>这种方案几乎把全部的资金都用在当前价了，资金利用率比较高。</p>
 
-<p>将资金拆成多份有利于灵活控制补撤订单，提高资金的流转速度。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[这次讲一个特殊类型的网格交易思路，基于深度的网格交易。]]></summary></entry><entry><title type="html">Dynamic Grid</title><link href="http://peiliping.github.io/blog/2022/06/11/grid2.html" rel="alternate" type="text/html" title="Dynamic Grid" /><published>2022-06-11T10:00:00+08:00</published><updated>2022-06-11T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/06/11/grid2</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/06/11/grid2.html"><![CDATA[<p>再介绍一种有趣的网格交易玩法。</p>
-
-<h3 id="动态区间">动态区间</h3>
-
-<p>上期说了网格交易的资金利用率很低，主要原因就是需要覆盖很大的价格范围。</p>
-
-<p>那么有没有什么办法可以把这个区间缩小一点呢，这样就可以提高利用率和收益率了。</p>
-
-<p>回忆一下去年提到的Linear相关的知识，通过数学的方法对价格的波动区间进行评估。</p>
-
-<p>轨道的上轨和下轨就是网格的最大价格和最小价格了，这个值也是动态的。</p>
-
-<h3 id="原则">原则</h3>
-
-<p>选取网格交易的方向（多、空）并不是直接判断未来的涨跌，而是一个逆向的思路。</p>
-
-<p>当前趋势不可能大跌，则开正向的网格，如果当前趋势是不可能大涨，那么就是开反向的。</p>
-
-<p>任何单边的行情里使用网格程序进行交易管理，都是会错过大部分利润的，在漫长的</p>
-
-<p>底部整齐期间或者是顶部震荡出货期间，使用更为恰当。</p>
-
-<p>可以适当在上轨或者下轨附近，甚至超出轨道时开始网格交易，这样整体的成本足够低。</p>
-
-<h3 id="工具">工具</h3>
-
-<p>这种网格并不能像传统普通网格那样长期无人值守，其实更像一种辅助交易工具。</p>
-
-<p>将受益曲线做的更加平滑，减少人工盯盘的时间。当然你也可以为这种网格设置一些条件。</p>
-
-<p>比如多空比超过多少就终止long方向的买入，只卖出，甚至是直接清仓。</p>
-
-<p>Linear是一种概率评估，虽然有效性很好，但是并不能作为方向决策的依据。</p>
-
-<p>当你确定好交易的方向时，可以通过Linear寻找一个好的买入卖出价格。</p>
-
-<p>在预测回调力度、震荡区间范围等方面都有很好的效果。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[再介绍一种有趣的网格交易玩法。]]></summary></entry><entry><title type="html">Expect SSH</title><link href="http://peiliping.github.io/blog/2022/05/12/expectssh.html" rel="alternate" type="text/html" title="Expect SSH" /><published>2022-05-12T10:00:00+08:00</published><updated>2022-05-12T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/05/12/expectssh</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/05/12/expectssh.html"><![CDATA[<p>提到自动登录ssh的时候，最好还是使用秘钥登录，当然也可以使用expect。</p>
+<p>将资金拆成多份有利于灵活控制补撤订单，提高资金的流转速度。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[这次讲一个特殊类型的网格交易思路，基于深度的网格交易。]]></summary></entry><entry><title type="html">Expect SSH</title><link href="http://peiliping.github.io/blog/2022/05/12/expectssh.html" rel="alternate" type="text/html" title="Expect SSH" /><published>2022-05-12T10:00:00+08:00</published><updated>2022-05-12T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/05/12/expectssh</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/05/12/expectssh.html"><![CDATA[<p>提到自动登录ssh的时候，最好还是使用秘钥登录，当然也可以使用expect。</p>
 
 <p>下面介绍几个expect和ssh的例子。</p>
 
