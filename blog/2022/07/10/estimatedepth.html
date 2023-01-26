@@ -3,21 +3,21 @@
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
-<title>DB2DB | Pei LiPing’s Blog</title>
+<title>Estimate Depth | Pei LiPing’s Blog</title>
 <meta name="generator" content="Jekyll v4.2.2" />
-<meta property="og:title" content="DB2DB" />
+<meta property="og:title" content="Estimate Depth" />
 <meta property="og:locale" content="en_US" />
-<meta name="description" content="几年前写过一个叫meepo的小项目，用来解决一些临时导表的需求。" />
-<meta property="og:description" content="几年前写过一个叫meepo的小项目，用来解决一些临时导表的需求。" />
-<link rel="canonical" href="http://peiliping.github.io/blog/2020/04/28/db2db.html" />
-<meta property="og:url" content="http://peiliping.github.io/blog/2020/04/28/db2db.html" />
+<meta name="description" content="上次讲了基于深度的网格交易，这里补充一个小技巧。" />
+<meta property="og:description" content="上次讲了基于深度的网格交易，这里补充一个小技巧。" />
+<link rel="canonical" href="http://peiliping.github.io/blog/2022/07/10/estimatedepth.html" />
+<meta property="og:url" content="http://peiliping.github.io/blog/2022/07/10/estimatedepth.html" />
 <meta property="og:site_name" content="Pei LiPing’s Blog" />
 <meta property="og:type" content="article" />
-<meta property="article:published_time" content="2020-04-28T10:00:00+08:00" />
+<meta property="article:published_time" content="2022-07-10T10:00:00+08:00" />
 <meta name="twitter:card" content="summary" />
-<meta property="twitter:title" content="DB2DB" />
+<meta property="twitter:title" content="Estimate Depth" />
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2020-04-28T10:00:00+08:00","datePublished":"2020-04-28T10:00:00+08:00","description":"几年前写过一个叫meepo的小项目，用来解决一些临时导表的需求。","headline":"DB2DB","mainEntityOfPage":{"@type":"WebPage","@id":"http://peiliping.github.io/blog/2020/04/28/db2db.html"},"url":"http://peiliping.github.io/blog/2020/04/28/db2db.html"}</script>
+{"@context":"https://schema.org","@type":"BlogPosting","dateModified":"2022-07-10T10:00:00+08:00","datePublished":"2022-07-10T10:00:00+08:00","description":"上次讲了基于深度的网格交易，这里补充一个小技巧。","headline":"Estimate Depth","mainEntityOfPage":{"@type":"WebPage","@id":"http://peiliping.github.io/blog/2022/07/10/estimatedepth.html"},"url":"http://peiliping.github.io/blog/2022/07/10/estimatedepth.html"}</script>
 <!-- End Jekyll SEO tag -->
 <link rel="stylesheet" href="/blog/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://peiliping.github.io/blog/feed.xml" title="Pei LiPing&apos;s Blog" /></head>
 <body><header class="site-header" role="banner">
@@ -40,68 +40,52 @@
         <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
 
   <header class="post-header">
-    <h1 class="post-title p-name" itemprop="name headline">DB2DB</h1>
+    <h1 class="post-title p-name" itemprop="name headline">Estimate Depth</h1>
     <p class="post-meta">
-      <time class="dt-published" datetime="2020-04-28T10:00:00+08:00" itemprop="datePublished">Apr 28, 2020
+      <time class="dt-published" datetime="2022-07-10T10:00:00+08:00" itemprop="datePublished">Jul 10, 2022
       </time></p>
   </header>
 
   <div class="post-content e-content" itemprop="articleBody">
-    <p>几年前写过一个叫meepo的小项目，用来解决一些临时导表的需求。</p>
+    <p>上次讲了基于深度的网格交易，这里补充一个小技巧。</p>
 
-<p>很意外居然还有网友在git上提issue，看来需求还是很广泛的。</p>
+<p>如何评估自己的挂单，在深度中的位置，预计还要多久才能成交。</p>
 
-<p>meepo整体设计有很多问题，而且bug也比较多，不建议使用。</p>
+<h3 id="深度排队">深度排队</h3>
 
-<h2 id="改版重构">改版重构</h2>
+<p>上一篇中提到了，深度是比较厚的，所以交易排队的时间需要比较久。</p>
 
-<p>最近又碰到了类似的需求，从mysql的一种表抽取部分字段写到另外一张表。</p>
+<p>那么如何预估我们订单还需要多久完成呢？一旦挂单进入深度之后，</p>
 
-<p>因为是定时数据处理，而且需要全量数据的导出，所以基于JDBC是最简单的方案。</p>
+<p>我们是无法准确知道订单前面还有多少的。但可以大致估算一个悲观结果，</p>
 
-<p>在数据摄取和分发部分，沿用了fevernova框架，这也比meepo更佳成熟稳定。</p>
+<p>最多还有xxxx排在我们的订单之前。</p>
 
-<h2 id="流批一体">流批一体</h2>
+<p>排在我们订单前面的订单也可能撤销订单，所以得到的数据是悲观值。</p>
 
-<p>这两年有一个特别火的概念叫流批一体，flink社区也在努力统一数据底层模型。</p>
+<h3 id="数据">数据</h3>
 
-<p>fevernova是一个类似flink的流式数据处理框架，之前也没试过做批处理。</p>
+<p>在下单时，我们可以记下当时的深度值，比如3kw。我们的订单指令提交后，</p>
 
-<p>这次为了实现批处理的需求，为source增加了jobfinished的指令。</p>
+<p>就会排在末尾，前面大致有3kw的深度。过了2个小时，想估算前面还有多少。</p>
 
-<p>当source完成预定处理，会等待一个checkpoint的周期，就结束任务了。</p>
+<p>将这两个小时的k线数据按照每一分钟查询出来，得到每一分钟的成交量和</p>
 
-<h2 id="rdb">RDB</h2>
+<p>主动买入成交量，主动卖出成交量，然后进行累加。假如我们的订单是买单，</p>
 
-<p>这次还需要支持postgre，虽然JDBC是通用的，但是Datasource和Sql拼装，</p>
+<p>那么主动卖出成交量的加和，就是成交消耗的买一深度的量。再用3kw减去</p>
 
-<p>都有很大的差别，需要重新设计扩展。</p>
+<p>累加值，就知道我们的订单前面大致还有多少排队的。</p>
 
-<p>举几个例子，table的scheme在mysql和postgre是不同的，在解决upsert场景的时候，</p>
+<h3 id="用处">用处</h3>
 
-<p>mysql可以用replace，pg则要写on conflict子句。</p>
+<p>通过计算我们的订单在深度排队中前后的情况，还有主动成交的历史数据轨迹，</p>
 
-<h2 id="性能">性能</h2>
+<p>可以帮我们优化挂单策略，当买一深度较薄时，是否需要将部分卖单挂到买二去。</p>
 
-<p>这次性能优化并没有meepo那么激进，尽量做通用的优化，减少对依赖的侵入性修改。</p>
+<p>甚至主动成交，来调剂手中两种稳定币的比例，在当前成交价移动后，快速排队。</p>
 
-<p>Postgre有一个unlogged类型的table，可以极大的提高写入速度，</p>
-
-<p>大家可以根据自己的需求酌情使用。</p>
-
-<h2 id="规范">规范</h2>
-
-<p>使用JDBC做增量数据导出，有一些需要注意的地方，比如：</p>
-
-<p>1、不能使用delete</p>
-
-<p>2、insert和update操作要更新updatetime字段</p>
-
-<p>3、需要对updatetime做索引</p>
-
-<p>4、有long型的自增主键，方便遍历</p>
-
-  </div><a class="u-url" href="/blog/2020/04/28/db2db.html" hidden></a>
+  </div><a class="u-url" href="/blog/2022/07/10/estimatedepth.html" hidden></a>
 </article>
 
       </div>
