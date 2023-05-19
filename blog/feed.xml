@@ -1,4 +1,53 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://peiliping.github.io/blog/" rel="alternate" type="text/html" /><updated>2023-01-26T20:31:01+08:00</updated><id>http://peiliping.github.io/blog/feed.xml</id><title type="html">Pei LiPing’s Blog</title><subtitle>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</subtitle><entry><title type="html">Birthday</title><link href="http://peiliping.github.io/blog/2022/10/03/birthday.html" rel="alternate" type="text/html" title="Birthday" /><published>2022-10-03T10:00:00+08:00</published><updated>2022-10-03T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/10/03/birthday</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/10/03/birthday.html"><![CDATA[<p>时间真快，一转眼宝宝已经周岁了。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://peiliping.github.io/blog/" rel="alternate" type="text/html" /><updated>2023-05-19T13:06:19+08:00</updated><id>http://peiliping.github.io/blog/feed.xml</id><title type="html">Pei LiPing’s Blog</title><subtitle>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</subtitle><entry><title type="html">Depth Grid</title><link href="http://peiliping.github.io/blog/2022/11/03/grid3.html" rel="alternate" type="text/html" title="Depth Grid" /><published>2022-11-03T10:00:00+08:00</published><updated>2022-11-03T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/11/03/grid3</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/11/03/grid3.html"><![CDATA[<p>之前讲过关于深度网格策略的思路，今天对这个进行一下优化。</p>
+
+<h2 id="挂单与深度的关系">挂单与深度的关系</h2>
+
+<p>挂单的量要与深度成正比，核心思想是越稳定的深度，就可以挂更多的单。</p>
+
+<p>但是如果深度有3kw就挂3单，都在深度队列的末尾，之后末尾深度补充的很差，就很可能是无效成交。</p>
+
+<p>如果深度相对薄一些，震荡幅度稍微大一些，就会很容易导致损失，或者是大量的无效成交。</p>
+
+<p>这里的优化方向是两笔挂单之间的深度间隔是1kw，虽然会导致一些排队时间的损失，但是抵御波动的能力强了很多。</p>
+
+<h2 id="如何估算深度的消耗情况">如何估算深度的消耗情况</h2>
+
+<p>精确的计算方法当然是订阅实时的交易明细，将每一笔的成交价格和成交量进行分类统计，</p>
+
+<p>根据买卖的方向就可以计算出一段时间内深度确切的消耗情况。但是这个计算的成本相对较高，稳定性较差。</p>
+
+<p>另外一个思路就是通过K线估算深度的消耗情况，这个评估方法我们之前在estimate-depth的blog中介绍过，</p>
+
+<p>这里就不多说了。需要特别理解一下taker-buy-base-asset-volume这个单词的含义，这里有一个公式：</p>
+
+<p>taker-buy-base-asset-volume + taker-buy-quote-asset-volume = volume</p>
+
+<h2 id="如何估算深度积累情况">如何估算深度积累情况</h2>
+
+<p>既然是要让两笔挂单之间的深度达到1kw，那么如何估算呢？假设第一笔挂单的深度是2kw，过了15分钟，</p>
+
+<p>当前深度是2.4kw，判断当前积累的深度是否达到1kw，公式如下：</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+第一笔订单之前预计剩余的深度 = 2kw - sum（15分钟内的taker-buy-XXX-asset-volume）
+
+第一笔订单之后预计积累的深度 = 2.4kw - 第一笔订单之前预计剩余的深度
+
+</code></pre></div></div>
+
+<h2 id="其他影响估算的因素">其他影响估算的因素</h2>
+
+<h3 id="撤单">撤单</h3>
+
+<p>在实测中我们统计过撤单的比例非常低，不到1%，几乎没有什么影响，所以可以忽略不计。</p>
+
+<h3 id="1min的k线包含多个盘口价格">1min的K线包含多个盘口价格</h3>
+
+<p>也就是这1min的波动较大，taker并不是集中在一个价格上成交的。在稳定B的交易中，这个比例也是偏低的，而且</p>
+
+<p>taker方向也主要集中在击穿方向上，对于你要估算的方向贡献会非常小，可以当成0来处理。</p>
+
+<p>上面的这两种情况都会导致多等待一些时间才挂单，但是影响是非常小的。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[之前讲过关于深度网格策略的思路，今天对这个进行一下优化。]]></summary></entry><entry><title type="html">Birthday</title><link href="http://peiliping.github.io/blog/2022/10/03/birthday.html" rel="alternate" type="text/html" title="Birthday" /><published>2022-10-03T10:00:00+08:00</published><updated>2022-10-03T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/10/03/birthday</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/10/03/birthday.html"><![CDATA[<p>时间真快，一转眼宝宝已经周岁了。</p>
 
 <p>这一年真的非常不容易，祝宝宝卓壮成长。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[时间真快，一转眼宝宝已经周岁了。]]></summary></entry><entry><title type="html">Awk Json Parser</title><link href="http://peiliping.github.io/blog/2022/09/02/jsonparser.html" rel="alternate" type="text/html" title="Awk Json Parser" /><published>2022-09-02T10:00:00+08:00</published><updated>2022-09-02T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/09/02/jsonparser</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/09/02/jsonparser.html"><![CDATA[<p>Awk主要是用于文本数据处理的，而且主要是CSV格式。如果你碰到要处理Json数据，</p>
 
@@ -379,20 +428,14 @@ function printX(o, _indent, _x){
 <h3 id="clone">Clone</h3>
 
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
-function clone(ma, mb, _key, _x){
+function clone(ma, mb, _x){
   for(_x in ma){
     if(typeof(ma[_x]) != "array"){
-      if(_key == ""){
-        mb[_x] = ma[_x];
-      }else{
-        mb[_key][_x] = ma[_x];
-      }
+      mb[_x] = ma[_x];
     }else{
-       if(_key == ""){
-         clone(ma[_x], mb, _x);
-       }else{
-         clone(ma[_x], mb[_key], _x);
-       }
+      mb[_x][__Y__] = 1;
+      clone(ma[_x], mb[_x]);
+      delete mb[_x][__Y__];
     }
   }
 }
@@ -403,7 +446,9 @@ function clone(ma, mb, _key, _x){
 
 <p>因为Awk无法做这样的赋值操作,当map[a]是Array时，b = map[a]会报错,</p>
 
-<p>错误提示为：试图在标量环境中使用数组“map[a]”。这时候我们可以用clone(map[a],b)来替代。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[最近写Awk比较多，所以写了一些便于自己使用的函数。]]></summary></entry><entry><title type="html">Binance Spot Client</title><link href="http://peiliping.github.io/blog/2022/03/11/binancespotclient.html" rel="alternate" type="text/html" title="Binance Spot Client" /><published>2022-03-11T10:00:00+08:00</published><updated>2022-03-11T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/03/11/binancespotclient</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/03/11/binancespotclient.html"><![CDATA[<p>上期我们把BinanceApi的请求签名进行了封装，接下来我们就在这个基础上，实现核心功能。</p>
+<p>错误提示为：试图在标量环境中使用数组“map[a]”。这时候我们可以用clone(map[a],b)来替代。</p>
+
+<p>通过用__Y__占位的方式解决多层类型嵌套的问题，clone完后delete掉。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[最近写Awk比较多，所以写了一些便于自己使用的函数。]]></summary></entry><entry><title type="html">Binance Spot Client</title><link href="http://peiliping.github.io/blog/2022/03/11/binancespotclient.html" rel="alternate" type="text/html" title="Binance Spot Client" /><published>2022-03-11T10:00:00+08:00</published><updated>2022-03-11T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/03/11/binancespotclient</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/03/11/binancespotclient.html"><![CDATA[<p>上期我们把BinanceApi的请求签名进行了封装，接下来我们就在这个基础上，实现核心功能。</p>
 
 <h3 id="client">Client</h3>
 
@@ -572,53 +617,4 @@ sendRequest(){
     echo "origClientOrderId"
   fi
 
-</code></pre></div></div>]]></content><author><name></name></author><summary type="html"><![CDATA[无意间在Binance的ApiDoc中看到了基于Curl的示例代码，于是便想封装一个基于Curl的]]></summary></entry><entry><title type="html">Awk Linear</title><link href="http://peiliping.github.io/blog/2022/01/11/awklinear.html" rel="alternate" type="text/html" title="Awk Linear" /><published>2022-01-11T10:00:00+08:00</published><updated>2022-01-11T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/01/11/awklinear</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/01/11/awklinear.html"><![CDATA[<p>上期讲到了Linear的概念，这次我们就用Awk来实现一个Linear吧。</p>
-
-<h3 id="代码">代码</h3>
-
-<p>下面这段代码是从TradingView的LR脚本中翻译过来的，也是我找到的比较简洁的一个版本。</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
-function lr(_source, _result, _i){
-  _result["len"] = length(_source);
-  for(_i = 1; _i &lt;= _result["len"]; _i++){
-    _result["sumx"]+=_i;
-    _result["sumy"]+=_source[_i];
-    _result["sumxx"]+=(_i * _i);
-    _result["sumxy"]+=(_i * _source[_i]);
-  }
-  _result["slope"] = (_result["len"] * _result["sumxy"] - _result["sumx"] * _result["sumy"]) / (_result["len"] * _result["sumxx"] - _result["sumx"] * _result["sumx"]);
-  _result["intercept"] = _result["sumy"] / _result["len"] - _result["slope"] * _result["sumx"] / _result["len"] + _result["slope"];
- 
-  for(_i = 1; _i &lt;= _result["len"]; _i++){
-    _result["stdDevAcc"]+=((_i * _result["slope"] + _result["intercept"] - _source[_i]) * (_i * _result["slope"] + _result["intercept"] - _source[_i]));
-  }
-  _result["stdDev"] = sqrt(_result["stdDevAcc"] / (_result["len"] - 1));
-  _result["M"] = _result["len"] * _result["slope"] + _result["intercept"];
-  _result["U"] = _result["M"] + 2 * _result["stdDev"];
-  _result["D"] = _result["M"] - 2 * _result["stdDev"];
-}
-
-</code></pre></div></div>
-
-<p>返回结果一般主要是获取slope、intercept、stdDev，还有U、M、D。</p>
-
-<h3 id="关于awk加载functions的问题">关于awk加载functions的问题</h3>
-
-<p>如果你写了一个完整的awk脚本可以通过参数 -f 来执行script，例如： <code class="language-plaintext highlighter-rouge">awk -f xxx.awkscript</code></p>
-
-<p>如果你只是向上面LR一样实现了一个函数，希望能够被复用的话，可以这样：</p>
-
-<p><code class="language-plaintext highlighter-rouge">awk -i lib.awkscript  '{ lr(source, result); print result["M"];}'</code></p>
-
-<p>如果你有多个lib文件的话，可以多次使用 -i  <code class="language-plaintext highlighter-rouge">-i a.awk -i b.awk -i c.awk</code></p>
-
-<p>还可以再script文件里使用 @include 进行文件或者目录的加载，有点像模板加载宏。</p>
-
-<h3 id="关于awk中array的赋值问题">关于awk中Array的赋值问题</h3>
-
-<p>awk的Array和Lua的Table特性非常相似，但是Awk没有提供像ipairs这样的迭代工具。</p>
-
-<p>Array也无法成为Awk函数的返回值，只能在参数中传递进来，参考awk中split的用法。</p>
-
-<p>如果map[“key”]也是Array的话，无法直接进行变量的赋值，比如：val = map[“key”]。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[上期讲到了Linear的概念，这次我们就用Awk来实现一个Linear吧。]]></summary></entry></feed>
+</code></pre></div></div>]]></content><author><name></name></author><summary type="html"><![CDATA[无意间在Binance的ApiDoc中看到了基于Curl的示例代码，于是便想封装一个基于Curl的]]></summary></entry></feed>

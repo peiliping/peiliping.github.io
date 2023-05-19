@@ -71,20 +71,14 @@ function printX(o, _indent, _x){
 <h3 id="clone">Clone</h3>
 
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
-function clone(ma, mb, _key, _x){
+function clone(ma, mb, _x){
   for(_x in ma){
     if(typeof(ma[_x]) != "array"){
-      if(_key == ""){
-        mb[_x] = ma[_x];
-      }else{
-        mb[_key][_x] = ma[_x];
-      }
+      mb[_x] = ma[_x];
     }else{
-       if(_key == ""){
-         clone(ma[_x], mb, _x);
-       }else{
-         clone(ma[_x], mb[_key], _x);
-       }
+      mb[_x][__Y__] = 1;
+      clone(ma[_x], mb[_x]);
+      delete mb[_x][__Y__];
     }
   }
 }
@@ -97,6 +91,7 @@ function clone(ma, mb, _key, _x){
 
 <p>错误提示为：试图在标量环境中使用数组“map[a]”。这时候我们可以用clone(map[a],b)来替代。</p>
 
+<p>通过用__Y__占位的方式解决多层类型嵌套的问题，clone完后delete掉。</p>
 
   </div><a class="u-url" href="/blog/2022/04/22/awklib.html" hidden></a>
 </article>
