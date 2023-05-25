@@ -1,4 +1,30 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://peiliping.github.io/blog/" rel="alternate" type="text/html" /><updated>2023-05-19T13:06:19+08:00</updated><id>http://peiliping.github.io/blog/feed.xml</id><title type="html">Pei LiPing’s Blog</title><subtitle>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</subtitle><entry><title type="html">Depth Grid</title><link href="http://peiliping.github.io/blog/2022/11/03/grid3.html" rel="alternate" type="text/html" title="Depth Grid" /><published>2022-11-03T10:00:00+08:00</published><updated>2022-11-03T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/11/03/grid3</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/11/03/grid3.html"><![CDATA[<p>之前讲过关于深度网格策略的思路，今天对这个进行一下优化。</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="http://peiliping.github.io/blog/feed.xml" rel="self" type="application/atom+xml" /><link href="http://peiliping.github.io/blog/" rel="alternate" type="text/html" /><updated>2023-05-25T21:08:52+08:00</updated><id>http://peiliping.github.io/blog/feed.xml</id><title type="html">Pei LiPing’s Blog</title><subtitle>有一天你走出腐烂的象牙塔门， 成为那漂浮不定的孤寂灵魂。 四处搜寻着安身的墓地坑坟， 刻画和擦拭着自己的墓志铭文。</subtitle><entry><title type="html">Mix Grid</title><link href="http://peiliping.github.io/blog/2022/12/22/grid4.html" rel="alternate" type="text/html" title="Mix Grid" /><published>2022-12-22T10:00:00+08:00</published><updated>2022-12-22T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/12/22/grid4</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/12/22/grid4.html"><![CDATA[<p>之前讲过很多次关于Grid的优化改进，这次做一个归纳总结。</p>
+
+<h2 id="标的分类与策略选择">标的分类与策略选择</h2>
+
+<p>选择哪一种网格策略，要根据标的的波动特征。</p>
+
+<h3 id="普通标的">普通标的</h3>
+
+<p>普通的网格交易策略，市面上的工具都可以满足，选择好的开仓时机最为关键。</p>
+
+<p>网格的间隔和手续费是需要关注的细节。</p>
+
+<h3 id="深度特别厚波动极小">深度特别厚，波动极小</h3>
+
+<p>采用基于深度的网格策略，订单尽量在深度上稀疏排列，避免被集中成交。</p>
+
+<p>优化点是在深度变薄或者即将产生波动之前，采取一些防御性的措施。</p>
+
+<h3 id="深度不够厚波动较频繁但波动范围有限">深度不够厚，波动较频繁，但波动范围有限</h3>
+
+<p>采用较小范围的普通网格策略，增加基于Linear的范围预估，实现网格范围的动态管理。</p>
+
+<p>借用远端的订单来辅助当前盘口的排队，缩短排队时间。这个优化方案是非常巧妙的，</p>
+
+<p>只需要监控帮助排队的深度不要太薄即可，一旦过薄就要cancel掉，如果在帮助排队时，</p>
+
+<p>领先于对向订单成交了，则需要主动在原价位兑换，然后重新排队。如果深度很薄则没有帮助排队的必要。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[之前讲过很多次关于Grid的优化改进，这次做一个归纳总结。]]></summary></entry><entry><title type="html">Depth Grid</title><link href="http://peiliping.github.io/blog/2022/11/03/grid3.html" rel="alternate" type="text/html" title="Depth Grid" /><published>2022-11-03T10:00:00+08:00</published><updated>2022-11-03T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/11/03/grid3</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/11/03/grid3.html"><![CDATA[<p>之前讲过关于深度网格策略的思路，今天对这个进行一下优化。</p>
 
 <h2 id="挂单与深度的关系">挂单与深度的关系</h2>
 
@@ -522,99 +548,4 @@ limitTrade(){
 
 <p>总的来说还是比较简单的，预处理一下参数，解析一下返回结果的json，按照一定的格式输出。</p>
 
-<p>U本位合约的Api也是差不多的情况，逻辑基本相同。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[上期我们把BinanceApi的请求签名进行了封装，接下来我们就在这个基础上，实现核心功能。]]></summary></entry><entry><title type="html">Cmd Binance Client</title><link href="http://peiliping.github.io/blog/2022/02/19/cmdbinanceclient.html" rel="alternate" type="text/html" title="Cmd Binance Client" /><published>2022-02-19T10:00:00+08:00</published><updated>2022-02-19T10:00:00+08:00</updated><id>http://peiliping.github.io/blog/2022/02/19/cmdbinanceclient</id><content type="html" xml:base="http://peiliping.github.io/blog/2022/02/19/cmdbinanceclient.html"><![CDATA[<p>无意间在Binance的ApiDoc中看到了基于Curl的示例代码，于是便想封装一个基于Curl的</p>
-
-<p>命令行客户端 。获取一般行情的Api接口直接使用Curl就可以，难题主要是获取个人数据</p>
-
-<p>和交易行为接口,需要对参数进行签名。</p>
-
-<h3 id="client">Client</h3>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
-ApiKey="zzzzzzzzzzzzzzzzzzzz"
-SecretKey="xxxxxxxxxxxxxxxxx"
-
-HttpCode=""
-HttpResult=""
-
-## 对参数数据进行签名
-signature(){
-  echo -n "$1" | openssl dgst -sha256 -hmac "${SecretKey}" | awk '{print "signature="$2}'
-}
-
-## 添加时间校对参数
-addTimeParams(){
-  local tsParams="recvWindow=10000&amp;timestamp="`date +%s`"000"
-  if [ -z "$1" ] ;then
-    echo $tsParams
-  else
-    echo $1"&amp;"$tsParams
-  fi
-}
-
-## 发送带签名的请求
-sendRequest(){
-  HttpCode=""
-  HttpResult=""
-  local method=$1
-  local host=$2
-  local path=$3
-  local params=$4
-  params=`addTimeParams ${params}`
-  local sig=`signature ${params}`
-  params=$params"&amp;"$sig
-  local result=`curl -s -w "\t%{http_code}" -H "X-MBX-APIKEY: ${ApiKey}" -X ${method} $host""$path"?"$params`
-  HttpCode=`echo $result | awk '{ print $NF}'`
-  HttpResult=`echo $result | awk '{ print substr($0,1,length($0)-4); }'`
-  if [ $HttpCode -eq 200 ];then
-    return 0
-  else
-    echo $HttpResult
-    return 1
-  fi
-}
-
-</code></pre></div></div>
-
-<p>签名的方法其实很简单，需要注意的是echo的参数-n，是不换行输出的意思。</p>
-
-<p>如果不加这个参数，那么签名数据就无法通过Server端的校验了。</p>
-
-<p>时间校对参数这里只是简单的用了当前时间，如果是谨慎设计的话，应该使用业务时间。</p>
-
-<p>比如获取行情信息后下单，那么下单的校对时间应该是获取行情的时间。</p>
-
-<p>如何获得Http的Code？curl默认是返回Http Response Body的，通过-w参数，</p>
-
-<p>可以获取httpcode，会输出到最后，通过awk将其切分成Code和Result变量。</p>
-
-<p>根据HttpCode来确定函数sendRequest的return值(0/1)。</p>
-
-<p>我们来调用一下这个Client。</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
-  local host="https://xxxxx.com"
-  local path="/sapi/v3/asset/getUserAsset"
-  sendRequest "POST" $host $path
-  [[ $? -gt  0 ]] &amp;&amp; return 1
-  echo $HttpResult
-
-</code></pre></div></div>
-
-<p>判断sendRequest的return值，如果大于0，则是请求失败，程序终止。</p>
-
-<p>[[ $? -gt  0 ]] &amp;&amp; return 1 是一种if语句的简洁写法。</p>
-
-<h3 id="shell中如何识别number类型">Shell中如何识别Number类型</h3>
-
-<p>网上可以搜到很多种，我比如喜欢下面的这个方法</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
-  expr $1 "+" 1 &amp;&gt; /dev/null
-  if [ $? -eq 0 ];then
-    echo "orderId"
-  else
-    echo "origClientOrderId"
-  fi
-
-</code></pre></div></div>]]></content><author><name></name></author><summary type="html"><![CDATA[无意间在Binance的ApiDoc中看到了基于Curl的示例代码，于是便想封装一个基于Curl的]]></summary></entry></feed>
+<p>U本位合约的Api也是差不多的情况，逻辑基本相同。</p>]]></content><author><name></name></author><summary type="html"><![CDATA[上期我们把BinanceApi的请求签名进行了封装，接下来我们就在这个基础上，实现核心功能。]]></summary></entry></feed>
